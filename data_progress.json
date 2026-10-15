@@ -1,0 +1,239 @@
+{
+  "guest_learner": {
+    "userId": "guest_learner",
+    "questionsAskedCount": 20,
+    "practiceSessionsCount": 1,
+    "quizAttempts": [],
+    "topicsStudied": [
+      "Algebra & Factorization",
+      "Newton's Laws of Motion",
+      "General Topic",
+      "Quadratic Equations",
+      "Vectors & Motion in One Dimension"
+    ],
+    "savedLearning": [],
+    "conversations": [
+      {
+        "id": "conv-init-1",
+        "userId": "guest_learner",
+        "title": "Mundyondisi, nikombela uhlamisela...",
+        "educationLevel": "FET Phase (Grade 10–12 CAPS)",
+        "subject": "General Education",
+        "topic": "General Topic",
+        "language": "en",
+        "mode": "practice",
+        "messages": [
+          {
+            "id": "msg_u_1791359845896",
+            "role": "user",
+            "content": "Mundyondisi, nikombela uhlamisela",
+            "timestamp": "2026-10-07T07:57:25.896Z",
+            "mode": "practice"
+          },
+          {
+            "id": "msg_a_1791359845896",
+            "role": "assistant",
+            "content": "Ahee! Ndza khensa leswi u tsakelaka ku dyondza. A hi swi tlhantlheni hi magoza.\n\nA **Quadratic Equation** (xikombiso xa xikwere) lexi tolovelekeke xi languteka hi ndlela leyi: **ax² + bx + c = 0**.\n\nKu \"factorize\" (ku avanyisa) i ku kuma tinomboro leti loko u ti phinda ti endlaka xikombiso xa wena. Hi ta tirhisa xikombiso xa **apples** (apula).\n\n---\n\n### Ahi Rhinghesi (Let's Practice)\n\n**Xivhutiso 1 (Straightforward):**\nBala leswi: $x² + 5x + 6 = 0$\n*Hint: Kuma tinomboro timbirhi leti loko u ti phinda ti endlaka 6, naswona loko u ti yengetela ti endla 5.*\n\n**Xivhutiso 2 (Standard):**\nBala leswi: $x² - 7x + 10 = 0$\n*Hint: Tsundzuka leswaku loko ku ri ni \"-\" eka 7x kambe ku ri ni \"+\" eka 10, tinomboro leti u ti lavaka hinkwato ti ta va na xikombiso xa \"-\" (minus).*\n\n**Xivhutiso 3 (Challenge):**\nBala leswi: $2x² + 5x + 3 = 0$\n*Hint: Laha, xikombiso xi sungula hi 2x². Ringeta ku tirhisa \"trial and error\" kumbe ku \"factorise by grouping\".*\n\n---\n\n### Ndlela yo endla:\n1. **Hleketa kahle**: U lava tinomboro timbirhi.\n2. **Tsala nhlamulo yawena**: Loko u heta, ni kombe leswi u swi kumeke.\n3. **Unga heli marimba**: Utaswi endla!\n\n**Kombisa ntirhо wa wena.** U lava mpfuno hi xivhutiso xihi eka leswi?\n\n- Xana u lava leswaku hi lulamisa Xivhutiso 1 swin'we?\n- Xana u lava ku tiva leswaku \"Quadratic formula\" yi tirhisiwa kwihi?\n- Xana u lava xifaniso xinwani xo hambana?",
+            "timestamp": "2026-10-07T07:57:25.896Z",
+            "mode": "practice",
+            "summary": "Quadratic Equations (PRACTICE): Core conceptual overview for Grade 10.",
+            "followUps": [
+              "Can you give me a more challenging problem in Quadratic Equations?",
+              "Walk me through the step-by-step solution for question 1.",
+              "Can we simplify the key steps or formulas further?"
+            ],
+            "isAiGenerated": true,
+            "disclaimer": "Nexovia Xitsonga Language Engine active · Controlled native-verified vocabulary prioritized"
+          },
+          {
+            "id": "msg_u_1791360073541",
+            "role": "user",
+            "content": "Mundyondisi, nikombela uhlamisela",
+            "timestamp": "2026-10-07T08:01:13.541Z",
+            "mode": "explain"
+          },
+          {
+            "id": "msg_a_1791360073541",
+            "role": "assistant",
+            "content": "Ahee! Ndza khensa leswi u tsakelaka ku dyondza. A hi swi tlhantlheni hi magoza.\n\nA hi sunguleni hi **Xivhutiso 1**: $x^2 + 5x + 6 = 0$.\n\n### A hi swi tlhantlheni hi magoza (Step-by-step solution)\n\nKu \"factorize\" xikombiso lexi, hi lava ku kuma tinomboro timbirhi leti:\n1. Loko hi ti **phinda** (multiply), ti endla **6**.\n2. Loko hi ti **yengetela** (add), ti endla **5**.\n\n**Step 1: Kuma tinomboro**\n*   $1 \\times 6 = 6$ (Kambe $1 + 6 = 7$ — Ahi swona)\n*   $2 \\times 3 = 6$ (Naswona $2 + 3 = 5$ — **Hi swona leswi!**)\n\n**Step 2: Tsala xikombiso lexintshwa**\nHi ta tirhisa **2** na **3** ku aka tinomboro leti nga eka mabhege mambirhi:\n$(x + 2)(x + 3) = 0$\n\n**Step 3: Nhlamulo**\nLeswaku xikombiso xi va **0**, un’we wa mabhege lawa u fanele ku va **0**.\n*   $x + 2 = 0 \\rightarrow x = -2$\n*   $x + 3 = 0 \\rightarrow x = -3$\n\n---\n\n### Ahi Rhinghesi (Let's Try)\n\nSwinene, sweswi i nkarhi wa wena! **Tsala nhlamulo yawena** hi ku landza xivutiso lexi:\n\n**Bala leswi (Calculate this):** $x^2 - 7x + 10 = 0$\n\n*   **Hleketa kahle**: U lava tinomboro timbirhi leti loko u ti phinda ti endlaka **10**, naswona loko u ti yengetela ti endla **-7**.\n*   *Tsundzuka hint ya mina*: Loko xikombiso xi ri na \"-\" eka -7x kambe xi ri na \"+\" eka 10, tinomboro to mbirhi leti u ti lavaka hinkwato ti ta va na xikombiso xa **minus (-)**.\n\n**Kombisa ntirhо wa wena (Show your working).** Utaswi endla!\n\n**Xana u lava mpfuno hi swin’wana?**\n1. Xana u lava ku tiyisisa loko nhlamulo ya wena ka $x^2 - 7x + 10 = 0$ yi ri yone?\n2. Xana u lava leswaku hi lulamisa Xivhutiso 3 (xa 2x²) swin'we?\n3. Xana u lava xifaniso xinwani xo olova?",
+            "timestamp": "2026-10-07T08:01:13.541Z",
+            "mode": "explain",
+            "summary": "Algebra & Factorization (EXPLAIN): Core conceptual overview for Grade 10.",
+            "followUps": [
+              "Can you give another real-world example in Algebra & Factorization?",
+              "How does this usually appear in tests or exams?",
+              "Can we simplify the key steps or formulas further?"
+            ],
+            "isAiGenerated": true,
+            "disclaimer": "Nexovia Xitsonga Language Engine active · Controlled native-verified vocabulary prioritized"
+          },
+          {
+            "id": "msg_u_1791360208735",
+            "role": "user",
+            "content": "Can you explain the key concepts of Quadratic Equations in isiZulu?",
+            "timestamp": "2026-10-07T08:03:28.735Z",
+            "mode": "translate"
+          },
+          {
+            "id": "msg_a_1791360208735",
+            "role": "assistant",
+            "content": "Sawubona! Ngijabula kakhulu ukuthi ufuna ukuqonda kahle ama-**Quadratic Equations**. Nansi incazelo elula ngesiZulu ukuze ukwazi ukuwakha kusasa:\n\n## Yini i-Quadratic Equation?\n\nI-**Quadratic Equation** (isibalo sesikwele) isibalo lapho amandla amakhulu (exponent) kaguquguquki (variable) kuwukuthi **2** (lokhu kubhalwa ngokuthi $x^2$).\n\nCabanga ngalo njengomumo wengadi esikwele: uma ungaphandle kwengadi, ubude nobubanzi buyafana. Uma uphindaphinda lezi zinhlangothi (length $\\times$ width), uthola indawo esikwele ($x^2$).\n\n### Isakhiwo esijwayelekile (Standard Form)\nYonke i-**Quadratic Equation** ilandela lolu hlelo:\n**$ax^2 + bx + c = 0$**\n\n*   **$a, b, c$**: Ziyizinombolo ezaziwayo (constants).\n*   **$x$**: Yilokho esikufunayo (the unknown variable).\n*   **$x^2$**: Yilokho okwenza isibalo sibe \"quadratic\".\n\n---\n\n## Imigomo Ebalulekile (Key Concepts)\n\n1.  **I-Factorization (Ukuhlukanisa):**\n    Lokhu kufana nokuhlakaza inani libe yizingxenye ezincane. Uma sithi $x^2 + 5x + 6 = 0$, sifuna izinombolo ezimbili eziyohlanganiseka zibe $(x + 2)(x + 3) = 0$.\n\n2.  **I-Zero Product Property (Umthetho ka-Zero):**\n    Uma izinto ezimbili ziphindaphindwa zikunike u-zero, kusho ukuthi enye yazo (noma zombili) kumele ibe u-zero. Yingakho sikwazi ukuthi $x + 2 = 0$ noma $x + 3 = 0$.\n\n3.  **I-Quadratic Formula (Ifomula Ebalulekile):**\n    Kwesinye isikhathi izinombolo azilula ukutholakala. Lapho-ke sisebenzisa le fomula enamandla:\n    **$x = \\frac{-b \\pm \\sqrt{b^2 - 4ac}}{2a}$**\n    *(Lolu wuhlobo lweresiphi yokupheka: ufaka nje izinombolo zakho (a, b, c) bese uthola impendulo!)*\n\n---\n\n### Ake sizame lokhu:\nManje njengoba sesiyazi incazelo, uyafuna ukuthi:\n\n*   **Sizame ukuxazulula inkinga usebenzisa i-Quadratic Formula?**\n*   **Uyafuna ukwazi ukuthi kungani kwesinye isikhathi sithola izimpendulo ezimbili ($x_1$ no $x_2$)?**\n*   **Noma ufuna ukubuyela ekuxazululeni isibalo sethu se-$x^2 - 7x + 10 = 0$?**\n\n*Khumbula: \"Learn today. Build tomorrow.\" Uyakwazi lokhu!*",
+            "timestamp": "2026-10-07T08:03:28.735Z",
+            "mode": "translate",
+            "summary": "Quadratic Equations (TRANSLATE): Core conceptual overview for Grade 10.",
+            "followUps": [
+              "Can you give another real-world example in Quadratic Equations?",
+              "How does this usually appear in tests or exams?",
+              "Can we simplify the key steps or formulas further?"
+            ],
+            "isAiGenerated": true,
+            "disclaimer": "AI-generated educational explanation · Not official CAPS curriculum content"
+          }
+        ],
+        "createdAt": "2026-10-07T07:57:25.896Z",
+        "updatedAt": "2026-10-07T08:03:28.736Z"
+      }
+    ],
+    "studyPlans": [
+      {
+        "id": "plan_1790755081276_n6sf",
+        "userId": "guest_learner",
+        "title": "Work, Energy & Power Mastery Study Plan",
+        "gradeOrProgramme": "Grade 12 / Matric",
+        "subject": "Physical Sciences",
+        "topic": "Work, Energy & Power",
+        "availableStudyTime": "4 hours per week",
+        "targetDate": "Final exam in 3 weeks",
+        "planOverview": "A focused 3-week intensive program designed for the South African Grade 12 Physical Sciences CAPS curriculum, targeting Work-Energy Theorem, Conservation of Mechanical Energy, and Power calculations.",
+        "schedule": [
+          {
+            "dayOrPhase": "Week 1: Foundations & The Work-Energy Theorem",
+            "focus": "Definitions, Free-Body Diagrams (FBDs) & Work-Energy Theorem",
+            "activities": [
+              "Review CAPS definitions for Work, Kinetic Energy, and Potential Energy",
+              "Practice drawing FBDs specifically for inclined planes and horizontal surfaces",
+              "Apply the Work-Energy Theorem (Wnet = ΔEk) to 10 basic problems",
+              "Master the calculation of net work done by constant and varying forces"
+            ],
+            "milestone": "Ability to correctly identify all forces acting on a body and calculate net work without assistance."
+          },
+          {
+            "dayOrPhase": "Week 2: Conservation of Energy & Power",
+            "focus": "Conservation of Mechanical Energy & Power Calculations",
+            "activities": [
+              "Derive and apply the Principle of Conservation of Mechanical Energy",
+              "Solve problems involving non-conservative forces (friction)",
+              "Practice P = W/Δt and P = Fv calculations",
+              "Complete 10 medium-difficulty problems integrating both energy and power"
+            ],
+            "milestone": "Successfully solving complex problems involving multiple energy transformations and power efficiency."
+          },
+          {
+            "dayOrPhase": "Week 3: Exam Readiness & Error Analysis",
+            "focus": "Past Paper Integration & Exam Technique",
+            "activities": [
+              "Complete 3 full-length past Matric exam questions under timed conditions",
+              "Perform a 'Post-Mortem' error analysis on every incorrect answer",
+              "Review the official DBE marking guidelines to understand mark allocation",
+              "Final review of the 'Formula Sheet' provided in the exam"
+            ],
+            "milestone": "Consistency in achieving 70%+ across three consecutive past paper exam sessions."
+          }
+        ],
+        "tips": [
+          "Create a 'Cheat Sheet' of all relevant formulas, then attempt to recreate it from memory to strengthen neural pathways.",
+          "Practice Active Recall: After reading a concept, close your notebook and try to explain the Work-Energy Theorem out loud as if teaching a peer.",
+          "Always start a physics problem by drawing a force diagram; marks are often awarded for the FBD, even if the calculation is incorrect.",
+          "Use spaced repetition: Spend the first 15 minutes of every session reviewing the most difficult concepts from the previous week."
+        ],
+        "createdAt": "2026-09-30T07:58:01.276Z"
+      }
+    ],
+    "lastActiveDate": "2026-10-11",
+    "scanSessions": [
+      {
+        "id": "scan_1791050922110_h0x1y",
+        "userId": "guest_learner",
+        "title": "Mathematics · General Topic",
+        "thumbnail": "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=",
+        "mimeType": "image/png",
+        "initialQuestion": "What does this show?",
+        "mode": "explain",
+        "educationLevel": "FET Phase (Grade 10–12 CAPS)",
+        "gradeOrProgramme": "Grade 10",
+        "subject": "Mathematics",
+        "topic": "General Topic",
+        "language": "en",
+        "aiExplanation": "### Understanding the Cartesian Plane\nThis image displays a **Cartesian plane** (an x-y coordinate system) with a specific point plotted on it. \n\n1. **The Axes**: The horizontal line is the **x-axis** and the vertical line is the **y-axis**. They cross at the origin (0,0).\n2. **The Coordinates**: A point is defined by two numbers, written as $(x; y)$. \n   - The **x-coordinate** (first number) tells you how far to move left or right from the center.\n   - The **y-coordinate** (second number) tells you how far to move up or down.\n3. **Locating the Point**: In this image, the point is located at **(-2; 3)**. This means you start at the center, move 2 units to the **left** along the x-axis, and move 3 units **up** along the y-axis.\n\n*Note: This explanation is provided by Nexovia AI and is not official CAPS material.*",
+        "summary": "The image shows a point plotted at (-2; 3) on a Cartesian plane, demonstrating how to identify coordinate positions.",
+        "clarityAssessment": {
+          "isClear": true,
+          "issue": "none",
+          "message": "Image is clear and readable."
+        },
+        "followUpSuggestions": [
+          "How do I plot a point in the third quadrant?",
+          "What is the equation of the line passing through the origin and this point?",
+          "Can you explain the signs of coordinates in each quadrant?"
+        ],
+        "messages": [
+          {
+            "id": "msg_u_1791050922110",
+            "role": "user",
+            "content": "What does this show?",
+            "timestamp": "2026-10-03T18:08:42.110Z"
+          },
+          {
+            "id": "msg_a_1791050922110",
+            "role": "assistant",
+            "content": "### Understanding the Cartesian Plane\nThis image displays a **Cartesian plane** (an x-y coordinate system) with a specific point plotted on it. \n\n1. **The Axes**: The horizontal line is the **x-axis** and the vertical line is the **y-axis**. They cross at the origin (0,0).\n2. **The Coordinates**: A point is defined by two numbers, written as $(x; y)$. \n   - The **x-coordinate** (first number) tells you how far to move left or right from the center.\n   - The **y-coordinate** (second number) tells you how far to move up or down.\n3. **Locating the Point**: In this image, the point is located at **(-2; 3)**. This means you start at the center, move 2 units to the **left** along the x-axis, and move 3 units **up** along the y-axis.\n\n*Note: This explanation is provided by Nexovia AI and is not official CAPS material.*",
+            "timestamp": "2026-10-03T18:08:42.110Z",
+            "isAiGenerated": true
+          }
+        ],
+        "practiceQuestions": [
+          {
+            "id": "pq1",
+            "type": "multiple_choice",
+            "question": "If a point is in the fourth quadrant, what will its coordinates look like?",
+            "options": [
+              "(+ , +)",
+              "(- , +)",
+              "(- , -)",
+              "(+ , -)"
+            ],
+            "correctAnswer": "(+ , -)",
+            "explanation": "In the fourth quadrant, you move right (positive x) and down (negative y)."
+          }
+        ],
+        "quiz": {
+          "id": "quiz_scan_1",
+          "title": "Quick Check on Scanned Problem",
+          "questions": [
+            {
+              "id": "q1",
+              "type": "multiple_choice",
+              "question": "Based on the image, in which quadrant is the point (-2; 3) located?",
+              "options": [
+                "First Quadrant",
+                "Second Quadrant",
+                "Third Quadrant",
+                "Fourth Quadrant"
+              ],
+              "correctAnswer": "Second Quadrant",
+              "explanation": "The point is to the left of the y-axis (negative x) and above the x-axis (positive y), which is the second quadrant."
+            }
+          ]
+        },
+        "saved": false,
+        "createdAt": "2026-10-03T18:08:42.110Z",
+        "updatedAt": "2026-10-03T18:08:42.110Z"
+      }
+    ],
+    "performanceEvents": [],
+    "completedLessonIds": [],
+    "learnedDays": [],
+    "academicDocuments": [],
+    "academicVoiceTier": "free"
+  }
+}

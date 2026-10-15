@@ -1,0 +1,6 @@
+{
+  "name": "Nexovia Academy - Learn today. Build tomorrow.",
+  "description": "Mobile-first South African education platform supporting learners from Grade R to University across School (CAPS), TVET (NATED & NC(V)), and Higher Education in all 11 official languages.",
+  "requestFramePermissions": ["camera", "microphone"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

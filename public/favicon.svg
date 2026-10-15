@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
+  <rect width="64" height="64" rx="16" fill="#0F172A"/>
+  <path d="M32 10L36.8 22.4L49.6 24.3L40.8 33.2L42.9 46L32 39.8L21.1 46L23.2 33.2L14.4 24.3L27.2 22.4L32 10Z" fill="url(#sunGrad)"/>
+  <path d="M22 52C22 52 27 44 32 44C37 44 42 52 42 52" stroke="#FBBF24" stroke-width="3" stroke-linecap="round"/>
+  <circle cx="32" cy="32" r="6" fill="#FFFBEB"/>
+  <defs>
+    <linearGradient id="sunGrad" x1="14.4" y1="10" x2="49.6" y2="46" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FDE047"/>
+      <stop offset="0.5" stop-color="#F59E0B"/>
+      <stop offset="1" stop-color="#D97706"/>
+    </linearGradient>
+  </defs>
+</svg>
