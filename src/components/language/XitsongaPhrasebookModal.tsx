@@ -1,7 +1,7 @@
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
- * Nexovia Xitsonga Language Engine - Phrasebook & Verification Hub
+ * Nexovian Xitsonga Language Engine - Phrasebook & Verification Hub
  */
 
 import React, { useState, useMemo } from 'react';
@@ -125,7 +125,7 @@ export const XitsongaPhrasebookModal: React.FC<XitsongaPhrasebookModalProps> = (
 
   const startEdit = (phrase: LanguageRecord) => {
     if (!isAdmin) {
-      setAdminActionError('Unauthorized: Only Nexovia administrators can modify verified phrases.');
+      setAdminActionError('Unauthorized: Only Nexovian administrators can modify verified phrases.');
       return;
     }
     setEditingPhrase(phrase);
@@ -145,7 +145,7 @@ export const XitsongaPhrasebookModal: React.FC<XitsongaPhrasebookModalProps> = (
 
   const startAddNew = () => {
     if (!isAdmin) {
-      setAdminActionError('Unauthorized: Only Nexovia administrators can add phrases.');
+      setAdminActionError('Unauthorized: Only Nexovian administrators can add phrases.');
       return;
     }
     setIsAddingNew(true);
@@ -224,7 +224,7 @@ export const XitsongaPhrasebookModal: React.FC<XitsongaPhrasebookModalProps> = (
               </span>
             </div>
             <h2 className="font-display text-xl sm:text-2xl font-bold text-slate-900 dark:text-white mt-1">
-              Nexovia Xitsonga Phrasebook
+              Nexovian Xitsonga Phrasebook
             </h2>
             <p className="text-xs text-slate-600 dark:text-slate-400 mt-1 max-w-2xl leading-relaxed">
               Native-speaker verified educational vocabulary across everyday language, classroom interactions, mathematics, and Socratic tutoring. AI models are strictly constrained to these verified phrases.

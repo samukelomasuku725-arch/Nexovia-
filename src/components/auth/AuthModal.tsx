@@ -56,7 +56,7 @@ export const AuthModal: React.FC = () => {
     try {
       await register({
         name: 'Alex Rivers',
-        email: `learner_${Date.now()}@nexovia.edu`,
+        email: `learner_${Date.now()}@nexovian.edu`,
         password: 'Password123!',
         gradeOrProgramme: 'Grade 10',
         educationLevel: 'School (CAPS)',
@@ -64,7 +64,7 @@ export const AuthModal: React.FC = () => {
       });
     } catch {
       try {
-        await login('alex.rivers@nexovia.edu', 'Password123!');
+        await login('alex.rivers@nexovian.edu', 'Password123!');
       } catch (err: any) {
         setError(err.message);
       }
@@ -173,7 +173,7 @@ export const AuthModal: React.FC = () => {
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="learner@nexovia.edu"
+                placeholder="learner@nexovian.edu"
                 className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl pl-9 pr-3 py-2.5 text-xs sm:text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-amber-500"
               />
             </div>

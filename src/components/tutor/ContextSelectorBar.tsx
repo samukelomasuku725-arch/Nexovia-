@@ -17,6 +17,7 @@ import { useAuth } from '../../context/AuthContext';
 import { AITutorMode } from '../../types';
 import {
   EDUCATION_SYSTEM,
+  APP_LEVELS,
   getSubjectsForLevel,
   SA_OFFICIAL_LANGUAGES,
   SubjectDemo
@@ -33,7 +34,7 @@ export const ContextSelectorBar: React.FC = () => {
 
   const availableSubjects: SubjectDemo[] = getSubjectsForLevel(learningContext.gradeOrProgramme);
   const currentSubjectObj =
-    availableSubjects.find((s) => s.name === learningContext.subject) || availableSubjects[0];
+    availableSubjects.find((s) => s.name === learningContext.subject) || null;
 
   const currentLangObj =
     SA_OFFICIAL_LANGUAGES.find((l) => l.code === learningContext.language) ||
@@ -53,16 +54,41 @@ export const ContextSelectorBar: React.FC = () => {
   const currentModeObj =
     modes.find((m) => m.id === learningContext.mode) || modes[0];
 
-  const handleSelectLevel = (levelName: string, categoryName: string) => {
+  const handleSelectLevel = (levelName: string, categoryName: string, keepSubjectOpen = false) => {
     const subjectsForNewLevel = getSubjectsForLevel(levelName);
-    const defaultSubject = subjectsForNewLevel[0]?.name || 'Mathematics';
-    const defaultTopic = subjectsForNewLevel[0]?.topics[0] || 'General Concepts';
+    
+    // Check if the current subject exists in the newly selected grade/pathway
+    const matchingSubject = subjectsForNewLevel.find(
+      (s) => s.name.toLowerCase() === (learningContext.subject || '').toLowerCase()
+    );
+
+    let nextSubject = '';
+    let nextTopic = '';
+
+    if (matchingSubject) {
+      nextSubject = matchingSubject.name;
+      // Retain topic if it exists or matches closely in the subject's topic list for this level
+      const matchingTopic = learningContext.topic && matchingSubject.topics.find(
+        (t) => t.toLowerCase() === learningContext.topic.toLowerCase() ||
+               t.toLowerCase().includes(learningContext.topic.toLowerCase()) ||
+               learningContext.topic.toLowerCase().includes(t.toLowerCase())
+      );
+      if (matchingTopic) {
+        nextTopic = matchingTopic;
+      } else {
+        nextTopic = '';
+      }
+    } else {
+      // Incompatible old subject: clear subject and topic so learner can choose their own
+      nextSubject = '';
+      nextTopic = '';
+    }
 
     updateLearningContext({
       educationLevel: categoryName,
       gradeOrProgramme: levelName,
-      subject: defaultSubject,
-      topic: defaultTopic
+      subject: nextSubject,
+      topic: nextTopic
     });
 
     if (isAuthenticated) {
@@ -73,22 +99,40 @@ export const ContextSelectorBar: React.FC = () => {
     }
 
     setIsLevelOpen(false);
+    // If keepSubjectOpen is requested (from inside the level selector) or if subject was cleared, keep subject menu open
+    if (keepSubjectOpen || !nextSubject) {
+      setIsSubjectOpen(true);
+    } else {
+      setIsSubjectOpen(false);
+    }
+  };
+
+  const handleSelectLevelQuick = (lvl: string) => {
+    const cat = EDUCATION_SYSTEM.find((c) => c.levels.includes(lvl));
+    const catName = cat ? cat.name : 'School';
+    handleSelectLevel(lvl, catName, true);
   };
 
   const handleSelectSubject = (subjectName: string) => {
-    const subj = availableSubjects.find((s) => s.name === subjectName);
-    const defaultTopic = subj?.topics[0] || 'General Concepts';
+    const subjectsForCurrentLevel = getSubjectsForLevel(learningContext.gradeOrProgramme);
+    const subj = subjectsForCurrentLevel.find((s) => s.name.toLowerCase() === subjectName.toLowerCase());
+    // Changing the subject must clear any incompatible old topic
+    const topicStillValid = subj ? subj.topics.includes(learningContext.topic) : false;
+    const nextTopic = topicStillValid ? learningContext.topic : '';
 
     updateLearningContext({
-      subject: subjectName,
-      topic: defaultTopic
+      subject: subj ? subj.name : subjectName,
+      topic: nextTopic
     });
-    setIsSubjectOpen(false);
   };
 
   const handleSelectTopic = (topicName: string) => {
     updateLearningContext({ topic: topicName });
     setIsSubjectOpen(false);
+  };
+
+  const handleClearSubjectOrTopic = () => {
+    updateLearningContext({ subject: '', topic: '' });
   };
 
   const handleSelectLanguage = (code: string) => {
@@ -162,60 +206,182 @@ export const ContextSelectorBar: React.FC = () => {
                 setIsLanguageOpen(false);
                 setIsModeOpen(false);
               }}
-              className="flex items-center gap-1.5 px-2.5 py-1.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200/80 dark:hover:bg-slate-700 text-slate-900 dark:text-white rounded-lg text-xs font-semibold transition-colors"
+              className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
+                !learningContext.subject
+                  ? 'bg-amber-100 dark:bg-amber-950/60 text-amber-900 dark:text-amber-200 border border-amber-300 dark:border-amber-700 animate-pulse'
+                  : 'bg-slate-100 dark:bg-slate-800 hover:bg-slate-200/80 dark:hover:bg-slate-700 text-slate-900 dark:text-white'
+              }`}
             >
               <BookOpen className="w-3.5 h-3.5 text-amber-500" />
-              <span className="truncate max-w-[130px] sm:max-w-[180px]">
-                {learningContext.subject}: {learningContext.topic}
+              <span className="truncate max-w-[180px] sm:max-w-[300px]">
+                {learningContext.subject
+                  ? learningContext.topic
+                    ? `${learningContext.subject}: ${learningContext.topic}`
+                    : `${learningContext.subject} (Select Topic)`
+                  : 'Choose Subject & Topic'}
               </span>
               <ChevronDown className="w-3 h-3 opacity-60" />
             </button>
 
             {isSubjectOpen && (
-              <div className="absolute top-full left-0 mt-1.5 w-80 max-h-88 overflow-y-auto bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-2xl z-50 p-2 space-y-3 text-xs">
+              <div
+                className="absolute top-full left-0 mt-2 max-h-[85vh] sm:max-h-[540px] overflow-y-auto bg-[#0F172A] border border-slate-700/90 rounded-2xl shadow-2xl z-50 p-3 sm:p-4 space-y-4 text-xs text-white"
+                style={{
+                  width: 'min(95vw, 680px)',
+                  minWidth: '320px',
+                  maxWidth: '95vw',
+                }}
+              >
                 <div>
-                  <span className="font-bold text-[10px] uppercase tracking-wider text-slate-400 px-2 block mb-1">
-                    Select Subject
-                  </span>
-                  <div className="grid grid-cols-2 gap-1 px-1 mb-2">
+                  <div className="flex items-center justify-between px-1 mb-2">
+                    <span className="font-bold text-xs uppercase tracking-wider text-[#facc15] font-mono">
+                      1. SELECT LEVEL &amp; SUBJECT
+                    </span>
+                    {learningContext.subject && (
+                      <button
+                        onClick={handleClearSubjectOrTopic}
+                        className="text-xs text-[#facc15] hover:underline font-semibold cursor-pointer"
+                      >
+                        Clear Selection
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Level Selector FIRST before subject */}
+                  <div className="mb-3.5 bg-slate-900/95 p-2.5 rounded-xl border border-slate-800">
+                    <div className="flex items-center justify-between text-[11px] font-bold text-slate-300 uppercase tracking-wider mb-2">
+                      <span className="flex items-center gap-1.5">
+                        <GraduationCap className="w-3.5 h-3.5 text-[#facc15]" />
+                        <span>Select Level:</span>
+                      </span>
+                      <span className="text-[#facc15] font-mono lowercase">
+                        active: {learningContext.gradeOrProgramme || 'Grade 10'}
+                      </span>
+                    </div>
+
+                    {/* Level buttons: Grade 4 to University */}
+                    <div className="flex flex-wrap gap-1.5">
+                      {APP_LEVELS.map((lvl) => {
+                        const isCurrent = (learningContext.gradeOrProgramme || 'Grade 10') === lvl;
+                        return (
+                          <button
+                            key={lvl}
+                            type="button"
+                            onClick={() => handleSelectLevelQuick(lvl)}
+                            className={`px-2.5 py-1.5 rounded-lg text-xs transition-all cursor-pointer ${
+                              isCurrent
+                                ? 'bg-[#facc15] text-[#0F172A] font-black shadow-md ring-2 ring-yellow-400'
+                                : 'bg-slate-800/90 text-slate-200 hover:bg-slate-700 hover:text-white border border-slate-700/80 font-medium'
+                            }`}
+                          >
+                            {lvl}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Subject Sub-header for selected level */}
+                  <div className="px-1 mb-2 flex items-center justify-between">
+                    <span className="text-[11px] font-semibold text-slate-200">
+                      Subjects for <span className="text-[#facc15] font-bold">{learningContext.gradeOrProgramme || 'Grade 10'}</span>:
+                    </span>
+                    <span className="text-[10px] text-slate-400">
+                      {availableSubjects.length} subjects
+                    </span>
+                  </div>
+
+                  {/* 2-column grid with auto-height buttons showing full text */}
+                  <div className="grid grid-cols-2 gap-2 sm:gap-2.5 px-0.5 mb-2">
                     {availableSubjects.map((s) => (
                       <button
                         key={s.id}
+                        type="button"
                         onClick={() => handleSelectSubject(s.name)}
-                        className={`px-2 py-1.5 rounded-lg text-left text-xs truncate transition-colors ${
+                        className={`rounded-xl text-center flex items-center justify-center transition-all cursor-pointer font-medium ${
                           learningContext.subject === s.name
-                            ? 'bg-amber-500 text-slate-950 font-bold'
-                            : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200'
+                            ? 'bg-[#facc15] text-slate-950 font-bold shadow-md ring-2 ring-yellow-400/60'
+                            : 'bg-slate-800/90 text-slate-100 hover:bg-slate-800 hover:text-white border border-slate-700 hover:border-yellow-400/40'
                         }`}
+                        style={{
+                          whiteSpace: 'normal',
+                          overflow: 'visible',
+                          textOverflow: 'clip',
+                          wordWrap: 'break-word',
+                          overflowWrap: 'break-word',
+                          lineHeight: 1.2,
+                          minHeight: '42px',
+                          height: 'auto',
+                          padding: '8px 12px',
+                          fontSize: '13px',
+                          textAlign: 'center'
+                        }}
                       >
-                        {s.name}
+                        <span
+                          className="w-full text-center"
+                          style={{
+                            whiteSpace: 'normal',
+                            overflow: 'visible',
+                            textOverflow: 'clip',
+                            wordWrap: 'break-word',
+                            overflowWrap: 'break-word',
+                            lineHeight: 1.2,
+                            fontSize: '13px'
+                          }}
+                        >
+                          {s.name}
+                        </span>
                       </button>
                     ))}
                   </div>
                 </div>
 
-                <div className="pt-2 border-t border-slate-100 dark:border-slate-800">
-                  <span className="font-bold text-[10px] uppercase tracking-wider text-slate-400 px-2 block mb-1">
-                    Select Topic ({learningContext.subject})
+                <div className="pt-3 border-t border-slate-800">
+                  <span className="font-bold text-xs uppercase tracking-wider text-[#facc15] px-1 block mb-2 font-mono">
+                    {learningContext.subject
+                      ? `2. SELECT TOPIC (${learningContext.subject})`
+                      : '2. SELECT TOPIC (Choose a subject above first)'}
                   </span>
-                  <div className="space-y-1">
-                    {currentSubjectObj.topics.map((t) => (
+                  {currentSubjectObj ? (
+                    <div className="space-y-1.5">
+                      {/* Option for open subject questions */}
                       <button
-                        key={t}
-                        onClick={() => handleSelectTopic(t)}
-                        className={`w-full text-left px-2.5 py-1.5 rounded-lg flex items-center justify-between text-xs transition-colors ${
-                          learningContext.topic === t
-                            ? 'bg-amber-400/20 text-amber-700 dark:text-amber-300 font-bold'
-                            : 'hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300'
+                        type="button"
+                        onClick={() => handleSelectTopic('')}
+                        className={`w-full text-left px-3 py-2 rounded-xl flex items-center justify-between text-xs transition-colors cursor-pointer ${
+                          !learningContext.topic
+                            ? 'bg-yellow-400/20 text-[#facc15] font-bold border border-yellow-400/40'
+                            : 'hover:bg-slate-800 text-slate-300 border border-transparent'
                         }`}
                       >
-                        <span className="truncate">{t}</span>
-                        {learningContext.topic === t && (
-                          <Check className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+                        <span className="italic">All Topics / Ask Any Question</span>
+                        {!learningContext.topic && (
+                          <Check className="w-3.5 h-3.5 text-[#facc15] shrink-0" />
                         )}
                       </button>
-                    ))}
-                  </div>
+                      {currentSubjectObj.topics.map((t) => (
+                        <button
+                          key={t}
+                          type="button"
+                          onClick={() => handleSelectTopic(t)}
+                          className={`w-full text-left px-3 py-2 rounded-xl flex items-center justify-between text-xs transition-colors cursor-pointer ${
+                            learningContext.topic === t
+                              ? 'bg-yellow-400/20 text-[#facc15] font-bold border border-yellow-400/40'
+                              : 'hover:bg-slate-800 text-slate-300 border border-transparent'
+                          }`}
+                        >
+                          <span className="break-words leading-relaxed">{t}</span>
+                          {learningContext.topic === t && (
+                            <Check className="w-3.5 h-3.5 text-[#facc15] shrink-0 ml-2" />
+                          )}
+                        </button>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="p-4 text-center text-slate-400 text-xs italic bg-slate-900/60 rounded-xl border border-dashed border-slate-800">
+                      Select a subject above to view curriculum topics.
+                    </div>
+                  )}
                 </div>
               </div>
             )}

@@ -2,7 +2,7 @@
  * @license
  * SPDX-License-Identifier: Apache-2.0
  * 
- * NEXOVIA ACADEMY - PHASE 8: TOPIC MASTERY DETAIL MODAL
+ * NEXOVIAN ACADEMY - PHASE 8: TOPIC MASTERY DETAIL MODAL
  * 
  * Detailed mastery breakdown:
  * - Diagnostic mastery score & status
@@ -38,7 +38,7 @@ export const TopicMasteryModal: React.FC<TopicMasteryModalProps> = ({
   onClose,
   onPractice
 }) => {
-  const { setCurrentTab, updateLearningContext } = useLearning();
+  const { setCurrentTab, learningContext, updateLearningContext } = useLearning();
 
   if (!detail) return null;
 
@@ -53,11 +53,11 @@ export const TopicMasteryModal: React.FC<TopicMasteryModalProps> = ({
   const handleAskAiTutor = () => {
     if (updateLearningContext) {
       updateLearningContext({
-        educationLevel: 'FET Phase (Grade 10–12 CAPS)',
-        gradeOrProgramme: 'Grade 10',
+        educationLevel: learningContext?.educationLevel || 'FET Phase (Grade 10–12 CAPS)',
+        gradeOrProgramme: learningContext?.gradeOrProgramme || 'Grade 10',
         subject: detail.subject,
         topic: detail.topic,
-        language: 'en',
+        language: learningContext?.language || 'en',
         mode: 'explain'
       });
     }
@@ -135,7 +135,7 @@ export const TopicMasteryModal: React.FC<TopicMasteryModalProps> = ({
           <div className="p-3 rounded-xl bg-amber-50/70 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/60 text-[11px] text-amber-900 dark:text-amber-200 flex items-start gap-2">
             <HelpCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
             <p className="leading-relaxed">
-              <strong>Notice:</strong> Nexovia mastery percentages are internal diagnostic heuristics designed to personalize your learning difficulty. They do not represent official Department of Basic Education (DBE) or school report card marks.
+              <strong>Notice:</strong> Nexovian mastery percentages are internal diagnostic heuristics designed to personalize your learning difficulty. They do not represent official Department of Basic Education (DBE) or school report card marks.
             </p>
           </div>
 
@@ -187,7 +187,7 @@ export const TopicMasteryModal: React.FC<TopicMasteryModalProps> = ({
           {/* Mastery Scale Reference */}
           <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200/80 dark:border-slate-800">
             <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block mb-2">
-              Nexovia Diagnostic Mastery Scale
+              Nexovian Diagnostic Mastery Scale
             </span>
             <div className="grid grid-cols-5 gap-1.5 text-center text-[10px]">
               <div className="p-1.5 rounded bg-rose-100 dark:bg-rose-950/40 text-rose-800 dark:text-rose-300 font-medium">

@@ -2,7 +2,7 @@
  * @license
  * SPDX-License-Identifier: Apache-2.0
  * 
- * NEXOVIA ACADEMY - PHASE 8: STUDENT DASHBOARD & MASTERY EXPERIENCE
+ * NEXOVIAN ACADEMY - PHASE 8: STUDENT DASHBOARD & MASTERY EXPERIENCE
  * 
  * Central learner home answering:
  * 1. What am I learning?
@@ -74,6 +74,11 @@ import { MyMasteryView } from './MyMasteryView';
 import { ProgressTrendsView } from './ProgressTrendsView';
 import { LearnerProfileModal } from './LearnerProfileModal';
 import { ContextualAITutorBar } from './ContextualAITutorBar';
+import { getSubjectsForLevel } from '../../data/educationData';
+import { AnswerFeedbackWidget } from '../feedback/AnswerFeedbackWidget';
+import { OhmsLawInteractiveWidget } from '../interactive/OhmsLawInteractiveWidget';
+import { HeroSection } from '../home/HeroSection';
+import { MissionHeroBanner } from '../home/MissionHeroBanner';
 
 export const StudentMasteryDashboardView: React.FC = () => {
   const {
@@ -82,10 +87,11 @@ export const StudentMasteryDashboardView: React.FC = () => {
     setCurrentTab,
     openLesson,
     setIsSearchOpen,
+    learningContext,
     updateLearningContext
   } = useLearning();
 
-  const { user, isAuthenticated, setIsAuthModalOpen, setAuthModalMode } = useAuth();
+  const { user, isAuthenticated, setIsAuthModalOpen, setAuthModalMode, logout } = useAuth();
   const { t } = useTranslation();
 
   // Active sub-navigation tab
@@ -104,6 +110,45 @@ export const StudentMasteryDashboardView: React.FC = () => {
   const [completedTaskIds, setCompletedTaskIds] = useState<Record<string, boolean>>({
     task_2: true
   });
+
+  // Quick Study Question & Feedback state on main learning page
+  const [dashboardAskQuery, setDashboardAskQuery] = useState('');
+  const [dashboardAnswerData, setDashboardAnswerData] = useState<{
+    question: string;
+    answer: string;
+    source: string;
+  } | null>(null);
+  const [isDashboardAskLoading, setIsDashboardAskLoading] = useState(false);
+
+  const handleDashboardAsk = async (customQ?: string) => {
+    const q = (customQ || dashboardAskQuery).trim();
+    if (!q) return;
+    setIsDashboardAskLoading(true);
+    try {
+      const res = await fetch('/api/ask', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          question: q,
+          grade: summary.gradeOrProgramme || 'Grade 10',
+          language: summary.preferredLanguage || learningContext?.language || 'en',
+          subject: learningContext?.subject || 'Mathematics'
+        })
+      });
+      const data = await res.json();
+      if (data.success && data.answer) {
+        setDashboardAnswerData({
+          question: q,
+          answer: data.answer,
+          source: data.source || 'cache'
+        });
+      }
+    } catch (err) {
+      console.error('Error in dashboard quick ask:', err);
+    } finally {
+      setIsDashboardAskLoading(false);
+    }
+  };
 
   // Compile full dashboard summary from real data
   const summary: StudentDashboardSummary = useMemo(() => {
@@ -132,12 +177,18 @@ export const StudentMasteryDashboardView: React.FC = () => {
 
   const launchContextualTutor = (topic: string, mode: AITutorMode = 'explain') => {
     if (updateLearningContext) {
+      const available = getSubjectsForLevel(summary.gradeOrProgramme);
+      const matched = available.find((s) =>
+        s.topics.some((t) => t.toLowerCase() === topic.toLowerCase() || topic.toLowerCase().includes(t.toLowerCase()))
+      );
+      const subj = matched ? matched.name : learningContext?.subject || 'Mathematics';
+
       updateLearningContext({
         educationLevel: summary.educationLevel,
         gradeOrProgramme: summary.gradeOrProgramme,
-        subject: 'Mathematics',
+        subject: subj,
         topic,
-        language: summary.preferredLanguage,
+        language: summary.preferredLanguage || learningContext?.language || 'en',
         mode
       });
     }
@@ -145,56 +196,61 @@ export const StudentMasteryDashboardView: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 pb-24 md:pb-12 text-slate-900 dark:text-slate-100 transition-colors">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 pb-24 md:pb-12 text-slate-900 dark:text-slate-100 transition-colors w-full max-w-[100vw] overflow-x-hidden">
       {/* 1. TOP HEADER & LEARNER COCKPIT BAR */}
-      <header className="bg-white dark:bg-slate-900 border-b border-slate-200/80 dark:border-slate-800 sticky top-0 z-30 shadow-xs backdrop-blur-md bg-white/95 dark:bg-slate-900/95">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3.5 flex items-center justify-between gap-4">
+      <header className="bg-white dark:bg-slate-900 border-b border-slate-200/80 dark:border-slate-800 sticky top-0 z-30 shadow-xs backdrop-blur-md bg-white/95 dark:bg-slate-900/95 w-full max-w-full overflow-hidden">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between gap-2 sm:gap-4 w-full max-w-full">
           {/* Learner Info */}
-          <div className="flex items-center gap-3 min-w-0">
+          <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
             <div className="relative shrink-0">
-              <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-xl bg-gradient-to-tr from-amber-500 to-amber-300 text-slate-950 flex items-center justify-center font-bold text-sm shadow-xs border border-amber-400">
+              <div className="w-9 h-9 sm:w-11 sm:h-11 rounded-xl bg-gradient-to-tr from-amber-500 to-amber-300 text-slate-950 flex items-center justify-center font-bold text-sm shadow-xs border border-amber-400">
                 {summary.learnerName.charAt(0)}
               </div>
-              <span className="absolute -bottom-1 -right-1 w-3.5 h-3.5 rounded-full bg-emerald-500 border-2 border-white dark:border-slate-900" />
+              <span className="absolute -bottom-1 -right-1 w-3 h-3 rounded-full bg-emerald-500 border-2 border-white dark:border-slate-900" />
             </div>
 
             <div className="min-w-0">
-              <div className="flex items-center gap-2">
-                <h1 className="font-display text-base sm:text-lg font-bold text-slate-900 dark:text-white truncate">
+              <div className="flex items-center gap-1.5 sm:gap-2">
+                <h1 className="font-display text-sm sm:text-base lg:text-lg font-bold text-slate-900 dark:text-white truncate">
                   Welcome back, {summary.learnerName.split(' ')[0]}
                 </h1>
-                <span className="hidden sm:inline-flex text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800">
+                <span className="hidden sm:inline-flex text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800 shrink-0">
                   {summary.gradeOrProgramme}
                 </span>
               </div>
-              <p className="text-xs text-slate-500 dark:text-slate-400 truncate">
+              <p className="text-[11px] sm:text-xs text-slate-500 dark:text-slate-400 truncate">
                 {summary.educationLevel} · CAPS South Africa
               </p>
             </div>
           </div>
 
           {/* Controls: Streak, Notifications, Search, Profile */}
-          <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+          <div className="flex items-center gap-1.5 sm:gap-3 shrink-0">
             {/* Streak Badge */}
             <div
-              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 text-amber-800 dark:text-amber-300 text-xs font-bold"
+              className="flex items-center gap-1 sm:gap-1.5 px-2 sm:px-2.5 py-1.5 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 text-amber-800 dark:text-amber-300 text-xs font-bold shrink-0"
               title={`Consecutive learning days. Longest: ${summary.streak.longestStreakDays} days.`}
             >
-              <Flame className="w-4 h-4 text-orange-500 fill-orange-500" />
-              <span>
+              <Flame className="w-3.5 h-3.5 text-orange-500 fill-orange-500 shrink-0" />
+              <span className="hidden sm:inline">
                 {summary.streak.currentStreakDays > 0
                   ? `${summary.streak.currentStreakDays} day streak 🔥`
-                  : 'Start streak today'}
+                  : 'Start streak'}
+              </span>
+              <span className="sm:hidden text-[11px]">
+                {summary.streak.currentStreakDays > 0
+                  ? `${summary.streak.currentStreakDays}d 🔥`
+                  : '0d'}
               </span>
             </div>
 
             {/* Notification Bell */}
             <button
               onClick={() => setIsNotificationsOpen(true)}
-              className="relative p-2 rounded-xl text-slate-500 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+              className="relative p-1.5 sm:p-2 rounded-xl text-slate-500 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors shrink-0"
               aria-label="View notifications"
             >
-              <Bell className="w-5 h-5" />
+              <Bell className="w-4 h-4 sm:w-5 sm:h-5" />
               {summary.notifications.length > 0 && (
                 <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-amber-500 ring-2 ring-white dark:ring-slate-900" />
               )}
@@ -203,83 +259,105 @@ export const StudentMasteryDashboardView: React.FC = () => {
             {/* Global Search */}
             <button
               onClick={() => setIsSearchOpen(true)}
-              className="p-2 rounded-xl text-slate-500 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+              className="p-1.5 sm:p-2 rounded-xl text-slate-500 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors shrink-0"
               aria-label="Search curriculum and tests"
             >
-              <Search className="w-5 h-5" />
+              <Search className="w-4 h-4 sm:w-5 sm:h-5" />
             </button>
 
             {/* Learner Profile Button */}
             <button
               onClick={() => setIsProfileModalOpen(true)}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-800 rounded-xl transition-colors"
+              className="flex items-center gap-1 px-2.5 sm:px-3 py-1.5 text-xs font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-800 rounded-xl transition-colors shrink-0"
             >
               <span>Profile</span>
             </button>
 
-            {/* Personalize Button */}
-            <button
-              onClick={() => setIsOnboardingOpen(true)}
-              className="hidden lg:flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-800 rounded-xl transition-colors"
-            >
-              <span>Personalize</span>
-            </button>
+            {/* User Name, Email & Logout Button */}
+            {user?.email && (
+              <div className="flex items-center gap-2 shrink-0">
+                <div className="hidden lg:flex flex-col text-right leading-tight">
+                  <span className="text-xs font-bold text-slate-900 dark:text-white truncate max-w-[130px]">
+                    {user.name}
+                  </span>
+                  <span className="text-[10px] font-mono text-slate-500 truncate max-w-[130px]">
+                    {user.email}
+                  </span>
+                </div>
+                <button
+                  onClick={logout}
+                  className="flex items-center gap-1 px-2.5 sm:px-3 py-1.5 text-xs font-bold text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/40 border border-red-200 dark:border-red-900/60 rounded-xl transition-colors shrink-0 cursor-pointer"
+                  title="Log out of Supabase"
+                >
+                  <span>Logout</span>
+                </button>
+              </div>
+            )}
           </div>
         </div>
       </header>
 
+      {/* TOP MISSION HERO BANNER (RIGHT BELOW HEADER/LOGO, ABOVE EVERYTHING ELSE) */}
+      <div className="max-w-7xl mx-auto w-full">
+        <MissionHeroBanner />
+      </div>
+
       {/* 2. MAIN DASHBOARD CONTENT GRID */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8 space-y-8">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8 space-y-8 w-full max-w-full overflow-hidden">
 
-        {/* SUB NAVIGATION TABS: Overview, My Mastery, Progress Trends, Study Plan */}
-        <div className="flex items-center gap-1.5 p-1.5 bg-slate-200/80 dark:bg-slate-800/80 rounded-2xl w-full sm:w-fit overflow-x-auto scrollbar-none shadow-xs">
-          <button
-            onClick={() => setDashboardSubTab('overview')}
-            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${
-              dashboardSubTab === 'overview'
-                ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-xs'
-                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-            }`}
-          >
-            <Layers className="w-3.5 h-3.5" />
-            <span>Overview</span>
-          </button>
+        {/* SUB NAVIGATION TABS: Overview, My Mastery, Progress Tracker, Study Plan */}
+        <div className="w-full max-w-full px-4 sm:px-0">
+          <div className="w-full max-w-full overflow-x-auto scrollbar-hide py-1">
+            <div className="flex items-center gap-2 p-1.5 bg-slate-200/80 dark:bg-slate-800/80 rounded-2xl min-w-max flex-nowrap shadow-xs">
+              <button
+                onClick={() => setDashboardSubTab('overview')}
+                className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap shrink-0 ${
+                  dashboardSubTab === 'overview'
+                    ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-xs'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                }`}
+              >
+                <Layers className="w-3.5 h-3.5" />
+                <span>Overview</span>
+              </button>
 
-          <button
-            onClick={() => setDashboardSubTab('mastery')}
-            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${
-              dashboardSubTab === 'mastery'
-                ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-xs'
-                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-            }`}
-          >
-            <Target className="w-3.5 h-3.5 text-amber-500" />
-            <span>My Mastery</span>
-          </button>
+              <button
+                onClick={() => setDashboardSubTab('mastery')}
+                className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap shrink-0 ${
+                  dashboardSubTab === 'mastery'
+                    ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-xs'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                }`}
+              >
+                <Target className="w-3.5 h-3.5 text-amber-500" />
+                <span>My Mastery</span>
+              </button>
 
-          <button
-            onClick={() => setDashboardSubTab('trends')}
-            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${
-              dashboardSubTab === 'trends'
-                ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-xs'
-                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-            }`}
-          >
-            <TrendingUp className="w-3.5 h-3.5 text-emerald-500" />
-            <span>Progress Trends</span>
-          </button>
+              <button
+                onClick={() => setDashboardSubTab('trends')}
+                className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap shrink-0 ${
+                  dashboardSubTab === 'trends'
+                    ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-xs'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                }`}
+              >
+                <TrendingUp className="w-3.5 h-3.5 text-emerald-500" />
+                <span>Progress Tracker</span>
+              </button>
 
-          <button
-            onClick={() => setDashboardSubTab('study_plan')}
-            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${
-              dashboardSubTab === 'study_plan'
-                ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-xs'
-                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-            }`}
-          >
-            <Calendar className="w-3.5 h-3.5 text-blue-500" />
-            <span>Study Plan</span>
-          </button>
+              <button
+                onClick={() => setDashboardSubTab('study_plan')}
+                className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap shrink-0 ${
+                  dashboardSubTab === 'study_plan'
+                    ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-xs'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                }`}
+              >
+                <Calendar className="w-3.5 h-3.5 text-blue-500" />
+                <span>Study Plan</span>
+              </button>
+            </div>
+          </div>
         </div>
 
         {/* CONDITIONALLY RENDER BASED ON SUB TAB */}
@@ -296,7 +374,7 @@ export const StudentMasteryDashboardView: React.FC = () => {
         )}
 
         {dashboardSubTab === 'study_plan' && (
-          <div className="space-y-6">
+          <div className="w-full max-w-full overflow-hidden space-y-6">
             <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-3xl p-5 sm:p-7 shadow-xs">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-5 border-b border-slate-100 dark:border-slate-800">
                 <div>
@@ -427,8 +505,232 @@ export const StudentMasteryDashboardView: React.FC = () => {
 
         {dashboardSubTab === 'overview' && (
           <>
-            {/* CONTEXTUAL AI TUTOR QUICK ACTIONS */}
+            {/* 1. HERO SECTION FOR NEXOVIAN (PTY) LTD */}
+            <HeroSection />
+
+            {/* 2. GUIDED LEARNING FINDER - KEPT DIRECTLY BELOW HERO */}
+            <section
+              id="guided-learning-finder"
+              aria-label="Guided Learning Finder"
+              className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-3xl p-5 sm:p-7 shadow-xs transition-colors"
+            >
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+                <div>
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/50 px-2.5 py-0.5 rounded-full border border-amber-300 dark:border-amber-700/60 font-mono">
+                      Guided Learning Finder
+                    </span>
+                    <span className="text-xs text-slate-500">1-Tap Direct Syllabus</span>
+                  </div>
+                  <h2 className="font-display text-base sm:text-lg font-bold text-slate-900 dark:text-white">
+                    Pick Your Level, Subject &amp; Start in 1 Click
+                  </h2>
+                </div>
+                <span className="text-xs text-slate-500 hidden sm:inline">
+                  CAPS Grade 4–12 · TVET N1–N6 · University
+                </span>
+              </div>
+
+              <div className="space-y-4">
+                {/* Level selector tabs */}
+                <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setQuickLevel('school');
+                      setQuickSubject('Mathematics');
+                    }}
+                    className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap min-h-[40px] flex items-center gap-1.5 cursor-pointer ${
+                      quickLevel === 'school'
+                        ? 'bg-amber-400 text-slate-950 shadow-2xs font-bold'
+                        : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
+                    }`}
+                  >
+                    <School className="w-3.5 h-3.5" />
+                    <span>School: Grades 4–12</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setQuickLevel('tvet');
+                      setQuickSubject('Engineering Mathematics');
+                    }}
+                    className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap min-h-[40px] flex items-center gap-1.5 cursor-pointer ${
+                      quickLevel === 'tvet'
+                        ? 'bg-blue-500 text-white shadow-2xs font-bold'
+                        : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
+                    }`}
+                  >
+                    <Briefcase className="w-3.5 h-3.5" />
+                    <span>TVET: N1–N6 &amp; NC(V)</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setQuickLevel('higherEd');
+                      setQuickSubject('Calculus & Linear Algebra');
+                    }}
+                    className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap min-h-[40px] flex items-center gap-1.5 cursor-pointer ${
+                      quickLevel === 'higherEd'
+                        ? 'bg-emerald-500 text-white shadow-2xs font-bold'
+                        : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
+                    }`}
+                  >
+                    <GraduationCap className="w-3.5 h-3.5" />
+                    <span>University</span>
+                  </button>
+                </div>
+
+                {/* Quick subject pills */}
+                <div className="flex flex-wrap gap-2">
+                  {(quickLevel === 'school'
+                    ? ['Mathematics', 'Physical Sciences', 'Life Sciences', 'English', 'Accounting', 'Economics']
+                    : quickLevel === 'tvet'
+                    ? ['Engineering Mathematics', 'Electrotechnics', 'Industrial Electronics', 'Mechanotechnics', 'Financial Accounting']
+                    : ['Calculus & Linear Algebra', 'Electromagnetic Waves', 'Computer Science', 'Microeconomics', 'Organic Chemistry']
+                  ).map((subj) => (
+                    <button
+                      key={subj}
+                      type="button"
+                      onClick={() => setQuickSubject(subj)}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all min-h-[38px] cursor-pointer ${
+                        quickSubject === subj
+                          ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-950 font-bold shadow-2xs'
+                          : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
+                      }`}
+                    >
+                      {subj}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Direct 1-tap launch action bar */}
+                <div className="pt-3 border-t border-slate-100 dark:border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-3">
+                  <span className="text-xs text-slate-500">
+                    Selected: <strong className="text-slate-900 dark:text-white">{quickSubject}</strong>
+                  </span>
+                  <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        launchContextualTutor(`${quickSubject} Fundamentals`, 'explain');
+                      }}
+                      className="flex-1 sm:flex-initial px-4 py-2 bg-amber-400 hover:bg-amber-300 text-slate-950 font-bold rounded-xl text-xs transition-transform active:scale-95 flex items-center justify-center gap-1.5 min-h-[44px] cursor-pointer"
+                    >
+                      <Sparkles className="w-3.5 h-3.5" />
+                      <span>Ask AI About {quickSubject}</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setCurrentTab('learn')}
+                      className="flex-1 sm:flex-initial px-4 py-2 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 font-bold rounded-xl text-xs transition-colors flex items-center justify-center gap-1.5 min-h-[44px] cursor-pointer"
+                    >
+                      <BookOpen className="w-3.5 h-3.5" />
+                      <span>View All Lessons</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            {/* 3. CONTEXTUAL AI TUTOR QUICK ACTIONS */}
             <ContextualAITutorBar summary={summary} />
+
+            {/* 4. QUICK STUDY ASSISTANT (Immediate answers + "Was this helpful? 👍 Yes / 👎 No" feedback) */}
+            <section aria-label="Quick Study Question Assistant" className="mb-6 p-5 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-xs">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-3">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-xl bg-amber-400 text-slate-950 flex items-center justify-center font-bold text-sm shadow-2xs">
+                    ✦
+                  </div>
+                  <div>
+                    <h3 className="font-display text-sm sm:text-base font-bold text-slate-900 dark:text-white">
+                      Ask Any Study Question
+                    </h3>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">
+                      Instant verified explanations powered by local question bank & AI
+                    </p>
+                  </div>
+                </div>
+
+                {/* Quick suggestions */}
+                <div className="flex flex-wrap items-center gap-1.5 text-xs">
+                  <span className="text-[11px] text-slate-400 mr-1 hidden lg:inline">Try:</span>
+                  {[
+                    "What is Ohm's Law?",
+                    "What are the states of matter?",
+                    "What is photosynthesis?"
+                  ].map((preset) => (
+                    <button
+                      key={preset}
+                      type="button"
+                      onClick={() => {
+                        setDashboardAskQuery(preset);
+                        handleDashboardAsk(preset);
+                      }}
+                      className="px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-amber-100 dark:hover:bg-amber-950/60 text-slate-700 dark:text-slate-300 hover:text-amber-800 dark:hover:text-amber-300 text-[11px] font-semibold transition-colors"
+                    >
+                      {preset}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Input row */}
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  placeholder="Type a maths or science question (e.g. How to solve linear equations?)..."
+                  value={dashboardAskQuery}
+                  onChange={(e) => setDashboardAskQuery(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') handleDashboardAsk();
+                  }}
+                  className="flex-1 px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 text-xs sm:text-sm placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-amber-500/50"
+                />
+                <button
+                  type="button"
+                  onClick={() => handleDashboardAsk()}
+                  disabled={isDashboardAskLoading || !dashboardAskQuery.trim()}
+                  className="px-5 py-2.5 bg-amber-400 hover:bg-amber-300 disabled:opacity-50 text-slate-950 font-bold rounded-xl text-xs sm:text-sm shadow-xs transition-transform active:scale-95 shrink-0"
+                >
+                  {isDashboardAskLoading ? 'Searching...' : 'Get Answer'}
+                </button>
+              </div>
+
+              {/* Answer display with Feedback Widget */}
+              {dashboardAnswerData && (
+                <div className="mt-4 p-4 sm:p-5 rounded-2xl bg-slate-50/70 dark:bg-slate-950/60 border border-slate-200/80 dark:border-slate-800">
+                  <div className="flex items-center justify-between text-xs text-slate-500 mb-2">
+                    <span className="font-bold text-slate-800 dark:text-slate-200">
+                      Answer for: "{dashboardAnswerData.question}"
+                    </span>
+                    <span className="text-[11px] px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 font-mono font-bold">
+                      {dashboardAnswerData.source === 'cache' ? '⚡ Local Bank' : '✨ AI Generated'}
+                    </span>
+                  </div>
+
+                  <div className="prose dark:prose-invert max-w-none text-xs sm:text-sm leading-relaxed whitespace-pre-line font-normal text-slate-800 dark:text-slate-200">
+                    {dashboardAnswerData.answer}
+                  </div>
+
+                  {/* Interactive Ohm's Law Simulation when question or answer relates to Ohm's Law */}
+                  {(dashboardAnswerData.question.toLowerCase().includes('ohm') ||
+                    dashboardAnswerData.answer.toLowerCase().includes("ohm's law")) && (
+                    <OhmsLawInteractiveWidget />
+                  )}
+
+                  {/* The Feedback Widget: "Was this helpful? 👍 Yes / 👎 No" */}
+                  <AnswerFeedbackWidget
+                    question={dashboardAnswerData.question}
+                    answer={dashboardAnswerData.answer}
+                  />
+                </div>
+              )}
+            </section>
         
         {/* THE FOUR MAIN PRIMARY ACTIONS (Clean, beginner-friendly, large mobile buttons) */}
         <section aria-label="Main Learning Actions">
@@ -469,7 +771,7 @@ export const StudentMasteryDashboardView: React.FC = () => {
               </div>
             </button>
 
-            {/* 2. Ask Nexovia AI Card */}
+            {/* 2. Ask Nexovian AI Card */}
             <button
               onClick={() => setCurrentTab('tutor')}
               className="flex flex-col justify-between p-5 bg-white dark:bg-slate-900 border-2 border-slate-200/80 dark:border-slate-800 hover:border-blue-500 dark:hover:border-blue-400 rounded-3xl text-left shadow-sm hover:shadow-md transition-all group active:scale-98 min-h-[160px]"
@@ -479,7 +781,7 @@ export const StudentMasteryDashboardView: React.FC = () => {
                   <Sparkles className="w-6 h-6" />
                 </div>
                 <h3 className="font-display text-base sm:text-lg font-bold text-slate-900 dark:text-white">
-                  Ask Nexovia AI
+                  Ask Nexovian AI
                 </h3>
                 <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">
                   Step-by-step help in 11 SA languages & voice
@@ -534,127 +836,6 @@ export const StudentMasteryDashboardView: React.FC = () => {
                 <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
               </div>
             </button>
-          </div>
-        </section>
-
-        {/* GUIDED QUICK-START: CHOOSE LEVEL & SUBJECT */}
-        <section className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-3xl p-5 sm:p-6 shadow-xs">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
-            <div>
-              <span className="text-[10px] font-bold uppercase tracking-wider text-amber-600 dark:text-amber-400">
-                Guided Quick-Start
-              </span>
-              <h3 className="font-display text-base sm:text-lg font-bold text-slate-900 dark:text-white">
-                Pick a Subject & Start in 1 Click
-              </h3>
-            </div>
-            <span className="text-xs text-slate-500">
-              Zero complicated setup required
-            </span>
-          </div>
-
-          <div className="space-y-4">
-            {/* Level selector tabs */}
-            <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
-              <button
-                type="button"
-                onClick={() => {
-                  setQuickLevel('school');
-                  setQuickSubject('Mathematics');
-                }}
-                className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap min-h-[40px] flex items-center gap-1.5 ${
-                  quickLevel === 'school'
-                    ? 'bg-amber-400 text-slate-950 shadow-2xs font-bold'
-                    : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200'
-                }`}
-              >
-                <School className="w-3.5 h-3.5" />
-                <span>School: Grades 4–12</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => {
-                  setQuickLevel('tvet');
-                  setQuickSubject('Engineering Mathematics');
-                }}
-                className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap min-h-[40px] flex items-center gap-1.5 ${
-                  quickLevel === 'tvet'
-                    ? 'bg-blue-500 text-white shadow-2xs font-bold'
-                    : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200'
-                }`}
-              >
-                <Briefcase className="w-3.5 h-3.5" />
-                <span>TVET: N1–N6 & NC(V)</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => {
-                  setQuickLevel('higherEd');
-                  setQuickSubject('Calculus & Linear Algebra');
-                }}
-                className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap min-h-[40px] flex items-center gap-1.5 ${
-                  quickLevel === 'higherEd'
-                    ? 'bg-emerald-500 text-white shadow-2xs font-bold'
-                    : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200'
-                }`}
-              >
-                <GraduationCap className="w-3.5 h-3.5" />
-                <span>University</span>
-              </button>
-            </div>
-
-            {/* Quick subject pills */}
-            <div className="flex flex-wrap gap-2">
-              {(quickLevel === 'school'
-                ? ['Mathematics', 'Physical Sciences', 'Life Sciences', 'English', 'Accounting', 'Economics']
-                : quickLevel === 'tvet'
-                ? ['Engineering Mathematics', 'Electrotechnics', 'Industrial Electronics', 'Mechanotechnics', 'Financial Accounting']
-                : ['Calculus & Linear Algebra', 'Electromagnetic Waves', 'Computer Science', 'Microeconomics', 'Organic Chemistry']
-              ).map((subj) => (
-                <button
-                  key={subj}
-                  type="button"
-                  onClick={() => setQuickSubject(subj)}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all min-h-[38px] ${
-                    quickSubject === subj
-                      ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-950 font-bold'
-                      : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
-                  }`}
-                >
-                  {subj}
-                </button>
-              ))}
-            </div>
-
-            {/* Direct 1-tap launch action bar */}
-            <div className="pt-3 border-t border-slate-100 dark:border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-3">
-              <span className="text-xs text-slate-500">
-                Selected: <strong className="text-slate-900 dark:text-white">{quickSubject}</strong>
-              </span>
-              <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
-                <button
-                  type="button"
-                  onClick={() => {
-                    launchContextualTutor(`${quickSubject} Fundamentals`, 'explain');
-                  }}
-                  className="flex-1 sm:flex-initial px-4 py-2 bg-amber-400 hover:bg-amber-300 text-slate-950 font-bold rounded-xl text-xs transition-transform active:scale-95 flex items-center justify-center gap-1.5 min-h-[44px]"
-                >
-                  <Sparkles className="w-3.5 h-3.5" />
-                  <span>Ask AI About {quickSubject}</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setCurrentTab('learn')}
-                  className="flex-1 sm:flex-initial px-4 py-2 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 font-bold rounded-xl text-xs transition-colors flex items-center justify-center gap-1.5 min-h-[44px]"
-                >
-                  <BookOpen className="w-3.5 h-3.5" />
-                  <span>View All Lessons</span>
-                </button>
-              </div>
-            </div>
           </div>
         </section>
 
@@ -906,7 +1087,7 @@ export const StudentMasteryDashboardView: React.FC = () => {
         <div className="p-3.5 rounded-2xl bg-amber-50/60 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900/40 text-xs text-amber-900 dark:text-amber-200 flex items-start gap-2.5">
           <HelpCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
           <p className="leading-relaxed">
-            <strong>Educational Transparency Notice:</strong> Nexovia mastery scores are diagnostic learning analytics derived from Socratic quizzes and practice sessions. They guide adaptive recommendations and do not represent official Department of Basic Education (DBE) or school report card marks.
+            <strong>Educational Transparency Notice:</strong> Nexovian mastery scores are diagnostic learning analytics derived from Socratic quizzes and practice sessions. They guide adaptive recommendations and do not represent official Department of Basic Education (DBE) or school report card marks.
           </p>
         </div>
 

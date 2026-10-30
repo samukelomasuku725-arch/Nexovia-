@@ -1,7 +1,7 @@
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
- * Nexovia Academic Voice - Scholar Premium Configuration Modal
+ * NEXOVIAN Academic Voice - Scholar Premium Configuration Modal
  */
 
 import React from 'react';
@@ -47,10 +47,10 @@ export const ScholarPremiumModal: React.FC<Props> = ({
             <div>
               <div className="flex items-center gap-2">
                 <h3 className="font-display font-bold text-xl text-slate-900 dark:text-white">
-                  Nexovia Scholar Premium
+                  NEXOVIAN Scholar Premium
                 </h3>
                 <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-500 text-slate-950 uppercase">
-                  R50 / Month
+                  R60 / Month
                 </span>
               </div>
               <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
@@ -137,7 +137,7 @@ export const ScholarPremiumModal: React.FC<Props> = ({
                 <Crown className="w-4 h-4 text-amber-500" />
                 <span>Scholar Premium</span>
               </span>
-              <span className="text-xs font-bold text-amber-600 dark:text-amber-400">R50 / mo</span>
+              <span className="text-xs font-bold text-amber-600 dark:text-amber-400">R60 / mo</span>
             </div>
 
             <ul className="space-y-2 text-xs text-slate-700 dark:text-slate-200 font-medium">
@@ -177,7 +177,7 @@ export const ScholarPremiumModal: React.FC<Props> = ({
                   }}
                   className="w-full py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-bold shadow-sm transition-all active:scale-95"
                 >
-                  Activate Scholar Premium (R50/mo)
+                  Activate Scholar Premium (R60/mo)
                 </button>
               )}
             </div>

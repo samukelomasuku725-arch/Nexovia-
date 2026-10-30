@@ -2,7 +2,7 @@
  * @license
  * SPDX-License-Identifier: Apache-2.0
  * 
- * NEXOVIA ACADEMY - PHASE 8: NEW LEARNER ONBOARDING WIZARD
+ * NEXOVIAN ACADEMY - PHASE 8: NEW LEARNER ONBOARDING WIZARD
  * 
  * Guides first-time learners through customizing their academic profile:
  * 1. Grade / Education Level Selection
@@ -25,6 +25,8 @@ import {
 import { SALanguageCode } from '../../types';
 import { SA_LANGUAGES } from '../../i18n/translations';
 import { useAuth } from '../../context/AuthContext';
+import { useLearning } from '../../context/LearningContext';
+import { getSubjectsForLevel } from '../../data/educationData';
 
 interface NewLearnerOnboardingModalProps {
   isOpen: boolean;
@@ -38,30 +40,31 @@ export const NewLearnerOnboardingModal: React.FC<NewLearnerOnboardingModalProps>
   onComplete
 }) => {
   const { user, updateProfile } = useAuth();
+  const { learningContext, updateLearningContext } = useLearning();
 
   const [step, setStep] = useState<number>(1);
-  const [educationLevel, setEducationLevel] = useState('FET Phase (Grade 10–12 CAPS)');
-  const [gradeOrProgramme, setGradeOrProgramme] = useState('Grade 10');
+  const [educationLevel, setEducationLevel] = useState(
+    user?.educationLevel || learningContext?.educationLevel || 'FET Phase (Grade 10–12 CAPS)'
+  );
+  const [gradeOrProgramme, setGradeOrProgramme] = useState(
+    user?.gradeOrProgramme || learningContext?.gradeOrProgramme || 'Grade 10'
+  );
   const [selectedSubjects, setSelectedSubjects] = useState<string[]>([
     'Mathematics',
     'Physical Sciences'
   ]);
-  const [preferredLanguage, setPreferredLanguage] = useState<SALanguageCode>('en');
+  const [preferredLanguage, setPreferredLanguage] = useState<SALanguageCode>(
+    (user?.preferredLanguage as SALanguageCode) || learningContext?.language || 'en'
+  );
   const [dailyMinutes, setDailyMinutes] = useState<number>(30);
   const [primaryGoal, setPrimaryGoal] = useState<'matric_exam' | 'topic_catchup' | 'curriculum_ahead' | 'tvet_career'>('matric_exam');
 
-  if (!isOpen) return null;
+  // Available subjects for the chosen grade
+  const availableSubjects = React.useMemo(() => {
+    return getSubjectsForLevel(gradeOrProgramme).map((s) => s.name);
+  }, [gradeOrProgramme]);
 
-  const availableSubjects = [
-    'Mathematics',
-    'Physical Sciences',
-    'Life Sciences',
-    'Technical Mathematics',
-    'Accounting',
-    'Computer Applications Technology',
-    'Information Technology',
-    'Geography'
-  ];
+  if (!isOpen) return null;
 
   const toggleSubject = (sub: string) => {
     if (selectedSubjects.includes(sub)) {
@@ -78,8 +81,17 @@ export const NewLearnerOnboardingModal: React.FC<NewLearnerOnboardingModalProps>
       await updateProfile({
         educationLevel,
         gradeOrProgramme,
-        preferredLanguage
+        preferredLanguage,
+        focusSubjects: selectedSubjects
       });
+      if (updateLearningContext) {
+        updateLearningContext({
+          educationLevel,
+          gradeOrProgramme,
+          subject: selectedSubjects[0] || 'Mathematics',
+          language: preferredLanguage
+        });
+      }
     } catch {
       // Fallback
     }
@@ -99,10 +111,10 @@ export const NewLearnerOnboardingModal: React.FC<NewLearnerOnboardingModalProps>
         <div className="p-4 sm:p-6 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between bg-slate-50 dark:bg-slate-950/60">
           <div>
             <span className="text-[10px] font-bold uppercase tracking-wider text-amber-600 dark:text-amber-400">
-              Step {step} of 3 · Personalize Nexovia
+              Step {step} of 3 · Personalize Nexovian
             </span>
             <h3 id="onboarding-wizard-title" className="font-display text-lg font-bold text-slate-900 dark:text-white mt-0.5">
-              Welcome to Nexovia Academy
+              Welcome to Nexovian Academy
             </h3>
           </div>
           <button

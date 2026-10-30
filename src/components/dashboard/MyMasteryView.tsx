@@ -2,21 +2,21 @@
  * @license
  * SPDX-License-Identifier: Apache-2.0
  * 
- * NEXOVIA ACADEMY - PHASE 8: DEDICATED "MY MASTERY" EXPERIENCE
+ * NEXOVIAN ACADEMY - PHASE 8: DEDICATED "MY MASTERY" EXPERIENCE
  * 
  * Comprehensive diagnostic mastery tree:
  * 1. By Subject (Mathematics, Physical Sciences, Life Sciences, Technical Mathematics)
  * 2. By Topic (Algebra, Equations, Mechanics, etc.)
  * 3. By Subtopic (granular skill level)
  * 
- * Official Nexovia 5-Tier Diagnostic Heuristic Scale:
+ * Official Nexovian 5-Tier Diagnostic Heuristic Scale:
  * - 0–39: Needs significant support
  * - 40–59: Developing
  * - 60–74: Basic understanding
  * - 75–89: Strong
  * - 90–100: Mastered
  * 
- * Educational Disclaimer: Nexovia mastery scores are diagnostic heuristics,
+ * Educational Disclaimer: Nexovian mastery scores are diagnostic heuristics,
  * not official Department of Basic Education (DBE) report card marks.
  */
 
@@ -137,7 +137,7 @@ export const MyMasteryView: React.FC<MyMasteryViewProps> = ({
   };
 
   return (
-    <div className="space-y-6 animate-fade-in">
+    <div className="space-y-6 animate-fade-in w-full max-w-full overflow-hidden">
       {/* 1. Header & Diagnostic Scale Guide */}
       <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-3xl p-5 sm:p-7 shadow-xs">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-5 border-b border-slate-100 dark:border-slate-800">
@@ -170,7 +170,7 @@ export const MyMasteryView: React.FC<MyMasteryViewProps> = ({
         {/* 5-Tier Scale Display */}
         <div className="mt-5">
           <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 block mb-2.5">
-            Nexovia Diagnostic Mastery Scale
+            Nexovian Diagnostic Mastery Scale
           </span>
           <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 text-xs">
             <div className="p-2.5 rounded-xl border border-rose-200 dark:border-rose-900/50 bg-rose-50/50 dark:bg-rose-950/20">
@@ -200,7 +200,7 @@ export const MyMasteryView: React.FC<MyMasteryViewProps> = ({
         <div className="mt-4 p-3 rounded-2xl bg-amber-50/70 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/40 text-xs text-amber-900 dark:text-amber-200 flex items-start gap-2.5">
           <HelpCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
           <p className="leading-relaxed">
-            <strong>Heuristic Transparency:</strong> Nexovia mastery percentages reflect continuous question response accuracy and time-weighted practice retention. They do not constitute official academic marks issued by schools or the South African Department of Basic Education.
+            <strong>Heuristic Transparency:</strong> Nexovian mastery percentages reflect continuous question response accuracy and time-weighted practice retention. They do not constitute official academic marks issued by schools or the South African Department of Basic Education.
           </p>
         </div>
       </div>

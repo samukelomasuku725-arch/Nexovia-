@@ -2,7 +2,7 @@
  * @license
  * SPDX-License-Identifier: Apache-2.0
  * 
- * NEXOVIA ACADEMY - PHASE 7: ASSESSMENT RESULTS MODAL
+ * NEXOVIAN ACADEMY - PHASE 7: ASSESSMENT RESULTS MODAL
  * 
  * Detailed performance breakdown:
  * - Score, percentage, marks earned/available, pass/fail status

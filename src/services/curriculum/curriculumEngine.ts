@@ -2,7 +2,7 @@
  * @license
  * SPDX-License-Identifier: Apache-2.0
  * 
- * BRIGHTPATH ACADEMY - CAPS CURRICULUM ENGINE SERVICE (PHASE 6)
+ * NEXOVIA - CAPS CURRICULUM ENGINE SERVICE (PHASE 6)
  * 
  * Core engine providing:
  * 1. Curriculum Hierarchy Traversal (Level -> Grade -> Subject -> Phase -> Term -> Topic -> Subtopic -> Lesson)

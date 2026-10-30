@@ -2,7 +2,7 @@
  * @license
  * SPDX-License-Identifier: Apache-2.0
  * 
- * BRIGHTPATH ACADEMY - SOUTH AFRICAN CAPS CURRICULUM CONFIGURATION
+ * NEXOVIAN - SOUTH AFRICAN CAPS CURRICULUM CONFIGURATION
  * 
  * Scalable definitions for:
  * 1. 4 South African School Phases
@@ -198,7 +198,7 @@ export const AVAILABLE_CURRICULA: CurriculumMetadata[] = [
     defaultLanguage: 'en',
     sourceInfo: {
       classification: 'DEMO',
-      sourceName: 'BrightPath South African CAPS Reference Blueprint',
+      sourceName: 'NEXOVIAN South African CAPS Reference Blueprint',
       sourceDocument: 'Curriculum & Assessment Policy Frameworks',
       verificationStatus: 'demo',
       disclaimer: 'Curriculum structures are calibrated for South African educational standards. Content items are labeled DEMO or VERIFIED accordingly.'

@@ -1,16 +1,28 @@
 {
   "id": "/",
-  "name": "Nexovia - Learn today. Build tomorrow.",
-  "short_name": "Nexovia",
-  "description": "Learn today. Build tomorrow. Modern interactive courses, daily practice, and career paths.",
+  "name": "NEXOVIAN",
+  "short_name": "NEXOVIAN",
+  "description": "We built NEXOVIAN to help every student understand every subject in their own language. No one is rich and no one is poor.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
   "orientation": "portrait-primary",
-  "background_color": "#0F172A",
-  "theme_color": "#0F172A",
+  "background_color": "#0A0F1F",
+  "theme_color": "#0A0F1F",
   "categories": ["education", "productivity"],
   "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
     {
       "src": "/icon-192.svg",
       "sizes": "192x192",
@@ -28,6 +40,12 @@
       "sizes": "512x512",
       "type": "image/svg+xml",
       "purpose": "maskable"
+    },
+    {
+      "src": "/logo.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
     }
   ]
 }

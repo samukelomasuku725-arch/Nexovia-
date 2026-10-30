@@ -2,14 +2,14 @@
  * @license
  * SPDX-License-Identifier: Apache-2.0
  * 
- * BRIGHTPATH ACADEMY - MULTILINGUAL LEARNING & EDUCATIONAL CONTENT ENGINE
+ * NEXOVIA - MULTILINGUAL LEARNING & EDUCATIONAL CONTENT ENGINE
  * 
  * Core Invariants:
- * 1. The learner's activeLearningLanguage controls the EDUCATIONAL CONTENT throughout BrightPath.
+ * 1. The learner's activeLearningLanguage controls the EDUCATIONAL CONTENT throughout NEXOVIA.
  * 2. Questions, hints, answer options, explanations, feedback, and instructions follow activeLearningLanguage.
  * 3. Mathematical expressions (e.g. x² - 5x + 6, (x - 2)(x - 3), numbers, variables)
  *    MUST REMAIN MATHEMATICALLY CORRECT AND UNCHANGED.
- * 4. For Xitsonga: FIRST use the BrightPath verified Xitsonga Language Engine (140 entries).
+ * 4. For Xitsonga: FIRST use the NEXOVIA verified Xitsonga Language Engine (140 entries).
  *    Do not rewrite or modify verified wording.
  * 5. Content outside the verified dataset is marked internally as `ai_generated / unverified`.
  * 6. Supports 11 official South African languages with safe fallback.
@@ -802,7 +802,7 @@ const CANONICAL_QUESTION_TRANSLATIONS: Record<
 };
 
 /**
- * Service providing multilingual localization for all BrightPath learning content.
+ * Service providing multilingual localization for all NEXOVIA learning content.
  */
 class MultilingualEducationalService {
   /**

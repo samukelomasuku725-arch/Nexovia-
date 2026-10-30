@@ -2,7 +2,7 @@
  * @license
  * SPDX-License-Identifier: Apache-2.0
  * 
- * NEXOVIA ACADEMY - PHASE 7: QUESTION BANK MODAL
+ * NEXOVIAN ACADEMY - PHASE 7: QUESTION BANK MODAL
  * 
  * Central Question Bank management:
  * - Search & filter across 8 Question Types

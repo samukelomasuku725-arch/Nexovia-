@@ -2,7 +2,7 @@
  * @license
  * SPDX-License-Identifier: Apache-2.0
  * 
- * NEXOVIA ACADEMY - PHASE 7: ASSESSMENT BUILDER MODAL
+ * NEXOVIAN ACADEMY - PHASE 7: ASSESSMENT BUILDER MODAL
  * 
  * Teacher and Administrator Assessment Authoring Studio:
  * - Create Practice, Quiz, Test, Assignment, and Exam assessments

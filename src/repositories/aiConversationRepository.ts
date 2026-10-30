@@ -2,7 +2,7 @@
  * @license
  * SPDX-License-Identifier: Apache-2.0
  * 
- * BRIGHTPATH ACADEMY - AI CONVERSATION & SAVED CONTENT REPOSITORY
+ * NEXOVIA - AI CONVERSATION & SAVED CONTENT REPOSITORY
  * 
  * Centralized, decoupled repository for AI Tutor conversations and saved notes/content.
  */
@@ -21,10 +21,10 @@ export class AIConversationRepository implements IAIConversationRepository {
   private loadFromStorage() {
     try {
       if (typeof window !== 'undefined' && window.localStorage) {
-        const storedConv = localStorage.getItem('brightpath_conversations');
+        const storedConv = localStorage.getItem('nexovia_conversations');
         if (storedConv) this.localConversations = JSON.parse(storedConv);
 
-        const storedSaved = localStorage.getItem('brightpath_saved_content');
+        const storedSaved = localStorage.getItem('nexovia_saved_content');
         if (storedSaved) this.localSavedItems = JSON.parse(storedSaved);
       }
     } catch {
@@ -35,8 +35,8 @@ export class AIConversationRepository implements IAIConversationRepository {
   private persistStorage() {
     try {
       if (typeof window !== 'undefined' && window.localStorage) {
-        localStorage.setItem('brightpath_conversations', JSON.stringify(this.localConversations.slice(-50)));
-        localStorage.setItem('brightpath_saved_content', JSON.stringify(this.localSavedItems.slice(-100)));
+        localStorage.setItem('nexovia_conversations', JSON.stringify(this.localConversations.slice(-50)));
+        localStorage.setItem('nexovia_saved_content', JSON.stringify(this.localSavedItems.slice(-100)));
       }
     } catch {
       // Ignore

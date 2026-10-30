@@ -1,0 +1,125 @@
+{
+  "totalAiCallsSaved": 5,
+  "stats": {
+    "totalAiCallsSaved": 5
+  },
+  "questions": [
+    {
+      "id": "qc_ohm_grade10_science",
+      "question": "What is Ohm's Law?",
+      "answer": "Ohm's Law states V = I × R\n\nWhere:\nV = Voltage (volts)\nI = Current (amps)\nR = Resistance (ohms)\n\n### CAPS Grade 11 & 12 Physics Aligned\nIn electric circuits (DC circuits), Ohm's Law describes the direct proportionality between potential difference (voltage) across an ohmic conductor and the electric current flowing through it, provided the temperature remains constant.\n\n* **Voltage (V):** The potential difference or electrical push moving electric charge through the conductor, measured in Volts (V).\n* **Current (I):** The rate of flow of electric charge (electrons) per second through the circuit, measured in Amperes (A), where 1 A = 1 C/s.\n* **Resistance (R):** The opposition to the flow of electric charge, measured in Ohms (Ω).\n\n### Worked Example\nIf a circuit has a resistor with resistance **R = 2Ω** connected across a battery with potential difference **V = 6V**:\nUsing Ohm's Law:\n\nI = (V / R)\n\n\nI = (6 V / 2 Ω) = 3 A\n\nTherefore, the electric current flowing through the circuit is **3 Amperes (3A)**.\n\n### Simple English Explanation\nThink of voltage like water pressure pushing water through a garden hose. Current is the volume of water flowing through each second, and resistance is putting your thumb partially over the nozzle. Higher voltage (pressure) creates more current (flow); higher resistance restricts current.\n\n### Incazelo nge-isiZulu (isiZulu Translation)\nUmthetho ka-Ohm (Ohm's Law) usho ukuthi amandla kagesi (V) alingana ngqo nomsinga kagesi (I) uphindaphindwe ngokuphikisa kukagesi (R): **V = I × R**.\n* **V = Voltage (volts):** Amandla okusunduza amashaji kagesi.\n* **I = Current (amps):** Inani lokugeleza kwamashaji ngomzuzwana emsingeni kagesi.\n* **R = Resistance (ohms):** Ukuphikiswa kokuhamba kukagesi.\nIsibonelo: Uma R = 2Ω kanti V = 6V, umsinga kagesi ngu-I = 6 / 2 = 3A.\n\n### Socratic Question\nIf resistance doubles while voltage remains constant, what happens to current?\n*Think through I = V / R: since resistance R is in the denominator, doubling R causes the current I to halve Iₙₑ𝓌 = I / 2.*",
+      "grade": "Grade 11 & 12",
+      "language": "en",
+      "subject": "science",
+      "timestamp": 1792672000000
+    },
+    {
+      "id": "qc_quad_grade10_maths",
+      "question": "Can you explain the key concepts of Quadratic Equations in IsiZulu?",
+      "answer": "Sawubona! Ngijabule kakhulu ukukusiza ngezibalo. Ake sibheke lokho okubizwa ngokuthi ama-**Quadratic Equations** (ama-equation anezikwele).\n\n---\n\n## Yini i-Quadratic Equation?\n\nI-Quadratic equation wuhlobo lwe-equation lapho isibalo esiphezulu (exponent) sokuguquguqukayo (variable), esivame ukuba ngu-x, kuyinani elingu-**2**. \n\nIsimo sayo esijwayelekile sibukeka kanje:\n**ax² + bx + c = 0**\n\n*   **a, b, kanye no-c** yizinombolo ezaziwayo (constants).\n*   **x** yiyona nto esiyifunayo (variable).\n\n---\n\n## Izinyathelo zokuxazulula (Factorization)\n\n### Isibonelo: x² + 5x + 6 = 0\n\n1.  **Thola izinombolo:** Sifuna izinombolo ezimbili lapho uziphindaphinda uthole u-**6**, kodwa lapho uzihlanganisa uthole u-**5** (2 × 3 = 6 kanti 2 + 3 = 5).\n2.  **Bhala njengama-brackets:** (x + 2)(x + 3) = 0\n3.  **Izimpendulo:** x = -2 noma x = -3.",
+      "grade": "Grade 10",
+      "language": "zu",
+      "subject": "maths",
+      "timestamp": 1729325917422
+    },
+    {
+      "id": "qc_prime_grade7_maths",
+      "question": "What is the difference between prime numbers and composite numbers?",
+      "answer": "### Prime Numbers vs. Composite Numbers (Grade 7 CAPS Mathematics)\n\nIn mathematics, whole numbers greater than 1 are grouped into two main families:\n\n1. **Prime Numbers**:\n- A prime number has **exactly two distinct factors**: **1 and itself**.\n- Examples: 2, 3, 5, 7, 11, 13, 17, 19.\n- Note: The number **2** is the only even prime number!\n\n2. **Composite Numbers**:\n- A composite number has **more than two factors** (it can be divided evenly by numbers other than 1 and itself).\n- Examples: 4 (factors: 1, 2, 4), 6 (factors: 1, 2, 3, 6), 8, 9, 10, 12.\n\n*Special Rule:* The number **1 is neither prime nor composite** because it has only one factor (itself).",
+      "grade": "Grade 7",
+      "language": "en",
+      "subject": "maths",
+      "timestamp": 1729326100000
+    },
+    {
+      "id": "qc_matter_grade8_science",
+      "question": "What are the three states of matter and how do particle arrangements differ?",
+      "answer": "### The Three States of Matter (Grade 8 CAPS Natural Sciences)\n\nAll matter is made of particles. The Particle Model of Matter explains how they behave:\n\n1. **Solids**:\n- **Arrangement**: Closely packed in a regular, fixed pattern.\n- **Movement**: Particles vibrate in fixed positions.\n- **Spaces**: Extremely small spaces between particles.\n- **Shape & Volume**: Definite shape and definite volume.\n\n2. **Liquids**:\n- **Arrangement**: Close together with no fixed pattern.\n- **Movement**: Particles slide past one another.\n- **Spaces**: Small spaces, but slightly larger than solids.\n- **Shape & Volume**: Takes the shape of the container; definite volume.\n\n3. **Gases**:\n- **Arrangement**: Far apart in random arrangement.\n- **Movement**: Move fast and freely in all directions.\n- **Spaces**: Very large spaces between particles.\n- **Shape & Volume**: No fixed shape, expands to fill any container.",
+      "grade": "Grade 8",
+      "language": "en",
+      "subject": "science",
+      "timestamp": 1729326200000
+    },
+    {
+      "id": "qc_equations_grade9_maths",
+      "question": "How do you solve linear equations with variables on both sides?",
+      "answer": "### Solving Linear Equations with Variables on Both Sides (Grade 9 CAPS Mathematics)\n\n**Goal:** Group all variable terms on one side (usually the left) and constant numbers on the opposite side.\n\n**Example:** Solve for x: R5x - 4 = 2x + 11R\n\n1. **Step 1 - Subtract R2x from both sides:**\n   R5x - 2x - 4 = 11\n   R3x - 4 = 11R\n\n2. **Step 2 - Add R4 to both sides:**\n   R3x = 11 + 4\n   R3x = 15R\n\n3. **Step 3 - Divide both sides by the coefficient of x (3):**\n   x = 15 / 3\n   \\mathbf{x = 5}R\n\n4. **Check:** Left side: R5(5) - 4 = 21. Right side: R2(5) + 11 = 21. Correct!",
+      "grade": "Grade 9",
+      "language": "en",
+      "subject": "maths",
+      "timestamp": 1729326300000
+    },
+    {
+      "id": "qc_photo_grade9_science",
+      "question": "What is photosynthesis and what is its chemical word equation?",
+      "answer": "### Photosynthesis (Grade 9 CAPS Natural Sciences)\n\n**Definition:** Photosynthesis is the biological process by which green plants produce their own food (glucose) using radiant light energy from the Sun, water absorbed by roots, and carbon dioxide from the air.\n\n**Where it occurs:** Inside the chloroplasts of plant cells, using the green pigment called **chlorophyll**.\n\n**Word Equation:**\nCarbon Dioxide + Water + Radiant Light Energy ➔ Glucose + Oxygen\n\n**Chemical Equation:**\nR6CO_2 + 6H_2O \\xrightarrow{\\text{light, chlorophyll}} C_6H_{12}O_6 + 6O_2\n\n**Why it matters:** It produces oxygen that almost all living organisms need for cellular respiration and provides the primary energy source for food chains.",
+      "grade": "Grade 9",
+      "language": "en",
+      "subject": "science",
+      "timestamp": 1729326400000
+    },
+    {
+      "id": "qc_1793166933668_opna1",
+      "question": "Explain Ohm's Law using a taxi rank example",
+      "answer": "**1. Hello!**\nIt is a pleasure to meet you; let's break down this physics concept so that you can tackle your exams with confidence!\n\n**2. What is Ohm's Law?**\nOhm's Law states that the current I flowing through a conductor is directly proportional to the potential difference V across it, provided the temperature remains constant. The formula we use is V = I × R, where V is voltage (measured in Volts), I is current (measured in Amperes), and R is resistance (measured in Ohms, Ω).\n\n**3. Step-by-Step**\n1. **Identify the variables:** Think of Voltage V as the \"push\" that moves the charges, Current I as the flow of the charges themselves, and Resistance R as anything that tries to stop that flow.\n2. **Understand the relationship:** If you increase the push V, the flow I increases. If you increase the obstacles R, the flow I decreases.\n3. **Use the formula:** In an exam, if you are given two values, rearrange V = IR to solve for the third (e.g., I = V / R or R = V / I).\n4. **Check units:** Always ensure you are working in Volts V, Amps A, and Ohms Ω to get the correct answer.\n\n**4. Local Example**\nImagine a busy taxi rank at peak hour:\n*   **Voltage V:** This is like the **urgency of the commuters**. The more people are rushing to get home, the stronger the \"push\" at the rank.\n*   **Resistance R:** This is like **heavy traffic or a poorly maintained road** leading out of the rank. The worse the road, the harder it is for the taxis to move.\n*   **Current I:** This is the **actual number of taxis** successfully leaving the rank per minute.\n\nIf the urgency (Voltage) stays the same but the road gets blocked (Resistance increases), fewer taxis can leave (Current decreases). If you clear the road (low resistance), more taxis can flow through with the same amount of pressure.\n\n**5. Try Yourself**\nIf a circuit has a light bulb with a resistance of R10\\ \\Omegaand you connect it to a R9V battery, how much current I will flow through the bulb?\n\n**6. Summary**\nOhm’s Law tells us that to increase the current in a circuit, you must either increase the voltage or decrease the resistance.",
+      "grade": "Grade 10",
+      "language": "en",
+      "subject": "science",
+      "timestamp": 1793166933668
+    },
+    {
+      "id": "qc_1793218772388_zhkrb",
+      "question": "A 5kg box accelerates at 3m/s2. What is the net force? F=ma",
+      "answer": "Hello! It is great to see you working hard on your Physical Sciences. Let's break this down together so it becomes as easy as counting change at the spaza shop.\n\nQUESTION: \"A 5kg box accelerates at 3m/s2. What is the net force? F=ma\"\nSUBJECT: Physical Sciences\n\n**STEP 1:** What we have, what we need.\nWe have the mass of the box m = 5 kg and we have the acceleration a = 3 m / s². We need to find the total push or pull on the box, which we call the net force F_net.\n\n**STEP 2:** First action.\nTo find the force, we use Newton’s Second Law. This law tells us that if you want to speed up a heavy object (mass), you need to apply a force. The heavier the object, the more force you need.\n\n**STEP 3:** Substitute the values.\nWe use the formula F_net = m × a.\nPut our numbers in:\nF_net = 5 kg × 3 m / s²\n\n**STEP 4:** Arithmetic.\nNow, we just multiply the two numbers:\nR5 \\times 3 = 15\n\n**FINAL ANSWER:**\nThe net force is **R15\\text{ N}** (Newtons).\n\n---\n\nSIMPLE FORMULA TO REMEMBER:\n> 💡 **Newton’s Second Law: F_net = m × a**\n> *(Think of \"F-ma\" like \"Five-ma\" – force is just mass times acceleration!)*\n\nQUICK PRACTICE:\nIf you have a crate with a mass of **R10\\text{ kg}** and you push it so it accelerates at **R2 m / s²**, what is the net force acting on the crate? (Try to solve this using the same steps!)",
+      "grade": "Grade 10",
+      "language": "en",
+      "subject": "science",
+      "timestamp": 1793218772388
+    },
+    {
+      "id": "qc_1793218772389_pb8oy",
+      "question": "Calculate the net force on a 5kg box accelerating at 3m/s2 using F=ma.",
+      "answer": "Hello! It is great to see you working hard on your Physical Sciences. Let's break this down together so it becomes as easy as counting change at the spaza shop.\n\nQUESTION: \"A 5kg box accelerates at 3m/s2. What is the net force? F=ma\"\nSUBJECT: Physical Sciences\n\n**STEP 1:** What we have, what we need.\nWe have the mass of the box m = 5 kg and we have the acceleration a = 3 m / s². We need to find the total push or pull on the box, which we call the net force F_net.\n\n**STEP 2:** First action.\nTo find the force, we use Newton’s Second Law. This law tells us that if you want to speed up a heavy object (mass), you need to apply a force. The heavier the object, the more force you need.\n\n**STEP 3:** Substitute the values.\nWe use the formula F_net = m × a.\nPut our numbers in:\nF_net = 5 kg × 3 m / s²\n\n**STEP 4:** Arithmetic.\nNow, we just multiply the two numbers:\nR5 \\times 3 = 15\n\n**FINAL ANSWER:**\nThe net force is **R15\\text{ N}** (Newtons).\n\n---\n\nSIMPLE FORMULA TO REMEMBER:\n> 💡 **Newton’s Second Law: F_net = m × a**\n> *(Think of \"F-ma\" like \"Five-ma\" – force is just mass times acceleration!)*\n\nQUICK PRACTICE:\nIf you have a crate with a mass of **R10\\text{ kg}** and you push it so it accelerates at **R2 m / s²**, what is the net force acting on the crate? (Try to solve this using the same steps!)",
+      "grade": "Grade 10",
+      "language": "en",
+      "subject": "science",
+      "timestamp": 1793218772389
+    },
+    {
+      "id": "qc_1793218779087_zl09m",
+      "question": "Calculate profit if cost price is R200 and selling price is R350",
+      "answer": "Hello there! It is great to see you working on your accounting skills. Let's break this down together so you can master your financial statements.\n\n**QUESTION:** \"Calculate profit if cost price is R200 and selling price is R350\"\n**SUBJECT:** Accounting\n\n**STEP 1:** What we have, what we need\nWe have the **Cost Price** (what you paid to buy or make the item), which is R200. We have the **Selling Price** (the price you sold the item for), which is R350. We need to find the **Profit** (the extra money you made after covering the cost).\n\n**STEP 2:** First action\nTo find the profit, we need to see how much \"extra\" money we got over what we originally spent. If we sell the item for more than it cost us, we have made a profit.\n\n**STEP 3:** Next action - substitute values\nThe formula is: Profit = Selling Price – Cost Price\nProfit = R350 – R200\n\n**STEP 4:** Continue until answer\nProfit = R150\n\n**FINAL ANSWER:** The profit is R150.\n\n**SIMPLE FORMULA TO REMEMBER:**\n> 💡 **Profit Formula: Profit = Selling Price – Cost Price**\n> *(Remember: Profit is just the gap between what you sold it for and what it cost you.)*\n\n**QUICK PRACTICE:**\nIf you buy a soccer ball for your shop for R120 and sell it to a teammate for R200, what is your profit?",
+      "grade": "Grade 10",
+      "language": "en",
+      "subject": "accounting",
+      "timestamp": 1793218779087
+    },
+    {
+      "id": "qc_1793218779088_esiu1",
+      "question": "Calculate profit given a cost price of R200 and a selling price of R350.",
+      "answer": "Hello there! It is great to see you working on your accounting skills. Let's break this down together so you can master your financial statements.\n\n**QUESTION:** \"Calculate profit if cost price is R200 and selling price is R350\"\n**SUBJECT:** Accounting\n\n**STEP 1:** What we have, what we need\nWe have the **Cost Price** (what you paid to buy or make the item), which is R200. We have the **Selling Price** (the price you sold the item for), which is R350. We need to find the **Profit** (the extra money you made after covering the cost).\n\n**STEP 2:** First action\nTo find the profit, we need to see how much \"extra\" money we got over what we originally spent. If we sell the item for more than it cost us, we have made a profit.\n\n**STEP 3:** Next action - substitute values\nThe formula is: Profit = Selling Price – Cost Price\nProfit = R350 – R200\n\n**STEP 4:** Continue until answer\nProfit = R150\n\n**FINAL ANSWER:** The profit is R150.\n\n**SIMPLE FORMULA TO REMEMBER:**\n> 💡 **Profit Formula: Profit = Selling Price – Cost Price**\n> *(Remember: Profit is just the gap between what you sold it for and what it cost you.)*\n\n**QUICK PRACTICE:**\nIf you buy a soccer ball for your shop for R120 and sell it to a teammate for R200, what is your profit?",
+      "grade": "Grade 10",
+      "language": "en",
+      "subject": "accounting",
+      "timestamp": 1793218779088
+    },
+    {
+      "id": "qc_1793218787168_xz4ay",
+      "question": "What is the population density if 20,000 people live in 500 km2?",
+      "answer": "Hello! It is wonderful to help you with your Geography studies today. Remember, no matter where you are or what your background is, you have the power to master these concepts—let’s break this down together!\n\n**QUESTION:** \"What is the population density if 20,000 people live in 500 km²?\"\n\n**SUBJECT:** Geography\n\n**STEP 1:** We have the total number of people (20,000) and the total size of the land (500 km²). We need to find out how many people are squashed into every single square kilometre of that land.\n\n**STEP 2:** To find the density, we divide the total number of people by the total area. Think of it like sharing sweets equally into bags—we are spreading the people out over the land to see how crowded it is.\n\n**STEP 3:** We use the formula: Population Density = Total Population ÷ Total Area.\nSo, we put our numbers in: 20,000 ÷ 500.\n\n**STEP 4:** To make the math easier, we can cancel out the two zeros at the end of both numbers: 200 ÷ 5.\n200 ÷ 5 = 40.\n\n**FINAL ANSWER:** 40 people per km²\n\n**SIMPLE FORMULA TO REMEMBER:**\n> 💡 **Population Density Formula: Total Population ÷ Area**\n> *(Think: \"People divided by Space\" tells you how crowded the place is.)*\n\n**QUICK PRACTICE:**\nIf a small town has 3,000 people living in an area of 10 km², what is the population density? (Give it a try!)",
+      "grade": "Grade 10",
+      "language": "en",
+      "subject": "geography",
+      "timestamp": 1793218787168
+    },
+    {
+      "id": "qc_1793218787168_864v9",
+      "question": "Calculate population density for 20,000 people in 500 km2",
+      "answer": "Hello! It is wonderful to help you with your Geography studies today. Remember, no matter where you are or what your background is, you have the power to master these concepts—let’s break this down together!\n\n**QUESTION:** \"What is the population density if 20,000 people live in 500 km²?\"\n\n**SUBJECT:** Geography\n\n**STEP 1:** We have the total number of people (20,000) and the total size of the land (500 km²). We need to find out how many people are squashed into every single square kilometre of that land.\n\n**STEP 2:** To find the density, we divide the total number of people by the total area. Think of it like sharing sweets equally into bags—we are spreading the people out over the land to see how crowded it is.\n\n**STEP 3:** We use the formula: Population Density = Total Population ÷ Total Area.\nSo, we put our numbers in: 20,000 ÷ 500.\n\n**STEP 4:** To make the math easier, we can cancel out the two zeros at the end of both numbers: 200 ÷ 5.\n200 ÷ 5 = 40.\n\n**FINAL ANSWER:** 40 people per km²\n\n**SIMPLE FORMULA TO REMEMBER:**\n> 💡 **Population Density Formula: Total Population ÷ Area**\n> *(Think: \"People divided by Space\" tells you how crowded the place is.)*\n\n**QUICK PRACTICE:**\nIf a small town has 3,000 people living in an area of 10 km², what is the population density? (Give it a try!)",
+      "grade": "Grade 10",
+      "language": "en",
+      "subject": "geography",
+      "timestamp": 1793218787168
+    }
+  ]
+}

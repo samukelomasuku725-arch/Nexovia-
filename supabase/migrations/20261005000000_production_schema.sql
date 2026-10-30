@@ -1,5 +1,4 @@
--- ============================================================================
--- BRIGHTPATH ACADEMY — PRODUCTION DATABASE SCHEMA & SECURITY RULES
+-- NEXOVIA — PRODUCTION DATABASE SCHEMA & SECURITY RULES
 -- Target: Supabase PostgreSQL (PostgreSQL 15+)
 -- Phase: 7.5 Production & Scalability Architecture
 -- Designed to scale from development to 500,000+ registered South African learners.

@@ -2,7 +2,7 @@
  * @license
  * SPDX-License-Identifier: Apache-2.0
  * 
- * BRIGHTPATH ACADEMY - LEARNER PROGRESS & ADAPTIVE REPOSITORY
+ * NEXOVIA - LEARNER PROGRESS & ADAPTIVE REPOSITORY
  * 
  * Centralized, decoupled repository for learner progress, performance events,
  * mastery evaluation, and adaptive profile compilation.
@@ -33,7 +33,7 @@ export class LearnerProgressRepository implements ILearnerProgressRepository {
   private initFromLocalStorage() {
     try {
       if (typeof window !== 'undefined' && window.localStorage) {
-        const stored = localStorage.getItem('brightpath_events_cache');
+        const stored = localStorage.getItem('nexovia_events_cache');
         if (stored) {
           const parsed = JSON.parse(stored);
           for (const [userId, events] of Object.entries(parsed)) {
@@ -53,7 +53,7 @@ export class LearnerProgressRepository implements ILearnerProgressRepository {
         for (const [k, v] of this.eventsCache.entries()) {
           obj[k] = v.slice(-200);
         }
-        localStorage.setItem('brightpath_events_cache', JSON.stringify(obj));
+        localStorage.setItem('nexovia_events_cache', JSON.stringify(obj));
       }
     } catch {
       // Ignore

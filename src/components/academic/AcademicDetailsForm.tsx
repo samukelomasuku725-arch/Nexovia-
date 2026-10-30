@@ -1,7 +1,7 @@
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
- * Nexovia Academic Voice - Institutional & Assignment Configuration Form
+ * Nexovian Academic Voice - Institutional & Assignment Configuration Form
  */
 
 import React from 'react';
@@ -426,7 +426,7 @@ export const AcademicDetailsForm: React.FC<Props> = ({ formData, onChange }) => 
         <ShieldCheck className="w-4 h-4 text-blue-600 dark:text-blue-400 shrink-0 mt-0.5" />
         <div className="text-[11px] leading-relaxed">
           <strong className="block mb-0.5">South African Institutional Compliance Verification:</strong>
-          Nexovia formats documents according to tertiary and TVET (NATED/NCV) curriculum benchmarks.
+          Nexovian formats documents according to tertiary and TVET (NATED/NCV) curriculum benchmarks.
           Please always confirm your faculty's specific cover sheet and plagiarism declaration requirements prior to final submission.
         </div>
       </div>

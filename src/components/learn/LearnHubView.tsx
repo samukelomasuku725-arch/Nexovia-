@@ -2,7 +2,7 @@
  * @license
  * SPDX-License-Identifier: Apache-2.0
  * 
- * NEXOVIA ACADEMY - UNIFIED LEARN HUB VIEW
+ * NEXOVIAN ACADEMY - UNIFIED LEARN HUB VIEW
  * 
  * Clean, beginner-friendly learning gateway:
  * - Guides students through choosing their education level (Grades 4-12, TVET, University)

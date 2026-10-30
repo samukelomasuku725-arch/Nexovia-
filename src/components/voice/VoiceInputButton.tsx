@@ -327,7 +327,7 @@ export const VoiceInputButton: React.FC<VoiceInputButtonProps> = ({
             </div>
             <h3 className="text-base font-bold">Microphone Access Required</h3>
             <p className="text-xs text-slate-600 dark:text-slate-300 mt-2 leading-relaxed">
-              Nexovia Academy needs microphone permission so you can speak questions directly to your AI Tutor.
+              Nexovian Academy needs microphone permission so you can speak questions directly to your AI Tutor.
             </p>
             <div className="mt-3 bg-slate-50 dark:bg-slate-800/60 p-3 rounded-xl border border-slate-200 dark:border-slate-700 text-xs space-y-1.5 text-slate-600 dark:text-slate-300">
               <p className="font-semibold text-slate-800 dark:text-slate-100">To allow access:</p>

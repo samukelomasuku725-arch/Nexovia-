@@ -2,7 +2,7 @@
  * @license
  * SPDX-License-Identifier: Apache-2.0
  * 
- * BRIGHTPATH ACADEMY - PROFILE & PRIVACY REPOSITORY
+ * NEXOVIA - PROFILE & PRIVACY REPOSITORY
  * 
  * Centralized repository for user profiles, POPIA consent management,
  * GDPR/POPIA compliant data export, and account deletion requests.
@@ -35,8 +35,8 @@ export class ProfileRepository implements IProfileRepository {
     // Default mock user profile
     const defaultProfile: UserProfile = {
       id: userId,
-      email: 'learner@brightpath.ac.za',
-      name: 'BrightPath Learner',
+      email: 'learner@nexovia.ac.za',
+      name: 'NEXOVIA Learner',
       role: 'STUDENT',
       educationLevel: 'FET Phase (Grade 10–12 CAPS)',
       gradeOrProgramme: 'Grade 10',

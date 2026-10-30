@@ -2,7 +2,7 @@
  * @license
  * SPDX-License-Identifier: Apache-2.0
  * 
- * NEXOVIA ACADEMY - PHASE 7: ASSESSMENT PLAYER MODAL
+ * NEXOVIAN ACADEMY - PHASE 7: ASSESSMENT PLAYER MODAL
  * 
  * Mobile-first, Android-friendly assessment test-taking environment:
  * - Supports all 8 Question Types:
@@ -67,7 +67,7 @@ interface Props {
   onComplete: (attempt: any) => void;
 }
 
-const STORAGE_PREFIX = 'nexovia_asmt_draft_';
+const STORAGE_PREFIX = 'nexovian_asmt_draft_';
 
 export const AssessmentPlayerModal: React.FC<Props> = ({
   isOpen,

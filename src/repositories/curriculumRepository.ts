@@ -2,7 +2,7 @@
  * @license
  * SPDX-License-Identifier: Apache-2.0
  * 
- * BRIGHTPATH ACADEMY - CURRICULUM REPOSITORY IMPLEMENTATION
+ * NEXOVIA - CURRICULUM REPOSITORY IMPLEMENTATION
  */
 
 import { ICurriculumRepository } from './types';

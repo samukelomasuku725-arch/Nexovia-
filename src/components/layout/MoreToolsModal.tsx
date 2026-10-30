@@ -2,7 +2,7 @@
  * @license
  * SPDX-License-Identifier: Apache-2.0
  * 
- * NEXOVIA ACADEMY - SECONDARY TOOLS & SETTINGS MODAL
+ * NEXOVIAN ACADEMY - SECONDARY TOOLS & SETTINGS MODAL
  * 
  * Clean, organized secondary menu for less frequently used features,
  * keeping the primary 4 actions (Learn, Ask AI, Voice-to-Doc, My Progress)
@@ -24,7 +24,8 @@ import {
   Globe,
   Sparkles,
   ArrowRight,
-  ShieldCheck
+  ShieldCheck,
+  Database
 } from 'lucide-react';
 import { useLearning } from '../../context/LearningContext';
 import { useTranslation } from '../../i18n/I18nContext';
@@ -69,7 +70,7 @@ export const MoreToolsModal: React.FC<Props> = ({
         {
           id: 'assessments',
           title: 'Formal Assessments & Exams',
-          subtitle: 'Timed test simulation & question bank',
+          subtitle: 'Timed test simulation & curriculum tests',
           icon: Award,
           color: 'bg-amber-500 text-slate-950',
           onClick: () => navigateTo('assessments')
@@ -149,6 +150,19 @@ export const MoreToolsModal: React.FC<Props> = ({
             onClose();
             if (onOpenVoiceSettings) onOpenVoiceSettings();
           }
+        },
+        {
+          id: 'about',
+          title: 'About Us (/about)',
+          subtitle: 'NEXOVIAN story, Mkhuhlu roots & compliance',
+          icon: ShieldCheck,
+          color: 'bg-emerald-600 text-white',
+          onClick: () => {
+            navigateTo('about');
+            if (typeof window !== 'undefined') {
+              window.history.pushState({}, '', '/about');
+            }
+          }
         }
       ]
     }
@@ -223,7 +237,7 @@ export const MoreToolsModal: React.FC<Props> = ({
 
         {/* Footer */}
         <div className="p-3.5 bg-slate-50 dark:bg-slate-950/80 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-xs text-slate-500">
-          <span>Nexovia Academy · South Africa</span>
+          <span>Nexovian Academy · South Africa</span>
           <button
             onClick={onClose}
             className="px-4 py-1.5 bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 text-slate-800 dark:text-slate-200 font-bold rounded-xl text-xs transition-colors"

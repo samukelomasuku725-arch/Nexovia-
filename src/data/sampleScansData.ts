@@ -72,7 +72,7 @@ export const SAMPLE_SCANS: SampleScanItem[] = [
         <rect x="40" y="270" width="520" height="85" fill="#f1f5f9" stroke="#e2e8f0" rx="4"/>
         <text x="55" y="295" font-family="sans-serif" font-size="11" font-weight="bold" fill="#0f172a">EXAM TECHNIQUE TIP:</text>
         <text x="55" y="315" font-family="sans-serif" font-size="11" fill="#475569">Always verify by re-expanding: (x - 1)(x - 3) = x² - 4x + 3 = 0, multiply by 2 gives 2x² - 8x + 6.</text>
-        <text x="55" y="335" font-family="sans-serif" font-size="10" fill="#64748b">BrightPath Academy CAPS Alignment · Foundation Problem Solving</text>
+        <text x="55" y="335" font-family="sans-serif" font-size="10" fill="#64748b">NEXOVIA CAPS Alignment · Foundation Problem Solving</text>
       </svg>
     `)}`
   },

@@ -1,7 +1,7 @@
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
- * Nexovia Academic Voice - Reference Research & Verification Manager
+ * Nexovian Academic Voice - Reference Research & Verification Manager
  */
 
 import React, { useState } from 'react';
@@ -123,7 +123,7 @@ export const ReferenceManager: React.FC<Props> = ({
       <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 text-xs text-slate-600 dark:text-slate-300 flex items-start gap-2.5">
         <ShieldCheck className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
         <div className="text-[11px] leading-relaxed">
-          <strong>Strict Academic Provenance Standard:</strong> Nexovia never invents fake author names, fabricated DOIs, or broken URLs. References tagged with{' '}
+          <strong>Strict Academic Provenance Standard:</strong> Nexovian never invents fake author names, fabricated DOIs, or broken URLs. References tagged with{' '}
           <span className="text-emerald-700 dark:text-emerald-300 font-bold">Verified</span> are confirmed in official South African repositories (DHET, SAQA, SABS) or peer-reviewed scholarly journals. Items tagged with{' '}
           <span className="text-amber-700 dark:text-amber-300 font-bold">Unverified</span> require student cross-checking against the institutional library.
         </div>

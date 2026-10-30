@@ -2,7 +2,7 @@
  * @license
  * SPDX-License-Identifier: Apache-2.0
  * 
- * NEXOVIA ACADEMY - UNIFIED FEEDBACK & CONFIRMATION NOTIFICATION
+ * NEXOVIAN ACADEMY - UNIFIED FEEDBACK & CONFIRMATION NOTIFICATION
  * 
  * Accessible, mobile-friendly confirmation and error banners:
  * - Clear text messages

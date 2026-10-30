@@ -51,6 +51,8 @@ import { SAMPLE_SCANS, SampleScanItem } from '../../data/sampleScansData';
 import { VoiceInputButton } from '../voice/VoiceInputButton';
 import { MessageAudioControls } from '../voice/MessageAudioControls';
 import { SA_LANGUAGES } from '../../data/learningContextData';
+import { CleanFormulaRenderer } from '../common/CleanFormulaRenderer';
+import { cleanFormulaString } from '../../utils/formulaCleaner';
 
 const SCAN_MODES: { id: ScanMode; label: string; desc: string; icon: string }[] = [
   { id: 'explain', label: 'Explain', desc: 'Break down visible concepts, diagrams, and steps.', icon: '💡' },
@@ -796,13 +798,16 @@ export const ScanAndLearnView: React.FC = () => {
                     Learner Asked:
                   </span>
                   <p className="text-slate-800 dark:text-slate-200 font-medium">
-                    "{activeScanSession.initialQuestion}"
+                    "{cleanFormulaString(activeScanSession.initialQuestion)}"
                   </p>
                 </div>
 
-                {/* Explanation text formatted with readable typography */}
-                <div className="prose prose-slate dark:prose-invert max-w-none text-xs sm:text-sm leading-relaxed whitespace-pre-line">
-                  {activeScanSession.aiExplanation}
+                {/* Explanation text formatted with clean formula rendering */}
+                <div className="max-w-none text-xs sm:text-sm leading-relaxed">
+                  <CleanFormulaRenderer
+                    content={activeScanSession.aiExplanation}
+                    language={activeScanSession.language}
+                  />
                 </div>
 
                 {/* High-yield summary badge */}
@@ -812,9 +817,12 @@ export const ScanAndLearnView: React.FC = () => {
                       <Lightbulb className="w-4 h-4 text-amber-500" />
                       <span>Key Takeaway:</span>
                     </div>
-                    <p className="text-slate-700 dark:text-slate-300 leading-relaxed">
-                      {activeScanSession.summary}
-                    </p>
+                    <div className="text-slate-700 dark:text-slate-300 leading-relaxed">
+                      <CleanFormulaRenderer
+                        content={activeScanSession.summary}
+                        language={activeScanSession.language}
+                      />
+                    </div>
                   </div>
                 )}
 
@@ -889,7 +897,7 @@ export const ScanAndLearnView: React.FC = () => {
                             className="p-3.5 rounded-xl bg-white dark:bg-slate-900 border border-purple-100 dark:border-purple-900/40 space-y-2 text-xs"
                           >
                             <span className="font-bold text-slate-900 dark:text-white block">
-                              {qIdx + 1}. {q.question}
+                              {qIdx + 1}. {cleanFormulaString(q.question)}
                             </span>
 
                             {q.options && Array.isArray(q.options) && (
@@ -909,7 +917,7 @@ export const ScanAndLearnView: React.FC = () => {
                                           : 'border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300'
                                       }`}
                                     >
-                                      <span>{opt}</span>
+                                      <span>{cleanFormulaString(opt)}</span>
                                       {isSelected && <Check className="w-3.5 h-3.5 text-purple-600 shrink-0" />}
                                     </button>
                                   );
@@ -926,9 +934,11 @@ export const ScanAndLearnView: React.FC = () => {
                                 }`}
                               >
                                 <p className="font-bold">
-                                  {isCorrect ? '✓ Correct!' : `✗ Correct Answer: ${q.correctAnswer}`}
+                                  {isCorrect ? '✓ Correct!' : `✗ Correct Answer: ${cleanFormulaString(q.correctAnswer)}`}
                                 </p>
-                                <p className="mt-0.5">{q.explanation}</p>
+                                <div className="mt-0.5">
+                                  <CleanFormulaRenderer content={q.explanation} />
+                                </div>
                               </div>
                             )}
                           </div>

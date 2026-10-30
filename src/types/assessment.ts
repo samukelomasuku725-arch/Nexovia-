@@ -2,7 +2,7 @@
  * @license
  * SPDX-License-Identifier: Apache-2.0
  * 
- * BRIGHTPATH ACADEMY - PHASE 7: ASSESSMENTS & EXAM ENGINE TYPES
+ * NEXOVIA - PHASE 7: ASSESSMENTS & EXAM ENGINE TYPES
  * 
  * Comprehensive assessment architecture supporting:
  * - Assessment Types: PRACTICE, QUIZ, TEST, ASSIGNMENT, EXAM

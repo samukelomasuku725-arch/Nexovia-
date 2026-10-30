@@ -59,7 +59,7 @@ export const PwaInstallBanner: React.FC = () => {
           </div>
           <div>
             <h3 className="font-display text-lg font-bold text-slate-900 dark:text-white">
-              Install Nexovia
+              Install Nexovian
             </h3>
             <p className="text-xs text-slate-500 dark:text-slate-400">
               Native Android & Desktop PWA Experience
@@ -120,7 +120,7 @@ export const PwaInstallBanner: React.FC = () => {
             className="w-full flex items-center justify-center gap-2 py-3 bg-amber-400 hover:bg-amber-300 text-slate-950 font-bold rounded-xl text-sm transition-transform active:scale-98 shadow-sm"
           >
             <Download className="w-4 h-4" />
-            <span>Install Nexovia Now</span>
+            <span>Install Nexovian Now</span>
           </button>
         ) : (
           <button

@@ -2,7 +2,7 @@
  * @license
  * SPDX-License-Identifier: Apache-2.0
  * 
- * BRIGHTPATH ACADEMY - CENTRALIZED DATA ACCESS LAYER
+ * NEXOVIA - CENTRALIZED DATA ACCESS LAYER
  * 
  * Provides unified access to all domain repositories:
  * - curriculum

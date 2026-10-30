@@ -1,7 +1,7 @@
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
- * BrightPath Academic Voice-to-Document Types
+ * NEXOVIA Academic Voice-to-Document Types
  */
 
 export type AcademicSector = 'university' | 'tvet';
@@ -91,7 +91,7 @@ export interface AcademicVoiceTierStatus {
   documentsCreatedThisMonth: number;
   remainingDocuments: number;
   maxRecordingMinutes: number; // 5 min for free, 30 min for premium
-  premiumPriceZar: number; // 50 (R50 per month)
+  premiumPriceZar: number; // 60 (R60 per month)
   canRecordLongAudio: boolean;
   canExportHighResPdf: boolean;
   hasScholarSearchGrounding: boolean;

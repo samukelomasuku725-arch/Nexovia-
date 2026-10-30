@@ -1,7 +1,7 @@
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
- * BrightPath Academic Voice Client Service
+ * NEXOVIA Academic Voice Client Service
  */
 
 import {
@@ -10,8 +10,8 @@ import {
   AcademicVoiceTierStatus
 } from '../../types/academicVoice';
 
-const LOCAL_STORAGE_KEY = 'brightpath_academic_docs_cache';
-const LOCAL_TIER_KEY = 'brightpath_academic_tier_preference';
+const LOCAL_STORAGE_KEY = 'nexovia_academic_docs_cache';
+const LOCAL_TIER_KEY = 'nexovia_academic_tier_preference';
 
 export const academicVoiceService = {
   /**
@@ -183,7 +183,7 @@ export const academicVoiceService = {
   },
 
   /**
-   * Gets tier status (Free vs Premium R50/mo)
+   * Gets tier status (Free vs Premium R60/mo)
    */
   async getTierStatus(): Promise<AcademicVoiceTierStatus> {
     try {
@@ -203,7 +203,7 @@ export const academicVoiceService = {
       documentsCreatedThisMonth: 0,
       remainingDocuments: isFree ? 3 : 999,
       maxRecordingMinutes: isFree ? 5 : 30,
-      premiumPriceZar: 50,
+      premiumPriceZar: 60,
       canRecordLongAudio: !isFree,
       canExportHighResPdf: true,
       hasScholarSearchGrounding: true,
@@ -212,7 +212,7 @@ export const academicVoiceService = {
   },
 
   /**
-   * Sets tier (Free vs Premium R50/mo)
+   * Sets tier (Free vs Premium R60/mo)
    */
   async setTier(tier: 'free' | 'premium'): Promise<AcademicVoiceTierStatus> {
     localStorage.setItem(LOCAL_TIER_KEY, tier);

@@ -2,7 +2,7 @@
  * @license
  * SPDX-License-Identifier: Apache-2.0
  * 
- * NEXOVIA ACADEMY - PHASE 7: ASSESSMENT HUB VIEW
+ * NEXOVIAN ACADEMY - PHASE 7: ASSESSMENT HUB VIEW
  * 
  * Central Assessment Center for South African Learners & Educators:
  * - Filterable by Assessment Types: Practice, Quiz, Test, Assignment, Exam
@@ -47,9 +47,13 @@ import { AssessmentPlayerModal } from './AssessmentPlayerModal';
 import { AssessmentResultsModal } from './AssessmentResultsModal';
 import { AssessmentBuilderModal } from './AssessmentBuilderModal';
 import { QuestionBankModal } from './QuestionBankModal';
+import { useAuth } from '../../context/AuthContext';
+import { isAdminUser } from '../../services/antiAbuseService';
 
 export const AssessmentHubView: React.FC = () => {
   const { userProgress, adaptiveProfile, setCurrentTab, activeLearningLanguage } = useLearning();
+  const { user } = useAuth();
+  const isAdmin = isAdminUser(user);
 
   // Active filter tab
   const [filterType, setFilterType] = useState<AssessmentType | 'ALL' | 'IN_PROGRESS' | 'COMPLETED' | 'ADMIN'>('ALL');
@@ -69,7 +73,7 @@ export const AssessmentHubView: React.FC = () => {
   // Past completed attempts stored in component / local state
   const [attemptHistory, setAttemptHistory] = useState<AssessmentAttempt[]>(() => {
     try {
-      const saved = localStorage.getItem('nexovia_assessment_history_v1');
+      const saved = localStorage.getItem('nexovian_assessment_history_v1');
       return saved ? JSON.parse(saved) : [];
     } catch {
       return [];
@@ -90,7 +94,7 @@ export const AssessmentHubView: React.FC = () => {
     const updated = [attempt, ...attemptHistory];
     setAttemptHistory(updated);
     try {
-      localStorage.setItem('nexovia_assessment_history_v1', JSON.stringify(updated));
+      localStorage.setItem('nexovian_assessment_history_v1', JSON.stringify(updated));
     } catch {
       // ignore
     }
@@ -198,13 +202,13 @@ export const AssessmentHubView: React.FC = () => {
             { id: 'ASSIGNMENT', label: 'Assignments' },
             { id: 'EXAM', label: 'Matric Exams' },
             { id: 'COMPLETED', label: `Results (${completedAttemptsCount})` },
-            { id: 'ADMIN', label: 'Teacher Studio' }
+            ...(isAdmin ? [{ id: 'ADMIN', label: 'Teacher Studio' }] : [])
           ].map((tab) => (
             <button
               key={tab.id}
               onClick={() => setFilterType(tab.id as any)}
               className={`px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-colors ${
-                filterType === tab.id
+                (filterType === 'ADMIN' && !isAdmin ? 'ALL' : filterType) === tab.id
                   ? 'bg-amber-400 text-slate-950 font-bold shadow-xs'
                   : 'bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:text-slate-900'
               }`}
@@ -227,15 +231,17 @@ export const AssessmentHubView: React.FC = () => {
             />
           </div>
 
-          {/* Teacher/Admin actions */}
-          <button
-            onClick={() => setBuilderModalOpen(true)}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-900 dark:bg-white text-white dark:text-slate-950 text-xs font-bold shadow-xs transition-transform active:scale-95"
-            title="Create an assessment"
-          >
-            <Plus className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">Create Assessment</span>
-          </button>
+          {/* Teacher/Admin actions - Visible to Admin Only */}
+          {isAdmin && (
+            <button
+              onClick={() => setBuilderModalOpen(true)}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-900 dark:bg-white text-white dark:text-slate-950 text-xs font-bold shadow-xs transition-transform active:scale-95"
+              title="Create an assessment"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Create Assessment</span>
+            </button>
+          )}
         </div>
       </div>
 

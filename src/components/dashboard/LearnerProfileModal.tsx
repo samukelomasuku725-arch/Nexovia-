@@ -2,7 +2,7 @@
  * @license
  * SPDX-License-Identifier: Apache-2.0
  * 
- * NEXOVIA ACADEMY - PHASE 8: LEARNER PROFILE & PREFERENCES MODAL
+ * NEXOVIAN ACADEMY - PHASE 8: LEARNER PROFILE & PREFERENCES MODAL
  * 
  * Allows learners to view and update:
  * 1. Name
@@ -31,6 +31,7 @@ import { SALanguageCode } from '../../types';
 import { SA_LANGUAGES } from '../../i18n/translations';
 import { useAuth } from '../../context/AuthContext';
 import { useLearning } from '../../context/LearningContext';
+import { getSubjectsForLevel } from '../../data/educationData';
 
 interface LearnerProfileModalProps {
   isOpen: boolean;
@@ -42,40 +43,34 @@ export const LearnerProfileModal: React.FC<LearnerProfileModalProps> = ({
   onClose
 }) => {
   const { user, updateProfile } = useAuth();
-  const { updateLearningContext } = useLearning();
+  const { learningContext, updateLearningContext } = useLearning();
 
   const [name, setName] = useState(user?.name || 'Sipho Mokoena');
   const [educationLevel, setEducationLevel] = useState(
-    user?.educationLevel || 'FET Phase (Grade 10–12 CAPS)'
+    user?.educationLevel || learningContext.educationLevel || 'FET Phase (Grade 10–12 CAPS)'
   );
   const [gradeOrProgramme, setGradeOrProgramme] = useState(
-    user?.gradeOrProgramme || 'Grade 10'
+    user?.gradeOrProgramme || learningContext.gradeOrProgramme || 'Grade 10'
   );
   const [preferredLanguage, setPreferredLanguage] = useState<SALanguageCode>(
-    (user?.preferredLanguage as SALanguageCode) || 'en'
+    (user?.preferredLanguage as SALanguageCode) || learningContext.language || 'en'
   );
   const [dailyMinutes, setDailyMinutes] = useState<number>(30);
-  const [selectedSubjects, setSelectedSubjects] = useState<string[]>([
-    'Mathematics',
-    'Physical Sciences',
-    'Life Sciences'
-  ]);
+  const [selectedSubjects, setSelectedSubjects] = useState<string[]>(() => {
+    if (user?.focusSubjects && user.focusSubjects.length > 0) return user.focusSubjects;
+    if (learningContext?.subject) return [learningContext.subject];
+    return ['Mathematics'];
+  });
   const [primaryGoal, setPrimaryGoal] = useState<string>('matric_prep');
   const [isSaving, setIsSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
 
-  if (!isOpen) return null;
+  // Available subjects for the currently chosen grade
+  const availableSubjects = React.useMemo(() => {
+    return getSubjectsForLevel(gradeOrProgramme).map((s) => s.name);
+  }, [gradeOrProgramme]);
 
-  const availableSubjects = [
-    'Mathematics',
-    'Physical Sciences',
-    'Life Sciences',
-    'Technical Mathematics',
-    'Accounting',
-    'Computer Applications Technology',
-    'Information Technology',
-    'Geography'
-  ];
+  if (!isOpen) return null;
 
   const toggleSubject = (sub: string) => {
     if (selectedSubjects.includes(sub)) {
@@ -96,13 +91,18 @@ export const LearnerProfileModal: React.FC<LearnerProfileModalProps> = ({
           name,
           educationLevel,
           gradeOrProgramme,
-          preferredLanguage
+          preferredLanguage,
+          focusSubjects: selectedSubjects
         });
       }
       if (updateLearningContext) {
+        const activeSubj = selectedSubjects.includes(learningContext.subject)
+          ? learningContext.subject
+          : selectedSubjects[0] || '';
         updateLearningContext({
           educationLevel,
           gradeOrProgramme,
+          subject: activeSubj,
           language: preferredLanguage
         });
       }

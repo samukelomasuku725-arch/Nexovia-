@@ -77,6 +77,7 @@ export interface Flashcard {
   answer: string;
   codeSnippet?: string;
   difficulty: 'Foundation' | 'Core' | 'Expert';
+  xp?: number;
 }
 
 export interface UserNote {
@@ -211,6 +212,13 @@ export interface AIMessage {
   audioStatus?: 'unavailable' | 'pending_verification' | 'verified';
   requiresVerificationNotice?: boolean;
   verifiedPhrasesMatched?: Array<{ english: string; xitsonga: string }>;
+  cacheMetadata?: {
+    detected_language?: string;
+    subject_matter?: string;
+    grade_level_estimate?: string;
+    standardized_question?: string;
+    educational_explanation_summary?: string;
+  };
 }
 
 export interface AIConversation {
@@ -384,6 +392,7 @@ export interface UserProfile {
   educationLevel: string;
   gradeOrProgramme: string;
   preferredLanguage: SALanguageCode;
+  focusSubjects?: string[];
   avatarUrl?: string;
   popiaConsent: boolean;
   popiaConsentDate?: string;

@@ -2,7 +2,7 @@
  * @license
  * SPDX-License-Identifier: Apache-2.0
  * 
- * BRIGHTPATH ACADEMY - DATA ACCESS LAYER (REPOSITORY INTERFACES)
+ * NEXOVIA - DATA ACCESS LAYER (REPOSITORY INTERFACES)
  * 
  * Provides an abstract, decoupled boundary between UI components and backend storage.
  * Supports:

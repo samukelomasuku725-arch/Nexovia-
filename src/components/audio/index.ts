@@ -1,7 +1,7 @@
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
- * Nexovia Xitsonga Language Engine - Audio & Pronunciation Suite (Phase 2)
+ * Nexovian Xitsonga Language Engine - Audio & Pronunciation Suite (Phase 2)
  */
 
 export { AudioPlayer } from './AudioPlayer';

@@ -2,7 +2,7 @@
  * @license
  * SPDX-License-Identifier: Apache-2.0
  * 
- * BRIGHTPATH ACADEMY - PHASE 7: ASSESSMENT ENGINE
+ * NEXOVIA - PHASE 7: ASSESSMENT ENGINE
  * 
  * Core evaluation engine:
  * 1. Automatic Marking of all 8 Question Types

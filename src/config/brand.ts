@@ -34,18 +34,33 @@ export interface AppConfig {
   country: string;
   /** Year of launch */
   launchYear: number;
+  /** Legal entity name */
+  companyName: string;
+  /** CIPC registration */
+  registrationNumber: string;
+  /** B-BBEE Level */
+  bbbeeLevel: string;
+  /** Ownership profile */
+  ownership: string;
+  /** Headquarters location */
+  location: string;
 }
 
 export const APP_CONFIG: AppConfig = {
-  appName: 'BrightPath Academy',
-  shortName: 'BrightPath',
-  tagline: 'Learn today. Build tomorrow.',
-  coreVision: 'Create one learning platform that can support a learner\'s journey from Grade R all the way to University.',
+  appName: 'NEXOVIAN',
+  shortName: 'NEXOVIAN',
+  companyName: 'NEXOVIAN (PTY) LTD',
+  registrationNumber: '2026/845572/07',
+  bbbeeLevel: 'B-BBEE Level 1 (135%)',
+  ownership: '100% Black Owned · 100% Youth · 100% Rural',
+  location: 'Mkhuhlu, Mpumalanga',
+  tagline: 'Dyondza hi Ririmi Ra Wena — Learn In Your Language',
+  coreVision: 'Mpumalanga\'s first AI learning platform teaching Maths, Science & Life Sciences in all 11 official languages — built in Mkhuhlu for rural learners.',
   phase: 'Phase 1 - Mobile-First Foundation',
   version: '1.0.0-phase1',
-  cipcNotice: 'Temporary educational platform name registered for Phase 1 architecture and testing pending final CIPC corporate clearance.',
-  curriculumDisclaimer: 'BrightPath Academy is an independent educational platform. Verified curriculum frameworks are strictly distinguished from AI-generated learning support and practice. We do not claim official affiliation with or endorsement by DBE, DHET, Umalusi, SAQA, or examination councils.',
-  supportEmail: 'support@brightpath.ac.za',
+  cipcNotice: 'NEXOVIAN (PTY) LTD · Reg: 2026/845572/07 · B-BBEE Level 1 (135%) · 100% Black, Youth & Rural Owned · Mkhuhlu, Mpumalanga',
+  curriculumDisclaimer: 'NEXOVIAN is an independent educational platform aligned with CAPS (Grade 4–12), DHET (TVET N1–N6), and University frameworks.',
+  supportEmail: 'support@nexovian.ai',
   country: 'South Africa',
   launchYear: 2026
 };

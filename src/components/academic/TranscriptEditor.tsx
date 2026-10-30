@@ -1,7 +1,7 @@
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
- * Nexovia Academic Voice - Editable Transcript Review
+ * Nexovian Academic Voice - Editable Transcript Review
  */
 
 import React, { useState } from 'react';

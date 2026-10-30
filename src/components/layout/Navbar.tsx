@@ -6,6 +6,7 @@ import { useTranslation } from '../../i18n/I18nContext';
 import { APP_CONFIG } from '../../config/brand';
 import { XitsongaPhrasebookModal } from '../language/XitsongaPhrasebookModal';
 import { MoreToolsModal } from './MoreToolsModal';
+import { LogoIcon } from '../common/LogoIcon';
 
 export const Navbar: React.FC = () => {
   const {
@@ -22,7 +23,7 @@ export const Navbar: React.FC = () => {
     setActiveLearningLanguage
   } = useLearning();
 
-  const { isAuthenticated, user, setIsAuthModalOpen, setAuthModalMode } = useAuth();
+  const { isAuthenticated, user, setIsAuthModalOpen, setAuthModalMode, logout } = useAuth();
   const { t, language, setLanguage, languages, currentLanguageInfo } = useTranslation();
   const [isLangOpen, setIsLangOpen] = useState(false);
   const [isPhrasebookOpen, setIsPhrasebookOpen] = useState(false);
@@ -53,21 +54,26 @@ export const Navbar: React.FC = () => {
   };
 
   return (
-    <header className="sticky top-0 z-30 bg-white/95 dark:bg-slate-950/95 backdrop-blur-md border-b border-slate-200/80 dark:border-slate-800 transition-colors">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 h-14 md:h-16 flex items-center justify-between gap-4">
-        {/* Zone 1: Single text element wordmark */}
+    <header className="sticky top-0 z-30 bg-white/95 dark:bg-slate-950/95 backdrop-blur-md border-b border-slate-200/80 dark:border-slate-800 transition-colors w-full max-w-full overflow-hidden">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 h-14 md:h-16 flex items-center justify-between gap-3 w-full max-w-full">
+        {/* Zone 1: Futuristic N Logo Mark & Wordmark */}
         <div className="flex items-center gap-3">
           <button
             onClick={() => setCurrentTab('home')}
             className="flex items-center gap-2.5 text-left group focus:outline-none"
             aria-label={`${APP_CONFIG.appName} Home`}
           >
-            <div className="w-8 h-8 rounded-lg bg-slate-900 dark:bg-amber-500 text-amber-400 dark:text-slate-950 flex items-center justify-center font-bold text-lg shadow-sm transition-transform group-hover:scale-105 shrink-0">
-              ✦
-            </div>
+            {/* New SVG LogoIcon: 40x40, rounded 10px, dark #1e293b, neon cyan N with glow & circuit lines/brain */}
+            <LogoIcon size={40} className="shrink-0 group-hover:scale-105 transition-transform" />
             <div>
-              <span className="font-display text-lg sm:text-xl font-bold tracking-tight text-slate-900 dark:text-slate-100 block leading-tight truncate max-w-[180px] sm:max-w-none">
-                {APP_CONFIG.appName}
+              <div className="flex items-center gap-1.5">
+                <span className="font-display text-lg sm:text-xl font-black tracking-wider bg-gradient-to-r from-blue-400 via-indigo-300 to-purple-400 bg-clip-text text-transparent block leading-tight">
+                  {APP_CONFIG.appName}
+                </span>
+                <span className="hidden xl:inline-block w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse shadow-[0_0_8px_#00ffff]" />
+              </div>
+              <span className="hidden sm:block text-[9.5px] font-mono tracking-tight text-slate-500 dark:text-cyan-400/80 -mt-0.5 truncate max-w-[210px]">
+                The Learning Brain That Grows With You
               </span>
             </div>
           </button>
@@ -79,7 +85,7 @@ export const Navbar: React.FC = () => {
             onClick={() => setCurrentTab('home')}
             className={`transition-colors hover:text-slate-900 dark:hover:text-white py-1 whitespace-nowrap ${
               currentTab === 'home' || currentTab === 'dashboard'
-                ? 'text-slate-900 dark:text-white font-semibold border-b-2 border-amber-500'
+                ? 'text-cyan-600 dark:text-cyan-300 font-semibold border-b-2 border-cyan-400 shadow-[0_4px_12px_-4px_rgba(6,182,212,0.4)]'
                 : ''
             }`}
           >
@@ -90,11 +96,11 @@ export const Navbar: React.FC = () => {
             onClick={() => setCurrentTab('learn')}
             className={`flex items-center gap-1.5 transition-colors hover:text-slate-900 dark:hover:text-white py-1 whitespace-nowrap ${
               currentTab === 'learn' || currentTab === 'school' || currentTab === 'tvet' || currentTab === 'higherEd'
-                ? 'text-slate-900 dark:text-white font-semibold border-b-2 border-amber-500'
+                ? 'text-cyan-600 dark:text-cyan-300 font-semibold border-b-2 border-cyan-400 shadow-[0_4px_12px_-4px_rgba(6,182,212,0.4)]'
                 : ''
             }`}
           >
-            <BookOpen className="w-4 h-4 text-amber-500" />
+            <BookOpen className="w-4 h-4 text-cyan-400" />
             <span>Learn</span>
           </button>
 
@@ -102,23 +108,23 @@ export const Navbar: React.FC = () => {
             onClick={() => setCurrentTab('tutor')}
             className={`flex items-center gap-1.5 transition-colors hover:text-slate-900 dark:hover:text-white py-1 whitespace-nowrap ${
               currentTab === 'tutor'
-                ? 'text-slate-900 dark:text-white font-semibold border-b-2 border-amber-500'
+                ? 'text-purple-600 dark:text-purple-300 font-semibold border-b-2 border-purple-400 shadow-[0_4px_12px_-4px_rgba(168,85,247,0.4)]'
                 : ''
             }`}
           >
-            <Sparkles className="w-4 h-4 text-amber-500" />
-            <span>Ask Nexovia AI</span>
+            <Sparkles className="w-4 h-4 text-purple-400" />
+            <span>Ask Nexovian AI</span>
           </button>
 
           <button
             onClick={() => setCurrentTab('academicVoice')}
             className={`flex items-center gap-1.5 transition-colors hover:text-slate-900 dark:hover:text-white py-1 whitespace-nowrap ${
               currentTab === 'academicVoice'
-                ? 'text-slate-900 dark:text-white font-semibold border-b-2 border-amber-500'
+                ? 'text-cyan-600 dark:text-cyan-300 font-semibold border-b-2 border-cyan-400 shadow-[0_4px_12px_-4px_rgba(6,182,212,0.4)]'
                 : ''
             }`}
           >
-            <Mic className="w-4 h-4 text-amber-500" />
+            <Mic className="w-4 h-4 text-cyan-400" />
             <span>Voice-to-Document</span>
           </button>
 
@@ -126,12 +132,28 @@ export const Navbar: React.FC = () => {
             onClick={() => setCurrentTab('progress')}
             className={`flex items-center gap-1.5 transition-colors hover:text-slate-900 dark:hover:text-white py-1 whitespace-nowrap ${
               currentTab === 'progress'
-                ? 'text-slate-900 dark:text-white font-semibold border-b-2 border-amber-500'
+                ? 'text-cyan-600 dark:text-cyan-300 font-semibold border-b-2 border-cyan-400 shadow-[0_4px_12px_-4px_rgba(6,182,212,0.4)]'
                 : ''
             }`}
           >
-            <TrendingUp className="w-4 h-4 text-emerald-500" />
+            <TrendingUp className="w-4 h-4 text-cyan-400" />
             <span>My Progress</span>
+          </button>
+
+          <button
+            onClick={() => {
+              setCurrentTab('about');
+              if (typeof window !== 'undefined') {
+                window.history.pushState({}, '', '/about');
+              }
+            }}
+            className={`flex items-center gap-1.5 transition-colors hover:text-slate-900 dark:hover:text-white py-1 whitespace-nowrap cursor-pointer ${
+              currentTab === 'about'
+                ? 'text-emerald-600 dark:text-emerald-400 font-semibold border-b-2 border-emerald-500'
+                : ''
+            }`}
+          >
+            <span>About Us</span>
           </button>
 
           <button
@@ -152,7 +174,7 @@ export const Navbar: React.FC = () => {
             <button
               onClick={() => setIsPhrasebookOpen(true)}
               className="hidden md:flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-300 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300 hover:bg-emerald-100 transition-colors shadow-2xs"
-              title="Open Nexovia Xitsonga Language Engine & Phrasebook"
+              title="Open Nexovian Xitsonga Language Engine & Phrasebook"
             >
               <BookOpen className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
               <span>Xitsonga Engine</span>
@@ -244,18 +266,35 @@ export const Navbar: React.FC = () => {
             {theme === 'light' ? <Moon className="w-4 h-4" /> : <Sun className="w-4 h-4" />}
           </button>
 
-          {/* User Account Trigger */}
+          {/* User Account Trigger & Logout Button */}
           {isAuthenticated && user ? (
-            <button
-              onClick={() => setCurrentTab('profile')}
-              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors text-xs font-semibold"
-              title={`Logged in as ${user.name}`}
-            >
-              <div className="w-6 h-6 rounded-full bg-amber-400 text-slate-950 flex items-center justify-center font-bold text-[11px]">
-                {user.name.charAt(0).toUpperCase()}
-              </div>
-              <span className="hidden xl:inline truncate max-w-[90px]">{user.name.split(' ')[0]}</span>
-            </button>
+            <div className="flex items-center gap-1.5 sm:gap-2">
+              <button
+                onClick={() => setCurrentTab('profile')}
+                className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors text-xs"
+                title={`Logged in as ${user.name} (${user.email})`}
+              >
+                <div className="w-6 h-6 rounded-full bg-yellow-400 text-slate-950 flex items-center justify-center font-bold text-[11px] shrink-0">
+                  {user.name ? user.name.charAt(0).toUpperCase() : user.email?.charAt(0).toUpperCase()}
+                </div>
+                <div className="hidden sm:flex flex-col text-left leading-tight">
+                  <span className="truncate max-w-[130px] font-bold text-xs text-slate-900 dark:text-white">
+                    {user.name}
+                  </span>
+                  <span className="truncate max-w-[130px] font-mono text-[10px] text-slate-500 dark:text-slate-400">
+                    {user.email}
+                  </span>
+                </div>
+              </button>
+
+              <button
+                onClick={logout}
+                className="px-2.5 py-1.5 text-xs font-bold text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/40 rounded-lg transition-colors border border-red-200 dark:border-red-900/60 cursor-pointer"
+                title="Log out of Supabase"
+              >
+                Logout
+              </button>
+            </div>
           ) : (
             <button
               onClick={() => {

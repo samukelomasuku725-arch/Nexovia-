@@ -390,7 +390,7 @@ export const AdaptivePracticeSessionModal: React.FC<Props> = ({
                   Practice Session Completed!
                 </h4>
                 <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                  Your performance events have been analyzed by Nexovia's Adaptive Learning Engine.
+                  Your performance events have been analyzed by Nexovian's Adaptive Learning Engine.
                 </p>
               </div>
 

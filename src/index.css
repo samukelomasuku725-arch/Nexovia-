@@ -1,5 +1,9 @@
 @import "tailwindcss";
 
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
 @layer base {
   :root {
     --font-display: 'Fraunces', Georgia, serif;
@@ -14,11 +18,20 @@
     text-rendering: optimizeLegibility;
     -webkit-tap-highlight-color: transparent;
     scroll-behavior: smooth;
+    max-width: 100vw;
+    overflow-x: hidden;
+    width: 100%;
+    box-sizing: border-box;
   }
 
   body {
     min-height: 100vh;
+    max-width: 100vw;
     overflow-x: hidden;
+    width: 100%;
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
   }
 }
 
@@ -33,6 +46,15 @@
 
 .font-mono {
   font-family: var(--font-mono);
+}
+
+/* Scrollbar hide utilities */
+.scrollbar-none, .scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-none::-webkit-scrollbar, .scrollbar-hide::-webkit-scrollbar {
+  display: none;
 }
 
 /* Safe area padding for modern Android and iOS devices */
@@ -59,3 +81,4 @@
 ::-webkit-scrollbar-thumb:hover {
   background: rgba(100, 116, 139, 0.6);
 }
+

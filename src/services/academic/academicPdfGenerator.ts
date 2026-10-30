@@ -1,7 +1,7 @@
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
- * BrightPath Academic Voice-to-Document - Client-Side PDF Generation Engine
+ * NEXOVIA Academic Voice-to-Document - Client-Side PDF Generation Engine
  */
 
 import { jsPDF } from 'jspdf';
@@ -185,7 +185,7 @@ export function generateAcademicPdf(
     pdf.setFontSize(7);
     pdf.setFont('helvetica', 'normal');
     pdf.setTextColor(148, 163, 184);
-    pdf.text('BrightPath Academic Voice-to-Document Engine · South African Tertiary & TVET Framework', pageWidth / 2, currentY, { align: 'center' });
+    pdf.text('NEXOVIA Academic Voice-to-Document Engine · South African Tertiary & TVET Framework', pageWidth / 2, currentY, { align: 'center' });
 
     // Add page for body content
     pdf.addPage();
@@ -383,7 +383,7 @@ export function generateAcademicPdf(
     pdf.setTextColor(100, 116, 139);
     const pageStr = includeCoverPage ? `Page ${p - 1} of ${totalPages - 1}` : `Page ${p} of ${totalPages}`;
     pdf.text(pageStr, pageWidth / 2, pageHeight - 10, { align: 'center' });
-    pdf.text('BrightPath Academic Engine', pageWidth - marginRight, pageHeight - 10, { align: 'right' });
+    pdf.text('NEXOVIA Academic Engine', pageWidth - marginRight, pageHeight - 10, { align: 'right' });
   }
 
   // Create downloadable blob and URL

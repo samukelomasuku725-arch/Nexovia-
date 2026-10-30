@@ -1,7 +1,7 @@
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
- * Nexovia Xitsonga Language Engine - Phase 2 Audio Player
+ * Nexovian Xitsonga Language Engine - Phase 2 Audio Player
  * 
  * Mobile-first, accessible, responsive audio player supporting:
  * - Play / Pause / Replay

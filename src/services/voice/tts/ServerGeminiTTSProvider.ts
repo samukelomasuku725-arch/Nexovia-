@@ -4,7 +4,7 @@ import { isTtsSupportedForLanguage } from '../languageCapabilities';
 
 export class ServerGeminiTTSProvider implements TextToSpeechProvider {
   readonly id = 'gemini-server';
-  readonly name = 'BrightPath Gemini Neural Voice';
+  readonly name = 'NEXOVIA Gemini Neural Voice';
   readonly description = 'Natural neural voice synthesis powered by Gemini.';
 
   private state: TTSPlaybackState = 'idle';

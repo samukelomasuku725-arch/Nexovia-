@@ -2,7 +2,7 @@
  * @license
  * SPDX-License-Identifier: Apache-2.0
  * 
- * NEXOVIA ACADEMY - PHASE 8: PROGRESS TRENDS VISUALIZATION
+ * NEXOVIAN ACADEMY - PHASE 8: PROGRESS TRENDS VISUALIZATION
  * 
  * Mobile-first, responsive SVG data visualizations:
  * 1. Diagnostic Mastery Over Time (trend points & line)
@@ -87,7 +87,7 @@ export const ProgressTrendsView: React.FC<ProgressTrendsViewProps> = ({ trends }
     .join(' ');
 
   return (
-    <div className="space-y-6 animate-fade-in">
+    <div className="w-full max-w-full overflow-hidden space-y-6 animate-fade-in">
       {/* Header */}
       <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-3xl p-5 sm:p-7 shadow-xs">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">

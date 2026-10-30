@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   School,
   BookOpen,
@@ -49,6 +49,7 @@ import { multilingualEducationalService } from '../../services/language/multilin
 export const CurriculumBrowserView: React.FC = () => {
   const {
     setCurrentTab,
+    learningContext,
     updateLearningContext,
     markLessonComplete,
     userProgress,
@@ -60,16 +61,55 @@ export const CurriculumBrowserView: React.FC = () => {
 
   const { language } = useTranslation();
 
+  const resolveGradeIdFromContext = (gradeOrProg: string): string => {
+    if (!gradeOrProg) return 'grade-10';
+    const lower = gradeOrProg.toLowerCase();
+    if (lower.includes('grade r')) return 'grade-r';
+    const match = lower.match(/\bgrade\s*([0-9]+)\b/);
+    if (match) return `grade-${match[1]}`;
+    if (lower.includes('matric')) return 'grade-12';
+    return 'grade-10';
+  };
+
   // Mode: 'browse' vs 'dashboard'
   const [viewMode, setViewMode] = useState<'browse' | 'dashboard'>('browse');
 
-  // Hierarchy Navigation State
+  // Hierarchy Navigation State initialized from learningContext
   const [selectedPhaseFilter, setSelectedPhaseFilter] = useState<SouthAfricanPhaseId | 'all'>('all');
-  const [selectedGradeId, setSelectedGradeId] = useState<string>('grade-10');
+  const [selectedGradeId, setSelectedGradeId] = useState<string>(() =>
+    resolveGradeIdFromContext(learningContext?.gradeOrProgramme || '')
+  );
   const [selectedSubjectId, setSelectedSubjectId] = useState<string>('sub-g10-maths');
   const [selectedTermNumber, setSelectedTermNumber] = useState<1 | 2 | 3 | 4>(1);
   const [selectedTopicId, setSelectedTopicId] = useState<string>('top-g10-mth-t1-algebra');
   const [activeLesson, setActiveLesson] = useState<CurriculumLessonModel | null>(null);
+
+  // Sync with global learningContext when user navigates or changes context elsewhere
+  useEffect(() => {
+    if (learningContext?.gradeOrProgramme) {
+      const gId = resolveGradeIdFromContext(learningContext.gradeOrProgramme);
+      if (gId !== selectedGradeId) {
+        setSelectedGradeId(gId);
+        const subjs = curriculumEngine.getSubjectsForGrade(gId);
+        if (subjs.length > 0) {
+          const matched = learningContext.subject
+            ? subjs.find((s) => s.name.toLowerCase() === learningContext.subject.toLowerCase())
+            : undefined;
+          const nextSubj = matched || subjs[0];
+          setSelectedSubjectId(nextSubj.id);
+          setSelectedTermNumber(1);
+          const firstTopic = nextSubj.terms[0]?.topics[0];
+          if (firstTopic) setSelectedTopicId(firstTopic.id);
+        }
+      } else if (learningContext.subject) {
+        const subjs = curriculumEngine.getSubjectsForGrade(selectedGradeId);
+        const matched = subjs.find((s) => s.name.toLowerCase() === learningContext.subject.toLowerCase());
+        if (matched && matched.id !== selectedSubjectId) {
+          setSelectedSubjectId(matched.id);
+        }
+      }
+    }
+  }, [learningContext?.gradeOrProgramme, learningContext?.subject]);
 
   // Lesson Translation Selector state - synced with activeLearningLanguage
   const lessonLanguage = activeLearningLanguage;
@@ -112,15 +152,29 @@ export const CurriculumBrowserView: React.FC = () => {
     return map;
   }, [adaptiveProfile.topicMasteries]);
 
-  // Handle Grade Change
+  // Handle Grade Change — preserve subject if valid in newly chosen grade
   const handleGradeChange = (gradeId: string) => {
     setSelectedGradeId(gradeId);
     const subjs = curriculumEngine.getSubjectsForGrade(gradeId);
     if (subjs.length > 0) {
-      setSelectedSubjectId(subjs[0].id);
+      const currentSubjName = availableSubjects.find((s) => s.id === selectedSubjectId)?.name || learningContext.subject;
+      const matchedSubj = subjs.find((s) => s.name.toLowerCase() === currentSubjName.toLowerCase());
+      const nextSubj = matchedSubj || subjs[0];
+
+      setSelectedSubjectId(nextSubj.id);
       setSelectedTermNumber(1);
-      const firstTopic = subjs[0].terms[0]?.topics[0];
+      const firstTopic = nextSubj.terms[0]?.topics[0];
       if (firstTopic) setSelectedTopicId(firstTopic.id);
+
+      const targetGradeObj = curriculumEngine.getGradeById(gradeId);
+      if (targetGradeObj) {
+        updateLearningContext({
+          gradeOrProgramme: targetGradeObj.name,
+          educationLevel: targetGradeObj.phaseName,
+          subject: nextSubj.name,
+          topic: firstTopic ? firstTopic.title : ''
+        });
+      }
     }
     setActiveLesson(null);
   };
@@ -132,6 +186,12 @@ export const CurriculumBrowserView: React.FC = () => {
     const subj = curriculumEngine.getSubjectById(subjectId);
     const firstTopic = subj?.terms[0]?.topics[0];
     if (firstTopic) setSelectedTopicId(firstTopic.id);
+    if (subj) {
+      updateLearningContext({
+        subject: subj.name,
+        topic: firstTopic ? firstTopic.title : ''
+      });
+    }
     setActiveLesson(null);
   };
 

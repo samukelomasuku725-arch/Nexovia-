@@ -1,7 +1,7 @@
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
- * Nexovia Xitsonga Language Engine - Pronunciation Display (Phase 2)
+ * Nexovian Xitsonga Language Engine - Pronunciation Display (Phase 2)
  * 
  * CORE RULES:
  * 1. If a pronunciation field has been verified (pronunciationStatus === 'verified'):

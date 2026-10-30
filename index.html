@@ -1,27 +1,45 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" class="dark max-w-[100vw] overflow-x-hidden w-full">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, viewport-fit=cover" />
-    <title>Nexovia Academy - Learn today. Build tomorrow.</title>
-    <meta name="description" content="Mobile-first South African education platform supporting learners from Grade R to University across School (CAPS), TVET (NATED & NC(V)), and Higher Education in all 11 official languages." />
-    <meta property="og:title" content="Nexovia Academy - Learn today. Build tomorrow." />
-    <meta property="og:description" content="Mobile-first South African education platform supporting learners from Grade R to University across School (CAPS), TVET (NATED & NC(V)), and Higher Education in all 11 official languages." />
+    <title>NEXOVIAN - Learn in your language</title>
+    <meta name="description" content="We built NEXOVIAN to help every student understand every subject in their own language. No one is rich and no one is poor." />
+    <meta property="og:title" content="NEXOVIAN - Learn in your language" />
+    <meta property="og:description" content="We built NEXOVIAN to help every student understand every subject in their own language. No one is rich and no one is poor." />
     <meta property="og:type" content="website" />
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="theme-color" content="#0F172A" />
+    <meta name="theme-color" content="#0A0F1F" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-    <meta name="apple-mobile-web-app-title" content="Nexovia Academy" />
+    <meta name="apple-mobile-web-app-title" content="NEXOVIAN" />
     <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="icon" type="image/x-icon" href="/favicon.ico" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="apple-touch-icon" href="/logo.png" />
+    <link rel="apple-touch-startup-image" href="/splash.png" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,600;0,9..144,700;1,9..144,400&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+    <!-- Paystack Inline Checkout Script -->
+    <script src="https://js.paystack.co/v1/inline.js"></script>
   </head>
-  <body class="bg-slate-50 text-slate-900 antialiased selection:bg-amber-500/20 selection:text-amber-950">
-    <div id="root"></div>
+  <body class="bg-[#0A0F1F] text-slate-100 antialiased selection:bg-cyan-500/25 selection:text-cyan-200 min-h-screen max-w-[100vw] overflow-x-hidden w-full">
+    <div id="root">
+      <!-- Instant pre-hydration splash screen on dark #0A0F1F with glowing N centered -->
+      <div style="position:fixed;inset:0;background-color:#0A0F1F;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:9999;">
+        <div style="position:relative;width:96px;height:96px;border-radius:24px;background-color:#0A0F1F;border:1px solid rgba(0,255,255,0.6);display:flex;align-items:center;justify-content:center;box-shadow:0 0 35px rgba(0,255,255,0.4);">
+          <img src="/favicon.svg" alt="NEXOVIAN" style="width:72px;height:72px;" />
+        </div>
+        <div style="margin-top:20px;font-family:'Plus Jakarta Sans',sans-serif;font-weight:900;font-size:22px;letter-spacing:4px;color:#38bdf8;">
+          NEXOVIAN
+        </div>
+        <div style="margin-top:6px;font-family:'JetBrains Mono',monospace;font-size:12px;color:rgba(0,255,255,0.85);letter-spacing:1px;">
+          The Learning Brain That Grows With You
+        </div>
+      </div>
+    </div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

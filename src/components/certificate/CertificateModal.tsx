@@ -57,7 +57,7 @@ export const CertificateModal: React.FC = () => {
               <div className="flex items-center justify-center gap-2 mb-1">
                 <span className="text-2xl text-amber-500 font-bold">✦</span>
                 <span className="font-display text-2xl font-bold tracking-tight text-slate-900 uppercase">
-                  Nexovia
+                  Nexovian
                 </span>
               </div>
               <p className="text-xs uppercase tracking-widest text-slate-500 font-mono">
@@ -116,7 +116,7 @@ export const CertificateModal: React.FC = () => {
             <div className="mt-8 pt-4 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between text-[10px] font-mono text-slate-400 gap-2">
               <span>CREDENTIAL ID: {certificateToView.id}</span>
               <span className="truncate max-w-[280px]">VERIFICATION HASH: {certificateToView.verificationHash}</span>
-              <span>NEXOVIA.DEV/VERIFY</span>
+              <span>NEXOVIAN.DEV/VERIFY</span>
             </div>
           </div>
         </div>

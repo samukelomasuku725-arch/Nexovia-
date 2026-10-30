@@ -2,7 +2,7 @@
  * @license
  * SPDX-License-Identifier: Apache-2.0
  * 
- * BRIGHTPATH ACADEMY - SOUTH AFRICAN CAPS CURRICULUM DATA (PHASE 6)
+ * NEXOVIA - SOUTH AFRICAN CAPS CURRICULUM DATA (PHASE 6)
  * 
  * Structured curriculum model across South African school phases:
  * - Foundation Phase (Grade R–3)

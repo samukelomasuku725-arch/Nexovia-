@@ -304,7 +304,7 @@ export const TvetPathwayView: React.FC = () => {
 
                       {mod.topics.length === 0 ? (
                         <p className="text-xs text-slate-500 italic py-2">
-                          Standard practical modules. Launch Nexovia AI to generate exercises.
+                          Standard practical modules. Launch Nexovian AI to generate exercises.
                         </p>
                       ) : (
                         mod.topics.map(topic => {
@@ -446,7 +446,7 @@ export const TvetPathwayView: React.FC = () => {
                     className="flex items-center gap-1.5 px-4 py-2 bg-amber-400 hover:bg-amber-300 text-slate-950 font-bold text-xs rounded-xl shadow-sm"
                   >
                     <Sparkles className="w-3.5 h-3.5" />
-                    <span>Ask Nexovia AI</span>
+                    <span>Ask Nexovian AI</span>
                   </button>
                 </div>
               </div>

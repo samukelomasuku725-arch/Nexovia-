@@ -1,7 +1,7 @@
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
- * Nexovia Academic Voice - Document Preview & Live Section Editor
+ * Nexovian Academic Voice - Document Preview & Live Section Editor
  */
 
 import React, { useState } from 'react';

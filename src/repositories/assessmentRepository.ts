@@ -2,7 +2,7 @@
  * @license
  * SPDX-License-Identifier: Apache-2.0
  * 
- * BRIGHTPATH ACADEMY - ASSESSMENT & QUESTION BANK REPOSITORY
+ * NEXOVIA - ASSESSMENT & QUESTION BANK REPOSITORY
  * 
  * Centralized, decoupled repository implementation for assessments, question bank,
  * and authoritative learner attempt submissions.
@@ -30,7 +30,7 @@ export class AssessmentRepository implements IAssessmentRepository {
   private loadCachedAttempts() {
     try {
       if (typeof window !== 'undefined' && window.localStorage) {
-        const stored = localStorage.getItem('brightpath_assessment_attempts_cache');
+        const stored = localStorage.getItem('nexovia_assessment_attempts_cache');
         if (stored) {
           this.attemptsStore = JSON.parse(stored);
         }
@@ -44,7 +44,7 @@ export class AssessmentRepository implements IAssessmentRepository {
     try {
       if (typeof window !== 'undefined' && window.localStorage) {
         localStorage.setItem(
-          'brightpath_assessment_attempts_cache',
+          'nexovia_assessment_attempts_cache',
           JSON.stringify(this.attemptsStore.slice(-100))
         );
       }

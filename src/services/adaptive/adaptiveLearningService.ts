@@ -539,7 +539,7 @@ export function generateRecommendations(
       id: 'rec-study-plan',
       type: 'create_study_plan',
       title: 'Generate Personalized Study Schedule',
-      description: 'Set your exam date and study hours to let BrightPath pace your daily learning.',
+      description: 'Set your exam date and study hours to let NEXOVIA pace your daily learning.',
       reason: 'Learners with structured study plans maintain 3x higher completion rates.',
       priority: 4,
       priorityLabel: 'Unfinished',
@@ -777,7 +777,7 @@ export function getLearnerInsights(
     return {
       strongestSubject: 'Mathematics',
       strongestTopic: 'Curriculum Foundations',
-      summaryText: 'Welcome to BrightPath Academy! As you practice lessons and ask questions, your adaptive dashboard will reveal your individual strengths and high-yield focus areas.',
+      summaryText: 'Welcome to NEXOVIA! As you practice lessons and ask questions, your adaptive dashboard will reveal your individual strengths and high-yield focus areas.',
       encouragementText: 'Every question you answer helps tailor your personal study plan.'
     };
   }

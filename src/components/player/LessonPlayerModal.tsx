@@ -18,6 +18,9 @@ import {
 import { useLearning } from '../../context/LearningContext';
 import { InteractivePlayground } from '../sandbox/InteractivePlayground';
 import { multilingualEducationalService } from '../../services/language/multilingualEducationalService';
+import { AnswerFeedbackWidget } from '../feedback/AnswerFeedbackWidget';
+import { CleanFormulaRenderer } from '../common/CleanFormulaRenderer';
+import { cleanFormulaString } from '../../utils/formulaCleaner';
 
 export const LessonPlayerModal: React.FC = () => {
   const {
@@ -265,9 +268,9 @@ export const LessonPlayerModal: React.FC = () => {
               <h3 className="text-xs font-bold uppercase tracking-wider text-amber-700 dark:text-amber-400 mb-2">
                 Executive Concept Overview
               </h3>
-              <p className="text-sm sm:text-base text-slate-800 dark:text-slate-200 leading-relaxed font-normal">
-                {activeLesson.content.overview}
-              </p>
+              <div className="text-sm sm:text-base text-slate-800 dark:text-slate-200 leading-relaxed font-normal">
+                <CleanFormulaRenderer content={activeLesson.content.overview} />
+              </div>
 
               {/* Key Takeaways */}
               <div className="mt-4 pt-4 border-t border-amber-500/20">
@@ -281,7 +284,7 @@ export const LessonPlayerModal: React.FC = () => {
                       className="text-xs sm:text-sm text-slate-700 dark:text-slate-300 flex items-start gap-2"
                     >
                       <Check className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
-                      <span>{takeaway}</span>
+                      <span>{cleanFormulaString(takeaway)}</span>
                     </li>
                   ))}
                 </ul>
@@ -293,11 +296,11 @@ export const LessonPlayerModal: React.FC = () => {
               {activeLesson.content.sections.map((section, sIdx) => (
                 <div key={sIdx} className="space-y-3">
                   <h3 className="font-display text-lg sm:text-xl font-bold text-slate-900 dark:text-white">
-                    {section.heading}
+                    {cleanFormulaString(section.heading)}
                   </h3>
-                  <p className="text-sm sm:text-base text-slate-600 dark:text-slate-300 leading-relaxed">
-                    {section.body}
-                  </p>
+                  <div className="text-sm sm:text-base text-slate-600 dark:text-slate-300 leading-relaxed">
+                    <CleanFormulaRenderer content={section.body} />
+                  </div>
 
                   {/* Code block if present */}
                   {section.codeBlock && (
@@ -380,7 +383,7 @@ export const LessonPlayerModal: React.FC = () => {
                         className="bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 rounded-xl p-4 sm:p-5"
                       >
                         <h4 className="text-sm font-semibold text-slate-900 dark:text-white mb-3">
-                          {qIdx + 1}. {q.question}
+                          {qIdx + 1}. {cleanFormulaString(q.question)}
                         </h4>
 
                         <div className="space-y-2">
@@ -408,17 +411,25 @@ export const LessonPlayerModal: React.FC = () => {
                                 <span className="w-5 h-5 rounded-full border border-current flex items-center justify-center text-[10px] shrink-0 font-mono">
                                   {String.fromCharCode(65 + optIdx)}
                                 </span>
-                                <span>{opt}</span>
+                                <span>{cleanFormulaString(opt)}</span>
                               </button>
                             );
                           })}
                         </div>
 
                         {quizSubmitted && (
-                          <div className="mt-3 p-3 bg-white dark:bg-slate-800 rounded-lg text-xs leading-relaxed text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
-                            <strong>{uiStrings.explanationPrefix || 'Explanation: '}</strong>
-                            {q.explanation}
-                          </div>
+                          <>
+                            <div className="mt-3 p-3 bg-white dark:bg-slate-800 rounded-lg text-xs leading-relaxed text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
+                              <strong className="text-amber-600 dark:text-amber-400 block mb-1">
+                                {uiStrings.explanationPrefix || 'Explanation: '}
+                              </strong>
+                              <CleanFormulaRenderer content={q.explanation} />
+                            </div>
+                            <AnswerFeedbackWidget
+                              question={q.question}
+                              answer={q.explanation || q.options[q.correctIndex] || ''}
+                            />
+                          </>
                         )}
                       </div>
                     );

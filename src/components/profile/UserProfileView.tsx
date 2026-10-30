@@ -102,7 +102,7 @@ export const UserProfileView: React.FC = () => {
               <button
                 onClick={logout}
                 className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30 border border-rose-200 dark:border-rose-900 rounded-lg transition-colors"
-                title="Log out of Nexovia"
+                title="Log out of Nexovian"
               >
                 <LogOut className="w-3.5 h-3.5" />
                 <span>Log Out</span>
@@ -410,7 +410,7 @@ export const UserProfileView: React.FC = () => {
                     const url = URL.createObjectURL(blob);
                     const a = document.createElement('a');
                     a.href = url;
-                    a.download = `nexovia_data_export_${new Date().toISOString().slice(0, 10)}.json`;
+                    a.download = `nexovian_data_export_${new Date().toISOString().slice(0, 10)}.json`;
                     a.click();
                     URL.revokeObjectURL(url);
                   }

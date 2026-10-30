@@ -100,7 +100,7 @@ export const CurriculumAdminManagerModal: React.FC<Props> = ({
             <div className="space-y-3">
               <div className="p-3 rounded-xl bg-purple-50/50 dark:bg-purple-950/20 border border-purple-200/60 dark:border-purple-900/40 text-slate-700 dark:text-slate-300">
                 <strong>Curriculum Versioning Policy: </strong>
-                Nexovia supports multiple active curriculum standards (e.g. CAPS Standard vs CAPS Coding & Robotics Preview). Learners always remain linked to their selected version without silent data overwrites.
+                Nexovian supports multiple active curriculum standards (e.g. CAPS Standard vs CAPS Coding & Robotics Preview). Learners always remain linked to their selected version without silent data overwrites.
               </div>
 
               <div className="space-y-2.5">
@@ -223,7 +223,7 @@ export const CurriculumAdminManagerModal: React.FC<Props> = ({
             <div className="space-y-3">
               <div className="p-3 rounded-xl bg-blue-50 dark:bg-blue-950/20 border border-blue-200/60 dark:border-blue-900/40 text-blue-900 dark:text-blue-300">
                 <strong>11 Official South African Languages Matrix: </strong>
-                Nexovia never duplicates structural trees. Lessons have an English master text with registered translation states. Unauthored translations dynamically leverage Socratic AI translation with clear provenance.
+                Nexovian never duplicates structural trees. Lessons have an English master text with registered translation states. Unauthored translations dynamically leverage Socratic AI translation with clear provenance.
               </div>
 
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
@@ -268,7 +268,7 @@ export const CurriculumAdminManagerModal: React.FC<Props> = ({
 
         {/* Footer */}
         <div className="px-5 py-3.5 bg-slate-50 dark:bg-slate-950/60 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-xs text-slate-500">
-          <span>Nexovia Academy Content Engine v6.1</span>
+          <span>Nexovian Academy Content Engine v6.1</span>
           <button
             onClick={onClose}
             className="px-4 py-1.5 bg-purple-600 hover:bg-purple-500 text-white font-bold rounded-xl shadow-xs"

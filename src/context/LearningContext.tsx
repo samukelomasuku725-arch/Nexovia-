@@ -32,10 +32,11 @@ import {
 } from '../services/adaptive/adaptiveLearningService';
 import { TRACKS } from '../data/coursesData';
 import { SA_LANGUAGES } from '../data/learningContextData';
+import { getSubjectsForLevel } from '../data/educationData';
 import { ttsManager } from '../services/voice/tts/TextToSpeechManager';
 import { isTtsSupportedForLanguage } from '../services/voice/languageCapabilities';
 
-export type AppTab = 'home' | 'dashboard' | 'explore' | 'learn' | 'school' | 'tvet' | 'higherEd' | 'tracks' | 'tutor' | 'scan' | 'practice' | 'saved' | 'profile' | 'adaptive' | 'assessments' | 'academicVoice' | 'progress';
+export type AppTab = 'home' | 'dashboard' | 'explore' | 'learn' | 'school' | 'tvet' | 'higherEd' | 'tracks' | 'tutor' | 'scan' | 'practice' | 'saved' | 'profile' | 'adaptive' | 'assessments' | 'academicVoice' | 'progress' | 'adminBank' | 'about';
 
 export interface GeminiStatusInfo {
   checked: boolean;
@@ -164,7 +165,7 @@ interface LearningContextType {
   clearAdaptiveData: () => void;
 }
 
-const STORAGE_KEY = 'brightpath_learning_progress_v2';
+const STORAGE_KEY = 'nexovian_learning_progress_v2';
 
 const INITIAL_CONVERSATION: AIConversation = {
   id: 'conv-init-1',
@@ -182,7 +183,7 @@ const INITIAL_CONVERSATION: AIConversation = {
     {
       id: 'msg-welcome-1',
       role: 'assistant',
-      content: `Welcome to **BrightPath AI Tutor**! 
+      content: `Welcome to **Nexovian AI Tutor**! 
 *Tagline: "Learn today. Build tomorrow."*
 
 I am your interactive curriculum mentor. How can I help you master **Algebra & Factorization** today?
@@ -191,7 +192,7 @@ I am your interactive curriculum mentor. How can I help you master **Algebra & F
 - Choose from 11 official South African languages!`,
       timestamp: '2026-09-28T10:00:00.000Z',
       mode: 'explain',
-      summary: 'BrightPath AI Tutor Introduction',
+      summary: 'Nexovian AI Tutor Introduction',
       followUps: [
         'How do I factorize quadratic trinomials?',
         'Can you simplify completing the square with an analogy?',
@@ -248,13 +249,32 @@ const LearningContext = createContext<LearningContextType | undefined>(undefined
 
 export const LearningProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [tracks] = useState<Track[]>(TRACKS);
-  const [currentTab, setCurrentTab] = useState<AppTab>('home');
+  const [currentTab, setCurrentTab] = useState<AppTab>(() => {
+    if (typeof window !== 'undefined') {
+      if (window.location.pathname === '/admin' || window.location.pathname === '/admin/bank') {
+        return 'adminBank';
+      }
+      if (window.location.pathname === '/about') {
+        return 'about';
+      }
+      if (window.location.pathname === '/learn' || window.location.search.includes('lang=')) {
+        return 'learn';
+      }
+    }
+    return 'home';
+  });
   const [activeLessonId, setActiveLessonId] = useState<string | null>(null);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isPwaPromptOpen, setIsPwaPromptOpen] = useState(false);
   const [certificateToView, setCertificateToView] = useState<CertificateData | null>(null);
   const [isOffline, setIsOffline] = useState(!navigator.onLine);
-  const [theme, setTheme] = useState<'light' | 'dark'>('light');
+  const [theme, setTheme] = useState<'light' | 'dark'>(() => {
+    try {
+      const saved = localStorage.getItem('nexovian_theme');
+      if (saved === 'light' || saved === 'dark') return saved;
+    } catch (_) {}
+    return 'dark'; // Default futuristic dark mode
+  });
 
   // AI Tutor & Quiz state
   const [isTutorLoading, setIsTutorLoading] = useState(false);
@@ -278,7 +298,12 @@ export const LearningProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   // Unified Multilingual Learning State
   const [activeLearningLanguage, setActiveLearningLanguageState] = useState<SALanguageCode>(() => {
     try {
-      const stored = localStorage.getItem('brightpath_academy_language') as SALanguageCode;
+      if (typeof window !== 'undefined') {
+        const params = new URLSearchParams(window.location.search);
+        const urlLang = params.get('lang') as SALanguageCode;
+        if (urlLang) return urlLang;
+      }
+      const stored = localStorage.getItem('nexovian_academy_language') as SALanguageCode;
       if (stored) return stored;
     } catch {
       // fallback
@@ -289,8 +314,8 @@ export const LearningProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const setActiveLearningLanguage = (newLang: SALanguageCode) => {
     setActiveLearningLanguageState(newLang);
     try {
-      localStorage.setItem('brightpath_academy_language', newLang);
-      window.dispatchEvent(new CustomEvent('brightpath_language_changed', { detail: newLang }));
+      localStorage.setItem('nexovian_academy_language', newLang);
+      window.dispatchEvent(new CustomEvent('nexovian_language_changed', { detail: newLang }));
     } catch {
       // ignore
     }
@@ -300,16 +325,16 @@ export const LearningProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   // Sync with global language changes
   useEffect(() => {
     const handleLangSync = (e: any) => {
-      const lang = e?.detail || localStorage.getItem('brightpath_academy_language');
+      const lang = e?.detail || localStorage.getItem('nexovian_academy_language');
       if (lang && lang !== activeLearningLanguage) {
         setActiveLearningLanguageState(lang);
         setLearningContext((prev) => ({ ...prev, language: lang }));
       }
     };
-    window.addEventListener('brightpath_language_changed', handleLangSync);
+    window.addEventListener('nexovian_language_changed', handleLangSync);
     window.addEventListener('storage', handleLangSync);
     return () => {
-      window.removeEventListener('brightpath_language_changed', handleLangSync);
+      window.removeEventListener('nexovian_language_changed', handleLangSync);
       window.removeEventListener('storage', handleLangSync);
     };
   }, [activeLearningLanguage]);
@@ -318,7 +343,7 @@ export const LearningProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const [learningContext, setLearningContext] = useState<LearningContextState>(() => {
     let initialLang: SALanguageCode = 'en';
     try {
-      const stored = localStorage.getItem('brightpath_academy_language') as SALanguageCode;
+      const stored = localStorage.getItem('nexovian_academy_language') as SALanguageCode;
       if (stored) initialLang = stored;
     } catch {}
 
@@ -484,8 +509,8 @@ export const LearningProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   // ==========================================
   // PHASE 5: ADAPTIVE LEARNING ENGINE STATE
   // ==========================================
-  const ADAPTIVE_EVENTS_KEY = 'brightpath_adaptive_events_v2';
-  const THRESHOLDS_KEY = 'brightpath_mastery_thresholds_v2';
+  const ADAPTIVE_EVENTS_KEY = 'nexovian_adaptive_events_v2';
+  const THRESHOLDS_KEY = 'nexovian_mastery_thresholds_v2';
 
   const [performanceEvents, setPerformanceEvents] = useState<LearnerPerformanceEvent[]>(() => {
     try {
@@ -629,46 +654,137 @@ export const LearningProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     setActiveLessonId(null);
   };
 
+  useEffect(() => {
+    if (theme === 'dark') {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+    try {
+      localStorage.setItem('nexovian_theme', theme);
+    } catch (_) {}
+  }, [theme]);
+
   const toggleTheme = () => {
-    setTheme((prev) => {
-      const next = prev === 'light' ? 'dark' : 'light';
-      if (next === 'dark') {
-        document.documentElement.classList.add('dark');
-      } else {
-        document.documentElement.classList.remove('dark');
-      }
-      return next;
-    });
+    setTheme((prev) => (prev === 'light' ? 'dark' : 'light'));
   };
 
   const updateLearningContext = (partial: Partial<LearningContextState>) => {
     setLearningContext((prev) => {
-      const updated = { ...prev, ...partial };
+      const gradeChanged = partial.gradeOrProgramme !== undefined && partial.gradeOrProgramme !== prev.gradeOrProgramme;
+      let nextSubject = partial.subject !== undefined ? partial.subject : prev.subject;
+      let nextTopic = partial.topic !== undefined ? partial.topic : prev.topic;
+
+      // Changing the grade must refresh the available subjects and clear any incompatible old subject or topic
+      if (gradeChanged && partial.subject === undefined) {
+        const availableForNewGrade = getSubjectsForLevel(partial.gradeOrProgramme!);
+        const isSubjectValid = availableForNewGrade.some(
+          (s) => s.name.toLowerCase() === (prev.subject || '').toLowerCase()
+        );
+        if (isSubjectValid) {
+          const matchedSubj = availableForNewGrade.find(
+            (s) => s.name.toLowerCase() === (prev.subject || '').toLowerCase()
+          );
+          if (matchedSubj && prev.topic && !matchedSubj.topics.includes(prev.topic)) {
+            nextTopic = '';
+          }
+        } else {
+          nextSubject = '';
+          nextTopic = '';
+        }
+      }
+
+      // Changing the subject must clear any incompatible old topic
+      if (partial.subject !== undefined && partial.subject !== prev.subject && partial.topic === undefined) {
+        const currentGrade = partial.gradeOrProgramme || prev.gradeOrProgramme;
+        const available = getSubjectsForLevel(currentGrade);
+        const subjObj = available.find((s) => s.name === partial.subject);
+        if (subjObj && prev.topic && !subjObj.topics.includes(prev.topic)) {
+          nextTopic = '';
+        } else if (!subjObj) {
+          nextTopic = '';
+        }
+      }
+
+      const updated = {
+        ...prev,
+        ...partial,
+        subject: nextSubject,
+        topic: nextTopic
+      };
+
       if (partial.language && partial.language !== activeLearningLanguage) {
         setActiveLearningLanguageState(partial.language);
         try {
-          localStorage.setItem('brightpath_academy_language', partial.language);
-          window.dispatchEvent(new CustomEvent('brightpath_language_changed', { detail: partial.language }));
+          localStorage.setItem('nexovian_academy_language', partial.language);
+          localStorage.setItem('nexovian_academy_language', partial.language);
+          window.dispatchEvent(new CustomEvent('nexovian_language_changed', { detail: partial.language }));
+          window.dispatchEvent(new CustomEvent('nexovian_language_changed', { detail: partial.language }));
         } catch {}
+
+        // Update active conversation's language seamlessly
+        setUserProgress((p) => {
+          const active = p.conversations.find((c) => c.id === p.activeConversationId);
+          if (active && active.language !== partial.language) {
+            return {
+              ...p,
+              conversations: p.conversations.map((c) =>
+                c.id === active.id ? { ...c, language: partial.language! } : c
+              )
+            };
+          }
+          return p;
+        });
       }
+
       // Track topic in user progress
-      if (partial.topic && !userProgress.topicsStudied.includes(partial.topic)) {
+      if (updated.topic && !userProgress.topicsStudied.includes(updated.topic)) {
         setUserProgress((p) => ({
           ...p,
-          topicsStudied: [...p.topicsStudied, partial.topic!]
+          topicsStudied: [...p.topicsStudied, updated.topic!]
         }));
       }
 
-      // Synchronize active conversation with new subject/topic if changed
-      const topicChanged = partial.topic && partial.topic !== prev.topic;
-      const subjectChanged = partial.subject && partial.subject !== prev.subject;
-      if (topicChanged || subjectChanged) {
+      // Synchronize active conversation with new subject/topic/grade if changed
+      const topicChanged = updated.topic !== prev.topic;
+      const subjectChanged = updated.subject !== prev.subject;
+      if (topicChanged || subjectChanged || gradeChanged) {
         const targetSubj = updated.subject;
         const targetTop = updated.topic;
         const targetLevel = updated.educationLevel;
         const targetGrade = updated.gradeOrProgramme || targetLevel;
         const targetLang = updated.language;
         const targetMode = updated.mode;
+
+        const welcomeTitle = targetTop
+          ? `${targetTop} - ${targetMode.toUpperCase()}`
+          : targetSubj
+          ? `${targetSubj} - ${targetMode.toUpperCase()}`
+          : `${targetGrade} Studies`;
+
+        const welcomeContent = targetSubj && targetTop
+          ? `Welcome to **Nexovian AI Tutor**!\n\nTutor ready for **${targetTop}** (${targetSubj} · ${targetGrade}).\nMode: **${targetMode.toUpperCase()}** · Language: **${targetLang.toUpperCase()}**.\n\nAsk any question about **${targetTop}**, or choose a quick action below!`
+          : targetSubj
+          ? `Welcome to **Nexovian AI Tutor**!\n\nTutor ready for **${targetSubj}** (${targetGrade}).\nMode: **${targetMode.toUpperCase()}** · Language: **${targetLang.toUpperCase()}**.\n\nChoose a topic from the top bar or ask any question about **${targetSubj}** to begin!`
+          : `Welcome to **Nexovian AI Tutor**!\n\nI am your interactive curriculum mentor for **${targetGrade}**.\nMode: **${targetMode.toUpperCase()}** · Language: **${targetLang.toUpperCase()}**.\n\nWhat would you like to study in **${targetGrade}** today? Select a subject and topic above, or ask any question to get started!`;
+
+        const defaultFollowUps = targetSubj && targetTop
+          ? [
+              `What are the core concepts of ${targetTop}?`,
+              `Can you give a real-world example of ${targetTop}?`,
+              `How does ${targetTop} appear in tests or exams?`
+            ]
+          : targetSubj
+          ? [
+              `What are the most important topics in ${targetSubj}?`,
+              `Can you give an overview of ${targetSubj} for ${targetGrade}?`,
+              `Give me a starter practice question in ${targetSubj}.`
+            ]
+          : [
+              `What subjects are available in ${targetGrade}?`,
+              `Help me create a study plan for ${targetGrade}`,
+              `Explain how exams are structured for ${targetGrade}`
+            ];
 
         setUserProgress((p) => {
           // Check if user has an existing conversation matching this subject & topic
@@ -681,12 +797,11 @@ export const LearningProvider: React.FC<{ children: React.ReactNode }> = ({ chil
           }
 
           const active = p.conversations.find((c) => c.id === p.activeConversationId) || p.conversations[0];
-          // If active conversation has only assistant welcome messages and no user messages, update in-place
           const hasUserMessages = active?.messages.some((m) => m.role === 'user');
-          if (active && (!hasUserMessages || active.id === 'conv-init-1')) {
+          if (active && !hasUserMessages) {
             const updatedConv: AIConversation = {
               ...active,
-              title: `${targetTop} - ${targetMode.toUpperCase()}`,
+              title: welcomeTitle,
               educationLevel: targetLevel,
               gradeOrProgramme: targetGrade,
               subject: targetSubj,
@@ -698,15 +813,11 @@ export const LearningProvider: React.FC<{ children: React.ReactNode }> = ({ chil
                 {
                   id: `msg-${Date.now()}`,
                   role: 'assistant',
-                  content: `Welcome to **BrightPath AI Tutor**!\n\nTutor ready for **${targetTop}** (${targetSubj} · ${targetGrade}).\nMode: **${targetMode.toUpperCase()}** · Language: **${targetLang.toUpperCase()}**.\n\nAsk any question about **${targetTop}**, or choose a quick action below!`,
+                  content: welcomeContent,
                   timestamp: new Date().toISOString(),
                   mode: targetMode,
-                  summary: `${targetTop} Learning Overview`,
-                  followUps: [
-                    `What are the core concepts of ${targetTop}?`,
-                    `Can you give a real-world example of ${targetTop}?`,
-                    `How does ${targetTop} appear in tests or exams?`
-                  ]
+                  summary: `${targetTop || targetSubj || targetGrade} Learning Overview`,
+                  followUps: defaultFollowUps
                 }
               ]
             };
@@ -717,11 +828,11 @@ export const LearningProvider: React.FC<{ children: React.ReactNode }> = ({ chil
             };
           }
 
-          // Otherwise create a fresh conversation dedicated to this new topic
+          // Otherwise create a fresh conversation dedicated to this new context
           const newConv: AIConversation = {
             id: `conv-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
             userId: 'learner-1',
-            title: `${targetTop} - ${targetMode.toUpperCase()}`,
+            title: welcomeTitle,
             educationLevel: targetLevel,
             gradeOrProgramme: targetGrade,
             subject: targetSubj,
@@ -734,15 +845,11 @@ export const LearningProvider: React.FC<{ children: React.ReactNode }> = ({ chil
               {
                 id: `msg-${Date.now()}`,
                 role: 'assistant',
-                content: `Welcome to **BrightPath AI Tutor**!\n\nTutor ready for **${targetTop}** (${targetSubj} · ${targetGrade}).\nMode: **${targetMode.toUpperCase()}** · Language: **${targetLang.toUpperCase()}**.\n\nAsk any question about **${targetTop}**, or choose a quick action below!`,
+                content: welcomeContent,
                 timestamp: new Date().toISOString(),
                 mode: targetMode,
-                summary: `${targetTop} Learning Overview`,
-                followUps: [
-                  `What are the core concepts of ${targetTop}?`,
-                  `Can you give a real-world example of ${targetTop}?`,
-                  `How does ${targetTop} appear in tests or exams?`
-                ]
+                summary: `${targetTop || targetSubj || targetGrade} Learning Overview`,
+                followUps: defaultFollowUps
               }
             ]
           };
@@ -783,7 +890,7 @@ export const LearningProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         lastActiveDate: todayStr,
         lastActivityTimestamp: new Date().toISOString(),
         studyTimeMinutes: prev.studyTimeMinutes + 15,
-        totalXp: prev.totalXp + (alreadyCompleted ? 10 : xpBonus)
+        totalXp: prev.totalXp + (alreadyCompleted ? 0 : xpBonus)
       };
     });
 
@@ -837,15 +944,22 @@ export const LearningProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   };
 
   const recordQuizScore = (lessonId: string, score: number) => {
-    setUserProgress((prev) => ({
-      ...prev,
-      lessonQuizScores: {
-        ...prev.lessonQuizScores,
-        [lessonId]: score
-      },
-      totalXp: prev.totalXp + Math.round(score * 0.5),
-      lastActivityTimestamp: new Date().toISOString()
-    }));
+    setUserProgress((prev) => {
+      const prevBestScore = prev.lessonQuizScores?.[lessonId] ?? 0;
+      const scoreImprovement = Math.max(0, score - prevBestScore);
+      const earnedXp = Math.round(scoreImprovement * 0.5);
+      const newBestScore = Math.max(prevBestScore, score);
+
+      return {
+        ...prev,
+        lessonQuizScores: {
+          ...prev.lessonQuizScores,
+          [lessonId]: newBestScore
+        },
+        totalXp: prev.totalXp + earnedXp,
+        lastActivityTimestamp: new Date().toISOString()
+      };
+    });
   };
 
   const setActiveTrackId = (trackId: string) => {
@@ -859,7 +973,7 @@ export const LearningProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     const targetTrack = tracks.find((t) => t.id === trackId) || activeTrack;
     const cert: CertificateData = {
       id: `CERT-BP-${Math.random().toString(36).substring(2, 8).toUpperCase()}`,
-      studentName: studentName.trim() || 'BrightPath Scholar',
+      studentName: studentName.trim() || 'NEXOVIAN Scholar',
       trackId: targetTrack.id,
       trackTitle: targetTrack.title,
       issueDate: new Date().toLocaleDateString('en-US', {
@@ -925,25 +1039,45 @@ export const LearningProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   // AI CONVERSATION MANAGEMENT
   // ==========================================
   const createNewConversation = (title?: string): AIConversation => {
+    const targetSubj = learningContext.subject;
+    const targetTop = learningContext.topic;
+    const targetGrade = learningContext.gradeOrProgramme || learningContext.educationLevel;
+    const targetMode = learningContext.mode;
+
+    const convTitle =
+      title ||
+      (targetTop
+        ? `${targetTop} - ${targetMode.toUpperCase()}`
+        : targetSubj
+        ? `${targetSubj} - ${targetMode.toUpperCase()}`
+        : `${targetGrade} Studies`);
+
+    const convContent =
+      targetSubj && targetTop
+        ? `Tutor ready for **${targetTop}** (${targetSubj} · ${targetGrade}).\nMode: **${targetMode.toUpperCase()}** · Language: **${learningContext.language.toUpperCase()}**.\nAsk me any question or request step-by-step guidance!`
+        : targetSubj
+        ? `Tutor ready for **${targetSubj}** (${targetGrade}).\nMode: **${targetMode.toUpperCase()}** · Language: **${learningContext.language.toUpperCase()}**.\nChoose a topic above or ask any question to begin!`
+        : `Tutor ready for **${targetGrade}**.\nMode: **${targetMode.toUpperCase()}** · Language: **${learningContext.language.toUpperCase()}**.\nWhat would you like to study today? Choose a subject above or ask any question to get started!`;
+
     const newConv: AIConversation = {
       id: `conv-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
       userId: 'learner-1',
-      title: title || `${learningContext.topic} - ${learningContext.mode.toUpperCase()}`,
+      title: convTitle,
       educationLevel: learningContext.educationLevel,
       gradeOrProgramme: learningContext.gradeOrProgramme,
-      subject: learningContext.subject,
-      topic: learningContext.topic,
+      subject: targetSubj,
+      topic: targetTop,
       language: learningContext.language,
-      mode: learningContext.mode,
+      mode: targetMode,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
       messages: [
         {
           id: `msg-${Date.now()}`,
           role: 'assistant',
-          content: `Tutor ready for **${learningContext.topic}** (${learningContext.subject}).\nMode: **${learningContext.mode}** · Language: **${learningContext.language.toUpperCase()}**.\nAsk me any question or request step-by-step guidance!`,
+          content: convContent,
           timestamp: new Date().toISOString(),
-          mode: learningContext.mode
+          mode: targetMode
         }
       ]
     };
@@ -995,8 +1129,8 @@ export const LearningProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         if (conv.language && conv.language !== activeLearningLanguage) {
           setActiveLearningLanguageState(conv.language);
           try {
-            localStorage.setItem('brightpath_academy_language', conv.language);
-            window.dispatchEvent(new CustomEvent('brightpath_language_changed', { detail: conv.language }));
+            localStorage.setItem('nexovian_academy_language', conv.language);
+            window.dispatchEvent(new CustomEvent('nexovian_language_changed', { detail: conv.language }));
           } catch {}
         }
       }
@@ -1124,21 +1258,24 @@ export const LearningProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         if (json.keyMissing) {
           throw new Error('Gemini API key is not configured. Please set the GEMINI_API_KEY environment variable in your server environment.');
         }
-        throw new Error(json.message || "BrightPath couldn't generate a response right now.");
+        throw new Error(json.message || "NEXOVIAN couldn't generate a response right now.");
       }
 
       const aiData = json.data;
+      const rawContent = aiData.content || aiData.text || '';
+      const cleanContent = rawContent.split('---CACHE---')[0].trim();
 
       const aiMsg: AIMessage = {
         id: aiData.assistantMessage?.id || `msg-a-${Date.now()}`,
         role: 'assistant',
-        content: aiData.content || aiData.text || '',
+        content: cleanContent,
         timestamp: new Date().toISOString(),
         mode: effectiveMode,
         summary: aiData.summary || `Key study points for ${learningContext.topic}`,
         followUps: aiData.followUps || aiData.followUpSuggestions || [],
+        cacheMetadata: aiData.cacheMetadata,
         isAiGenerated: aiData.isAiGenerated ?? true,
-        disclaimer: aiData.disclaimer || 'AI-generated educational explanation · Not official CAPS curriculum content',
+        disclaimer: aiData.disclaimer || 'NEXOVIAN Tutor · Built in Mpumalanga for South Africa',
         languageSource: aiData.languageSource,
         verificationStatus: aiData.verificationStatus,
         targetLanguage: aiData.languageUsed,
@@ -1176,7 +1313,7 @@ export const LearningProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       }
     } catch (err: any) {
       console.error('Tutor message error:', err);
-      setTutorError(err?.message || "BrightPath couldn't generate a response right now.");
+      setTutorError(err?.message || "NEXOVIAN couldn't generate a response right now.");
     } finally {
       setIsTutorLoading(false);
     }
@@ -1262,7 +1399,7 @@ export const LearningProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         if (json.keyMissing) {
           throw new Error('Gemini API key is not configured. Please set the GEMINI_API_KEY environment variable in your server environment.');
         }
-        throw new Error(json.message || "BrightPath couldn't generate a study plan right now.");
+        throw new Error(json.message || "NEXOVIAN couldn't generate a study plan right now.");
       }
 
       const plan: StudyPlan = json.data;
@@ -1270,7 +1407,7 @@ export const LearningProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       return plan;
     } catch (err: any) {
       console.error('Study plan generation error:', err);
-      setTutorError(err?.message || "BrightPath couldn't generate a study plan right now.");
+      setTutorError(err?.message || "NEXOVIAN couldn't generate a study plan right now.");
       throw err;
     } finally {
       setIsTutorLoading(false);
@@ -1313,7 +1450,7 @@ export const LearningProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
       const json = await res.json();
       if (!res.ok || !json.success) {
-        throw new Error(json.message || "BrightPath couldn't generate a response right now.");
+        throw new Error(json.message || "NEXOVIAN couldn't generate a response right now.");
       }
 
       const quizData: GeneratedQuiz = json.data;
@@ -1321,7 +1458,7 @@ export const LearningProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       return quizData;
     } catch (err: any) {
       console.error('Quiz generation error:', err);
-      setTutorError("BrightPath couldn't generate a response right now.");
+      setTutorError("NEXOVIAN couldn't generate a response right now.");
       throw err;
     } finally {
       setIsTutorLoading(false);
@@ -1405,7 +1542,7 @@ export const LearningProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         if (json.keyMissing) {
           throw new Error('Gemini API key is not configured. Please set GEMINI_API_KEY in your server environment.');
         }
-        throw new Error(json.message || "BrightPath couldn't analyze the scanned image right now.");
+        throw new Error(json.message || "NEXOVIAN couldn't analyze the scanned image right now.");
       }
 
       const session: ScanSession = json.data.session;
@@ -1414,7 +1551,7 @@ export const LearningProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       return session;
     } catch (err: any) {
       console.error('Scan analysis error:', err);
-      const msg = err?.message || "BrightPath couldn't analyze the scanned image right now.";
+      const msg = err?.message || "NEXOVIAN couldn't analyze the scanned image right now.";
       setScanError(msg);
       throw err;
     } finally {
@@ -1449,7 +1586,7 @@ export const LearningProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
       const json = await res.json();
       if (!res.ok || !json.success) {
-        throw new Error(json.message || "BrightPath couldn't process your follow-up question.");
+        throw new Error(json.message || "NEXOVIAN couldn't process your follow-up question.");
       }
 
       const updatedSession: ScanSession = json.data.session;
@@ -1463,7 +1600,7 @@ export const LearningProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       return assistantMessage;
     } catch (err: any) {
       console.error('Scan follow-up error:', err);
-      const msg = err?.message || "BrightPath couldn't process your follow-up question.";
+      const msg = err?.message || "NEXOVIAN couldn't process your follow-up question.";
       setScanError(msg);
       throw err;
     } finally {

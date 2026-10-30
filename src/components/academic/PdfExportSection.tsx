@@ -1,7 +1,7 @@
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
- * Nexovia Academic Voice - PDF Export & Preview Controls
+ * Nexovian Academic Voice - PDF Export & Preview Controls
  */
 
 import React, { useState } from 'react';
@@ -109,7 +109,7 @@ export const PdfExportSection: React.FC<Props> = ({
           className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-xs font-semibold text-slate-800 dark:text-slate-200 transition-colors shadow-2xs self-start sm:self-auto"
         >
           <Save className="w-3.5 h-3.5 text-emerald-500" />
-          <span>{isSaving ? 'Saving...' : 'Save to Nexovia Account'}</span>
+          <span>{isSaving ? 'Saving...' : 'Save to Nexovian Account'}</span>
         </button>
       </div>
 
@@ -212,7 +212,7 @@ export const PdfExportSection: React.FC<Props> = ({
       </div>
 
       <p className="text-xs text-slate-400 text-center">
-        🔒 Your document remains fully editable in Nexovia even after exporting. You can return, modify sections, and regenerate PDFs anytime.
+        🔒 Your document remains fully editable in Nexovian even after exporting. You can return, modify sections, and regenerate PDFs anytime.
       </p>
     </div>
   );

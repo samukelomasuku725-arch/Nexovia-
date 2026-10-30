@@ -2,7 +2,7 @@
  * @license
  * SPDX-License-Identifier: Apache-2.0
  * 
- * BRIGHTPATH ACADEMY - PHASE 8: STUDENT DASHBOARD & MASTERY SERVICE
+ * NEXOVIA - PHASE 8: STUDENT DASHBOARD & MASTERY SERVICE
  * 
  * Central aggregator deriving high-performance student dashboard metrics from
  * real data across Adaptive Learning (Phase 5), CAPS Curriculum (Phase 6),
@@ -11,7 +11,7 @@
  * Important Rules:
  * - NO fake statistics or fabricated scores.
  * - Distinct separation between "Curriculum Completion" and "Topic Mastery".
- * - Clear disclosure that BrightPath learning analytics are diagnostic heuristics,
+ * - Clear disclosure that NEXOVIA learning analytics are diagnostic heuristics,
  *   not official DBE report card marks.
  */
 
@@ -141,7 +141,7 @@ export class DashboardService {
     return {
       learnerId,
       learnerName,
-      email: user?.email || 'learner@brightpath.ac.za',
+      email: user?.email || 'learner@nexovia.ac.za',
       role,
       educationLevel,
       gradeOrProgramme,
@@ -668,7 +668,7 @@ export class DashboardService {
 
   /**
    * Generates hierarchical diagnostic mastery trees (Section 8).
-   * Breaks down by Subject -> Topic -> Subtopics using the official BrightPath 5-tier diagnostic scale:
+   * Breaks down by Subject -> Topic -> Subtopics using the official NEXOVIA 5-tier diagnostic scale:
    * 0–39 Needs significant support
    * 40–59 Developing
    * 60–74 Basic understanding

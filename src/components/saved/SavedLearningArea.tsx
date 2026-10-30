@@ -16,6 +16,8 @@ import {
 } from 'lucide-react';
 import { useLearning } from '../../context/LearningContext';
 import { SavedItemType } from '../../types';
+import { CleanFormulaRenderer } from '../common/CleanFormulaRenderer';
+import { cleanFormulaString } from '../../utils/formulaCleaner';
 
 export const SavedLearningArea: React.FC = () => {
   const {
@@ -61,7 +63,7 @@ export const SavedLearningArea: React.FC = () => {
   });
 
   const handleCopy = (id: string, text: string) => {
-    navigator.clipboard.writeText(text);
+    navigator.clipboard.writeText(cleanFormulaString(text));
     setCopiedId(id);
     setTimeout(() => setCopiedId(null), 1500);
   };
@@ -166,7 +168,7 @@ export const SavedLearningArea: React.FC = () => {
                         </span>
                       </div>
                       <h4 className="font-display text-base font-bold text-slate-900 dark:text-white">
-                        {item.title}
+                        {cleanFormulaString(item.title)}
                       </h4>
                     </div>
 
@@ -192,8 +194,8 @@ export const SavedLearningArea: React.FC = () => {
                     </div>
                   </div>
 
-                  <div className="bg-slate-50 dark:bg-slate-950 p-4 rounded-xl text-xs sm:text-sm text-slate-700 dark:text-slate-300 whitespace-pre-wrap leading-relaxed">
-                    {item.content}
+                  <div className="bg-slate-50 dark:bg-slate-950 p-4 rounded-xl shadow-xs">
+                    <CleanFormulaRenderer content={item.content} language={item.language} />
                   </div>
 
                   <div className="mt-3 flex items-center justify-between text-[11px] text-slate-400">

@@ -1,23 +1,44 @@
-import React, { useState, useMemo } from 'react';
-import { RotateCw, Check, X, Sparkles, Shuffle, Lightbulb, Trophy } from 'lucide-react';
+import React, { useState, useMemo, useEffect } from 'react';
+import { RotateCw, Check, X, Trophy, ShieldCheck } from 'lucide-react';
 import { FLASHCARDS } from '../../data/flashcardsData';
 import { useLearning } from '../../context/LearningContext';
+import { useAuth } from '../../context/AuthContext';
+import { isAdminUser } from '../../services/antiAbuseService';
 import { multilingualEducationalService } from '../../services/language/multilingualEducationalService';
+import { CleanFormulaRenderer } from '../common/CleanFormulaRenderer';
+import { cleanFormulaString } from '../../utils/formulaCleaner';
+import { Flashcard } from '../../types';
 
 export const FlashcardPractice: React.FC = () => {
-  const { markLessonComplete, userProgress, recordPerformanceEvent, learningContext, activeLearningLanguage } = useLearning();
-  const [deck, setDeck] = useState(FLASHCARDS);
+  const { userProgress, recordPerformanceEvent, learningContext, activeLearningLanguage, setCurrentTab } = useLearning();
+  const { user } = useAuth();
+  const isAdmin = isAdminUser(user);
+
+  const [deck, setDeck] = useState<Flashcard[]>(FLASHCARDS);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isFlipped, setIsFlipped] = useState(false);
   const [masteredIds, setMasteredIds] = useState<string[]>([]);
   const [reviewIds, setReviewIds] = useState<string[]>([]);
-  const [difficultyFilter, setDifficultyFilter] = useState<'All' | 'Foundation' | 'Core' | 'Expert'>('All');
 
-  const filteredDeck = difficultyFilter === 'All'
-    ? deck
-    : deck.filter((c) => c.difficulty === difficultyFilter);
+  // Load latest flashcards from backend if available
+  useEffect(() => {
+    let isMounted = true;
+    fetch('/api/flashcards')
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (isMounted && data && Array.isArray(data.cards) && data.cards.length > 0) {
+          setDeck(data.cards);
+        }
+      })
+      .catch(() => {
+        // Fallback to local default flashcards
+      });
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
-  const rawCard = filteredDeck[currentIndex % (filteredDeck.length || 1)];
+  const rawCard = deck[currentIndex % (deck.length || 1)];
   const currentCard = useMemo(() => {
     return rawCard
       ? multilingualEducationalService.localizeFlashcard(rawCard, activeLearningLanguage)
@@ -26,7 +47,7 @@ export const FlashcardPractice: React.FC = () => {
 
   const handleNext = () => {
     setIsFlipped(false);
-    if (currentIndex < filteredDeck.length - 1) {
+    if (currentIndex < deck.length - 1) {
       setCurrentIndex((prev) => prev + 1);
     } else {
       setCurrentIndex(0);
@@ -39,6 +60,8 @@ export const FlashcardPractice: React.FC = () => {
       setMasteredIds((prev) => [...prev, currentCard.id]);
     }
     setReviewIds((prev) => prev.filter((id) => id !== currentCard.id));
+
+    const xpEarned = currentCard.xp || 10;
 
     // Record into Adaptive Learning Engine
     recordPerformanceEvent({
@@ -91,19 +114,15 @@ export const FlashcardPractice: React.FC = () => {
     handleNext();
   };
 
-  const handleShuffle = () => {
-    setIsFlipped(false);
-    setDeck((prev) => [...prev].sort(() => Math.random() - 0.5));
-    setCurrentIndex(0);
-  };
-
-  const masteryPct = filteredDeck.length > 0
-    ? Math.round((masteredIds.length / filteredDeck.length) * 100)
+  const masteryPct = deck.length > 0
+    ? Math.round((masteredIds.length / deck.length) * 100)
     : 0;
+
+  const currentXp = currentCard?.xp || 10;
 
   return (
     <section className="py-6 sm:py-10 max-w-4xl mx-auto px-4 sm:px-6">
-      {/* Header */}
+      {/* Header - Clean public view (no shuffle button, no metadata pills) */}
       <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-6">
         <div>
           <div className="text-xs font-semibold uppercase tracking-wider text-amber-600 dark:text-amber-400 mb-1">
@@ -112,51 +131,28 @@ export const FlashcardPractice: React.FC = () => {
           <h2 className="font-display text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white">
             Daily Quick-Fire Flashcards
           </h2>
-          <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
-            Reinforce core architectural heuristics, API protocols, and zero-slop design principles.
-          </p>
         </div>
 
-        {/* Shuffle and Controls */}
-        <div className="flex items-center gap-2">
+        {/* Admin shortcut if logged in as admin */}
+        {isAdmin && (
           <button
-            onClick={handleShuffle}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-slate-700 dark:text-slate-300 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 rounded-lg transition-colors"
+            onClick={() => setCurrentTab('adminBank')}
+            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-amber-900 dark:text-amber-300 bg-amber-100 dark:bg-amber-950/60 border border-amber-300 dark:border-amber-800 rounded-xl transition-colors hover:bg-amber-200"
+            title="Open Spaced Repetition Editor in Admin Portal"
           >
-            <Shuffle className="w-3.5 h-3.5" />
-            <span>Shuffle Deck</span>
+            <ShieldCheck className="w-3.5 h-3.5 text-amber-600" />
+            <span>Admin Editor</span>
           </button>
-        </div>
+        )}
       </div>
 
-      {/* Difficulty Filter Tabs */}
-      <div className="flex items-center gap-1 p-1 bg-slate-100 dark:bg-slate-900 rounded-xl mb-6 w-fit">
-        {(['All', 'Foundation', 'Core', 'Expert'] as const).map((diff) => (
-          <button
-            key={diff}
-            onClick={() => {
-              setDifficultyFilter(diff);
-              setCurrentIndex(0);
-              setIsFlipped(false);
-            }}
-            className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-colors ${
-              difficultyFilter === diff
-                ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-sm font-semibold'
-                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-            }`}
-          >
-            {diff}
-          </button>
-        ))}
-      </div>
-
-      {/* Progress Metric Bar */}
-      <div className="mb-6 bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-xl p-4 flex items-center justify-between gap-4">
+      {/* Progress Metric Bar: Deck Progress, Card count, Mastered % */}
+      <div className="mb-6 bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-4 flex items-center justify-between gap-4 shadow-xs">
         <div>
           <div className="flex items-center gap-2 text-xs font-medium text-slate-500 dark:text-slate-400">
-            <span>Deck Progress</span>
+            <span className="font-semibold text-slate-700 dark:text-slate-300">Deck Progress</span>
             <span aria-hidden="true">·</span>
-            <span>Card {currentIndex + 1} of {filteredDeck.length}</span>
+            <span>Card {deck.length > 0 ? currentIndex + 1 : 0} of {deck.length}</span>
             <span aria-hidden="true">·</span>
             <span>{masteredIds.length} Mastered</span>
           </div>
@@ -176,23 +172,19 @@ export const FlashcardPractice: React.FC = () => {
         </div>
       </div>
 
-      {/* 3D Flashcard Stage */}
+      {/* Flashcard Stage: PROMPT QUESTION Card & Tap to Flip */}
       {currentCard ? (
         <div className="space-y-6">
           <div
             onClick={() => setIsFlipped((prev) => !prev)}
             className="w-full min-h-[300px] sm:min-h-[340px] bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-6 sm:p-8 shadow-md hover:shadow-lg transition-all cursor-pointer flex flex-col justify-between group relative select-none"
           >
-            {/* Card Metadata Top */}
+            {/* Card Metadata Top - Clean (Touch Ergonomics metadata hidden in public view) */}
             <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 font-medium">
-              <div className="flex items-center gap-2">
-                <span>{currentCard.topic}</span>
-                <span aria-hidden="true">·</span>
-                <span className="font-semibold text-amber-600 dark:text-amber-400">
-                  {currentCard.difficulty}
-                </span>
-              </div>
-              <div className="flex items-center gap-1 text-[11px] text-slate-400 group-hover:text-slate-700 dark:group-hover:text-slate-200 transition-colors">
+              <span className="text-[11px] uppercase tracking-wider font-semibold text-slate-400">
+                {!isFlipped ? 'Prompt Question' : 'Answer'}
+              </span>
+              <div className="flex items-center gap-1.5 text-xs text-amber-600 dark:text-amber-400 font-semibold group-hover:text-amber-500 transition-colors">
                 <RotateCw className="w-3.5 h-3.5" />
                 <span>Tap to flip</span>
               </div>
@@ -202,24 +194,18 @@ export const FlashcardPractice: React.FC = () => {
             <div className="my-auto py-4">
               {!isFlipped ? (
                 <div>
-                  <span className="text-[11px] uppercase tracking-wider font-semibold text-slate-400 block mb-2">
-                    Prompt Question
-                  </span>
                   <h3 className="font-display text-xl sm:text-2xl font-bold text-slate-900 dark:text-white leading-relaxed">
-                    {currentCard.question}
+                    {cleanFormulaString(currentCard.question)}
                   </h3>
                 </div>
               ) : (
                 <div className="animate-in fade-in duration-200">
-                  <span className="text-[11px] uppercase tracking-wider font-semibold text-emerald-600 dark:text-emerald-400 block mb-2">
-                    Architectural Answer
-                  </span>
-                  <p className="text-base sm:text-lg text-slate-800 dark:text-slate-200 leading-relaxed font-normal">
-                    {currentCard.answer}
-                  </p>
+                  <div className="text-base sm:text-lg text-slate-800 dark:text-slate-200 leading-relaxed font-normal">
+                    <CleanFormulaRenderer content={currentCard.answer} />
+                  </div>
 
                   {currentCard.codeSnippet && (
-                    <div className="mt-4 p-3 bg-slate-950 rounded-xl font-mono text-xs text-emerald-400 border border-slate-800">
+                    <div className="mt-4 p-3 bg-slate-950 rounded-xl font-mono text-xs text-emerald-400 border border-slate-800 overflow-x-auto">
                       <code>{currentCard.codeSnippet}</code>
                     </div>
                   )}
@@ -227,18 +213,18 @@ export const FlashcardPractice: React.FC = () => {
               )}
             </div>
 
-            {/* Card Footer Hint */}
-            <div className="text-[11px] text-slate-400 pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between">
-              <span>{isFlipped ? 'Answer Revealed' : 'Click card to reveal architectural answer'}</span>
-              <span>Nexovia Revision System</span>
+            {/* Card Footer Hint: Clean learner instruction */}
+            <div className="text-xs text-slate-400 pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between">
+              <span>{isFlipped ? 'Answer Revealed' : 'Tap card to reveal answer'}</span>
+              <span className="text-[11px] text-slate-400">Card {currentIndex + 1} of {deck.length}</span>
             </div>
           </div>
 
-          {/* Action Ergonomic Buttons */}
+          {/* Action Ergonomic Buttons: Needs Review / Mastered (+10 XP) */}
           <div className="grid grid-cols-2 gap-3 sm:gap-4">
             <button
               onClick={handleMarkReview}
-              className="min-h-[48px] flex items-center justify-center gap-2 py-3 px-4 rounded-xl border border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 font-semibold text-sm transition-all active:scale-95"
+              className="min-h-[50px] flex items-center justify-center gap-2 py-3 px-4 rounded-xl border border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 font-semibold text-sm transition-all active:scale-95 shadow-2xs"
             >
               <X className="w-4 h-4 text-rose-500" />
               <span>Needs Review</span>
@@ -246,16 +232,16 @@ export const FlashcardPractice: React.FC = () => {
 
             <button
               onClick={handleMarkMastered}
-              className="min-h-[48px] flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 font-bold text-sm shadow-sm transition-all active:scale-95"
+              className="min-h-[50px] flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-amber-400 hover:bg-yellow-400 text-slate-950 font-bold text-sm shadow-md transition-all active:scale-95"
             >
-              <Check className="w-4 h-4" />
-              <span>Mastered (+10 XP)</span>
+              <Check className="w-4 h-4 stroke-[2.5]" />
+              <span>Mastered (+{currentXp} XP)</span>
             </button>
           </div>
         </div>
       ) : (
         <div className="p-8 text-center text-slate-500">
-          No flashcards match this filter.
+          No flashcards loaded.
         </div>
       )}
     </section>

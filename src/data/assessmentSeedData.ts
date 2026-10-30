@@ -2,7 +2,7 @@
  * @license
  * SPDX-License-Identifier: Apache-2.0
  * 
- * BRIGHTPATH ACADEMY - PHASE 7: ASSESSMENTS & EXAM SEED DATA
+ * NEXOVIA - PHASE 7: ASSESSMENTS & EXAM SEED DATA
  * 
  * High-quality seed data covering all 8 question types:
  * 1. Multiple Choice
@@ -533,7 +533,7 @@ export const SEED_ASSESSMENTS: AssessmentModel[] = [
     ],
     status: 'PUBLISHED',
     sourceType: 'DEMO',
-    createdBy: 'BrightPath Curriculum Team',
+    createdBy: 'NEXOVIA Curriculum Team',
     createdAt: '2024-02-10T00:00:00Z',
     updatedAt: '2024-02-10T00:00:00Z'
   },

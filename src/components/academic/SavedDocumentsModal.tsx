@@ -1,7 +1,7 @@
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
- * Nexovia Academic Voice - Saved Documents Library Modal
+ * Nexovian Academic Voice - Saved Documents Library Modal
  */
 
 import React, { useState } from 'react';

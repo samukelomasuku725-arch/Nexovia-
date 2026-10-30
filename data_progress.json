@@ -1,7 +1,7 @@
 {
   "guest_learner": {
     "userId": "guest_learner",
-    "questionsAskedCount": 20,
+    "questionsAskedCount": 26,
     "practiceSessionsCount": 1,
     "quizAttempts": [],
     "topicsStudied": [
@@ -9,7 +9,12 @@
       "Newton's Laws of Motion",
       "General Topic",
       "Quadratic Equations",
-      "Vectors & Motion in One Dimension"
+      "Vectors & Motion in One Dimension",
+      "Photosynthesis",
+      "Electric Circuits & Ohm's Law",
+      "Forces & Motion",
+      "Financial Statements",
+      "Population Geography"
     ],
     "savedLearning": [],
     "conversations": [
@@ -149,7 +154,7 @@
         "createdAt": "2026-09-30T07:58:01.276Z"
       }
     ],
-    "lastActiveDate": "2026-10-11",
+    "lastActiveDate": "2026-10-28",
     "scanSessions": [
       {
         "id": "scan_1791050922110_h0x1y",

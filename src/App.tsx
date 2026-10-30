@@ -26,6 +26,8 @@ import { StudentMasteryDashboardView } from './components/dashboard/StudentMaste
 import { LearnHubView } from './components/learn/LearnHubView';
 import { MyProgressHubView } from './components/progress/MyProgressHubView';
 import { AcademicVoiceView } from './components/academic/AcademicVoiceView';
+import { AdminQuestionBankView } from './components/admin/AdminQuestionBankView';
+import { AboutUsView } from './components/about/AboutUsView';
 import { LessonPlayerModal } from './components/player/LessonPlayerModal';
 import { CertificateModal } from './components/certificate/CertificateModal';
 import { SearchModal } from './components/search/SearchModal';
@@ -33,6 +35,12 @@ import { PwaInstallBanner } from './components/pwa/PwaInstallBanner';
 import { ToastProvider } from './components/layout/ToastNotification';
 import { AuthModal } from './components/auth/AuthModal';
 import { Footer } from './components/layout/Footer';
+import { SplashScreen } from './components/common/SplashScreen';
+import { useAuth } from './context/AuthContext';
+import { CreateAccountScreen } from './components/auth/CreateAccountScreen';
+import { SubscriptionBanner } from './components/subscription/SubscriptionBanner';
+import { isAdminUser } from './services/antiAbuseService';
+import { LogoIcon } from './components/common/LogoIcon';
 import { APP_CONFIG } from './config/brand';
 import { 
   ArrowRight, 
@@ -55,15 +63,45 @@ import {
 
 const MainLayout: React.FC = () => {
   const { currentTab, setCurrentTab, tracks, openLesson, adaptiveProfile } = useLearning();
+  const { isAuthenticated, isLoading, user, logout } = useAuth();
   const { t } = useTranslation();
 
+  // If initial auth session is being checked, show quick splash
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-[#F6F5EF] flex items-center justify-center p-4">
+        <div className="text-center">
+          <LogoIcon size={48} className="animate-pulse mx-auto" />
+          <p className="mt-4 font-mono text-xs font-bold text-slate-700">Connecting to NEXOVIAN...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // 1. Before showing Overview / My Mastery, check if user is logged in using Supabase Auth
+  // 2. If NOT logged in, show full screen Create Account page
+  if (!isAuthenticated && currentTab !== 'about') {
+    return <CreateAccountScreen />;
+  }
+
+  // Admin route guard: /admin /adminBank only accessible if admin, else redirect to home
+  if (currentTab === 'adminBank' && !isAdminUser(user)) {
+    setCurrentTab('home');
+    if (typeof window !== 'undefined' && window.location.pathname.startsWith('/admin')) {
+      window.history.replaceState({}, '', '/');
+    }
+  }
+
   return (
-    <div className="min-h-screen flex flex-col bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 transition-colors pb-16 md:pb-0">
+    <div className="min-h-screen flex flex-col bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 transition-colors pb-16 md:pb-0 w-full max-w-[100vw] overflow-x-hidden">
+      {/* 1-day Trial / Paystack Subscription Notification */}
+      <SubscriptionBanner />
+
       {/* 3-Zone Top Navigation Bar */}
       <Navbar />
 
       {/* Main Content Router */}
-      <main className="flex-1">
+      <main className="flex-1 w-full max-w-[100vw] overflow-x-hidden">
         {currentTab === 'home' && <StudentMasteryDashboardView />}
         {currentTab === 'explore' && (
           <div>
@@ -73,8 +111,9 @@ const MainLayout: React.FC = () => {
             <section className="max-w-7xl mx-auto px-4 sm:px-6 my-8">
               <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-2 mb-6">
                 <div>
-                  <div className="text-xs font-semibold uppercase tracking-wider text-amber-600 dark:text-amber-400 mb-1">
-                    South African Unified Structure
+                  <div className="text-xs font-semibold uppercase tracking-wider text-cyan-400 font-mono mb-1 flex items-center gap-1.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse shadow-[0_0_8px_#00f0ff]" />
+                    <span>South African Unified Structure</span>
                   </div>
                   <h2 className="font-display text-2xl font-bold text-slate-900 dark:text-white">
                     Three Education Pathways
@@ -89,7 +128,7 @@ const MainLayout: React.FC = () => {
                 {/* Pathway Card 1: School (CAPS) */}
                 <div 
                   onClick={() => setCurrentTab('school')}
-                  className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-all cursor-pointer flex flex-col justify-between group active:scale-98"
+                  className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 hover:border-cyan-500/50 rounded-2xl overflow-hidden shadow-sm hover:shadow-[0_0_20px_-5px_rgba(6,182,212,0.3)] transition-all cursor-pointer flex flex-col justify-between group active:scale-98"
                 >
                   <div>
                     <div className="relative h-44 overflow-hidden">
@@ -101,7 +140,7 @@ const MainLayout: React.FC = () => {
                       />
                       <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-transparent" />
                       <div className="absolute bottom-3 left-3 text-white">
-                        <span className="text-[10px] font-mono font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-amber-500/80 text-slate-950">
+                        <span className="text-[10px] font-mono font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-cyan-500 text-slate-950 shadow-[0_0_10px_-2px_rgba(6,182,212,0.6)]">
                           {t('pathwaySchoolBadge')}
                         </span>
                       </div>
@@ -109,7 +148,7 @@ const MainLayout: React.FC = () => {
 
                     <div className="p-5">
                       <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400 mb-1">
-                        <School className="w-4 h-4 text-amber-600 dark:text-amber-400" />
+                        <School className="w-4 h-4 text-cyan-400" />
                         <span>Foundation to FET Phases</span>
                       </div>
                       <h3 className="font-display text-lg font-bold text-slate-900 dark:text-white">
@@ -122,10 +161,10 @@ const MainLayout: React.FC = () => {
                   </div>
 
                   <div className="p-4 bg-slate-50 dark:bg-slate-950/60 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between">
-                    <span className="text-xs font-semibold text-amber-600 dark:text-amber-400">
+                    <span className="text-xs font-semibold text-cyan-500 dark:text-cyan-400">
                       Explore 13 Grades
                     </span>
-                    <ArrowRight className="w-4 h-4 text-amber-500 group-hover:translate-x-1 transition-transform" />
+                    <ArrowRight className="w-4 h-4 text-cyan-400 group-hover:translate-x-1 transition-transform" />
                   </div>
                 </div>
 
@@ -220,32 +259,32 @@ const MainLayout: React.FC = () => {
             {/* AI TUTOR & SCAN & LEARN PRIMARY ADJACENCY BANNERS */}
             <section className="max-w-7xl mx-auto px-4 sm:px-6 mb-8 grid grid-cols-1 md:grid-cols-2 gap-4">
               {/* Card 1: Scan & Learn */}
-              <div className="bg-gradient-to-br from-amber-500/15 via-amber-400/5 to-white dark:to-slate-900 border border-amber-500/30 rounded-2xl p-5 sm:p-6 flex flex-col justify-between shadow-xs">
+              <div className="bg-gradient-to-br from-cyan-950/40 via-slate-900/90 to-slate-950 text-white border border-cyan-500/30 hover:border-cyan-500/50 rounded-2xl p-5 sm:p-6 flex flex-col justify-between shadow-[0_0_20px_-5px_rgba(6,182,212,0.15)] transition-all">
                 <div>
                   <div className="flex items-center justify-between mb-3">
-                    <div className="w-10 h-10 rounded-xl bg-amber-400 text-slate-950 flex items-center justify-center font-bold shadow-xs">
+                    <div className="w-10 h-10 rounded-xl bg-cyan-400 text-slate-950 flex items-center justify-center font-bold shadow-[0_0_12px_rgba(6,182,212,0.5)]">
                       <Camera className="w-5 h-5" />
                     </div>
-                    <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-700 dark:text-amber-300">
+                    <span className="text-[10px] font-mono font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">
                       Phase 3 · Vision AI
                     </span>
                   </div>
 
-                  <h3 className="font-display text-lg font-bold text-slate-900 dark:text-white">
+                  <h3 className="font-display text-lg font-bold text-white">
                     Scan & Learn
                   </h3>
-                  <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 mt-1.5 leading-relaxed">
+                  <p className="text-xs sm:text-sm text-slate-300 mt-1.5 leading-relaxed">
                     Take a photo of textbook pages, homework questions, or circuit diagrams. Gemini analyzes clarity, explains step-by-step, generates quizzes, and answers follow-ups in 11 SA languages.
                   </p>
                 </div>
 
-                <div className="mt-5 pt-4 border-t border-amber-500/20 flex items-center justify-between">
-                  <span className="text-xs font-semibold text-amber-700 dark:text-amber-300">
+                <div className="mt-5 pt-4 border-t border-cyan-500/20 flex items-center justify-between">
+                  <span className="text-xs font-semibold text-cyan-300 font-mono">
                     Camera · Gallery · 7 Modes
                   </span>
                   <button
                     onClick={() => setCurrentTab('scan')}
-                    className="flex items-center gap-1.5 px-4 py-2 bg-amber-400 hover:bg-amber-300 text-slate-950 font-bold rounded-xl text-xs shadow-xs transition-transform active:scale-95"
+                    className="flex items-center gap-1.5 px-4 py-2 bg-gradient-to-r from-cyan-400 to-sky-300 hover:from-cyan-300 hover:to-sky-200 text-slate-950 font-bold rounded-xl text-xs shadow-[0_0_15px_-2px_rgba(6,182,212,0.4)] transition-transform active:scale-95"
                   >
                     <Camera className="w-3.5 h-3.5" />
                     <span>Open Scan & Learn</span>
@@ -254,13 +293,13 @@ const MainLayout: React.FC = () => {
               </div>
 
               {/* Card 2: AI Tutor */}
-              <div className="bg-gradient-to-br from-slate-900 to-slate-950 text-white border border-slate-800 rounded-2xl p-5 sm:p-6 flex flex-col justify-between shadow-xs">
+              <div className="bg-gradient-to-br from-purple-950/40 via-slate-900/90 to-slate-950 text-white border border-purple-500/30 hover:border-purple-500/50 rounded-2xl p-5 sm:p-6 flex flex-col justify-between shadow-[0_0_20px_-5px_rgba(168,85,247,0.15)] transition-all">
                 <div>
                   <div className="flex items-center justify-between mb-3">
-                    <div className="w-10 h-10 rounded-xl bg-amber-400 text-slate-950 flex items-center justify-center font-bold shadow-xs">
-                      <Sparkles className="w-5 h-5" />
+                    <div className="w-10 h-10 rounded-xl bg-purple-500 text-white flex items-center justify-center font-bold shadow-[0_0_12px_rgba(168,85,247,0.5)]">
+                      <Sparkles className="w-5 h-5 text-cyan-300" />
                     </div>
-                    <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-amber-400/20 text-amber-300">
+                    <span className="text-[10px] font-mono font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-purple-500/20 text-purple-300 border border-purple-500/30">
                       11 SA Languages
                     </span>
                   </div>
@@ -273,13 +312,13 @@ const MainLayout: React.FC = () => {
                   </p>
                 </div>
 
-                <div className="mt-5 pt-4 border-t border-slate-800 flex items-center justify-between">
-                  <span className="text-xs font-semibold text-slate-400">
+                <div className="mt-5 pt-4 border-t border-purple-500/20 flex items-center justify-between">
+                  <span className="text-xs font-semibold text-purple-300 font-mono">
                     Socratic · Study Plans · Practice
                   </span>
                   <button
                     onClick={() => setCurrentTab('tutor')}
-                    className="flex items-center gap-1.5 px-4 py-2 bg-white hover:bg-slate-100 text-slate-950 font-bold rounded-xl text-xs shadow-xs transition-transform active:scale-95"
+                    className="flex items-center gap-1.5 px-4 py-2 bg-gradient-to-r from-purple-500 via-indigo-500 to-cyan-400 hover:from-purple-400 hover:to-cyan-300 text-white font-bold rounded-xl text-xs shadow-[0_0_15px_-2px_rgba(168,85,247,0.4)] transition-transform active:scale-95"
                   >
                     <MessageSquare className="w-3.5 h-3.5" />
                     <span>Launch AI Tutor</span>
@@ -290,12 +329,12 @@ const MainLayout: React.FC = () => {
 
             {/* PHASE 5: ADAPTIVE LEARNING ENGINE HOME SPOTLIGHT */}
             <section className="max-w-7xl mx-auto px-4 sm:px-6 mb-8">
-              <div className="bg-white dark:bg-slate-900 border border-amber-500/30 rounded-3xl p-5 sm:p-7 shadow-sm">
+              <div className="bg-white dark:bg-slate-900 border border-cyan-500/30 rounded-3xl p-5 sm:p-7 shadow-[0_0_20px_-5px_rgba(6,182,212,0.15)]">
                 <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
                   <div className="space-y-3">
                     <div className="flex items-center gap-2">
-                      <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold uppercase tracking-wider bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30">
-                        <Compass className="w-3.5 h-3.5" />
+                      <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold uppercase tracking-wider bg-cyan-500/15 text-cyan-700 dark:text-cyan-300 border border-cyan-500/30 font-mono">
+                        <Compass className="w-3.5 h-3.5 text-cyan-400" />
                         <span>Adaptive Learning Engine</span>
                       </span>
                       <span className="text-xs text-slate-500 dark:text-slate-400 font-medium">
@@ -334,7 +373,7 @@ const MainLayout: React.FC = () => {
                   <div className="shrink-0 flex flex-col sm:flex-row lg:flex-col gap-2.5">
                     <button
                       onClick={() => setCurrentTab('adaptive')}
-                      className="flex items-center justify-center gap-2 px-5 py-2.5 bg-amber-400 hover:bg-amber-300 text-slate-950 font-bold rounded-xl text-xs sm:text-sm shadow-xs transition-transform active:scale-95 whitespace-nowrap"
+                      className="flex items-center justify-center gap-2 px-5 py-2.5 bg-gradient-to-r from-cyan-400 to-sky-300 hover:from-cyan-300 hover:to-sky-200 text-slate-950 font-bold rounded-xl text-xs sm:text-sm shadow-[0_0_15px_-2px_rgba(6,182,212,0.4)] transition-transform active:scale-95 whitespace-nowrap"
                     >
                       <Compass className="w-4 h-4" />
                       <span>Open Adaptive Engine</span>
@@ -472,6 +511,8 @@ const MainLayout: React.FC = () => {
         {currentTab === 'adaptive' && <AdaptiveDashboardView />}
         {currentTab === 'assessments' && <AssessmentHubView />}
         {currentTab === 'academicVoice' && <AcademicVoiceView />}
+        {currentTab === 'adminBank' && <AdminQuestionBankView />}
+        {currentTab === 'about' && <AboutUsView />}
       </main>
 
       {/* Global Footer (shown on all tabs except immersive tutor chat and scan view) */}
@@ -486,6 +527,7 @@ const MainLayout: React.FC = () => {
       <SearchModal />
       <PwaInstallBanner />
       <AuthModal />
+      <SplashScreen />
     </div>
   );
 };

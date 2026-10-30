@@ -2,7 +2,7 @@
  * @license
  * SPDX-License-Identifier: Apache-2.0
  * 
- * NEXOVIA ACADEMY - PHASE 8: SUBJECT DETAIL DASHBOARD MODAL
+ * NEXOVIAN ACADEMY - PHASE 8: SUBJECT DETAIL DASHBOARD MODAL
  * 
  * Complete subject exploration:
  * Subject Overview → Current Term → Topics → Lessons → Practice → Assessments

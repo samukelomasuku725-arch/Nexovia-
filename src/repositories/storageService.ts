@@ -2,7 +2,7 @@
  * @license
  * SPDX-License-Identifier: Apache-2.0
  * 
- * BRIGHTPATH ACADEMY - STORAGE SERVICE INTERFACE & ADAPTER
+ * NEXOVIA - STORAGE SERVICE INTERFACE & ADAPTER
  * 
  * Prepared for Supabase Storage buckets:
  * - 'avatars': Public/Authenticated user profile pictures

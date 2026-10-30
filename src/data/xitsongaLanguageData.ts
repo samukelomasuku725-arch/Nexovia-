@@ -1,7 +1,7 @@
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
- * BrightPath Xitsonga Language Dataset
+ * NEXOVIA Xitsonga Language Dataset
  * 
  * IMPORTANT:
  * These translations were supplied by a native Xitsonga speaker/user.
@@ -151,7 +151,7 @@ export const INITIAL_XITSONGA_DATASET: LanguageRecord[] = [
     category: 'basic',
     status: 'verified',
     source: 'native_user_verified',
-    example: 'Xikolo xa BrightPath (BrightPath School)',
+    example: 'Xikolo xa NEXOVIA (NEXOVIA School)',
     notes: 'Educational institution.',
     createdAt: '2026-10-06T00:00:00.000Z',
     updatedAt: '2026-10-06T00:00:00.000Z'

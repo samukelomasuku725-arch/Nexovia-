@@ -98,7 +98,7 @@ export const VoiceSettingsModal: React.FC<VoiceSettingsModalProps> = ({
   const handleTestAudioSample = () => {
     ttsManager.speakMessage(
       'sample-test',
-      'Welcome to Nexovia Academy. Your voice-learning system is calibrated and ready.',
+      'Welcome to Nexovian Academy. Your voice-learning system is calibrated and ready.',
       activeLanguage === 'af' ? 'af' : 'en'
     );
   };
@@ -157,7 +157,7 @@ export const VoiceSettingsModal: React.FC<VoiceSettingsModalProps> = ({
             <div>
               <h2 className="text-base sm:text-lg font-bold">Voice Learning Configuration</h2>
               <p className="text-xs text-slate-500">
-                Speech-to-Text & Text-to-Speech settings for Nexovia Academy
+                Speech-to-Text & Text-to-Speech settings for Nexovian Academy
               </p>
             </div>
           </div>
@@ -320,7 +320,7 @@ export const VoiceSettingsModal: React.FC<VoiceSettingsModalProps> = ({
                     },
                     {
                       id: 'gemini-server' as STTProviderType,
-                      title: 'Nexovia Gemini Multimodal Audio',
+                      title: 'Nexovian Gemini Multimodal Audio',
                       desc: 'Sends audio to server-side Gemini AI for high-accuracy South African dialect recognition.'
                     }
                   ].map((p) => (
@@ -531,7 +531,7 @@ export const VoiceSettingsModal: React.FC<VoiceSettingsModalProps> = ({
         {/* Footer */}
         <div className="p-4 border-t border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/50 flex items-center justify-between shrink-0">
           <span className="text-xs text-slate-400">
-            Nexovia Voice Learning · Phase 4
+            Nexovian Voice Learning · Phase 4
           </span>
           <button
             type="button"

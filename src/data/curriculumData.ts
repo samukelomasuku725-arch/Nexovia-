@@ -2,7 +2,7 @@
  * @license
  * SPDX-License-Identifier: Apache-2.0
  * 
- * BRIGHTPATH ACADEMY - COMPREHENSIVE CURRICULUM ARCHITECTURE (PHASE 1)
+ * NEXOVIA - COMPREHENSIVE CURRICULUM ARCHITECTURE (PHASE 1)
  * 
  * Supported Pathways:
  * 1. School (CAPS Alignment): Grade R to Grade 12

@@ -2,7 +2,7 @@
  * @license
  * SPDX-License-Identifier: Apache-2.0
  * 
- * BRIGHTPATH ACADEMY - IN-MEMORY & DISTRIBUTED CACHE SERVICE
+ * NEXOVIA - IN-MEMORY & DISTRIBUTED CACHE SERVICE
  * 
  * Provides:
  * - High-speed TTL cache for curriculum trees, assessments, and AI prompts

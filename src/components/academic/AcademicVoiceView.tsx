@@ -1,7 +1,7 @@
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
- * Nexovia Academic Voice-to-Document Main View
+ * Nexovian Academic Voice-to-Document Main View
  */
 
 import React, { useState, useEffect } from 'react';
@@ -308,7 +308,7 @@ export const AcademicVoiceView: React.FC = () => {
     try {
       const saved = await academicVoiceService.saveDocument(activeDocument);
       setActiveDocument(saved);
-      setSaveSuccessNotice('Document saved successfully to your Nexovia account!');
+      setSaveSuccessNotice('Document saved successfully to your Nexovian account!');
       await loadSavedData();
       setTimeout(() => setSaveSuccessNotice(null), 3000);
     } catch (err) {
@@ -414,7 +414,7 @@ export const AcademicVoiceView: React.FC = () => {
             Academic Voice-to-Document
           </h1>
           <p className="mt-1 text-xs sm:text-sm text-slate-600 dark:text-slate-400 max-w-2xl leading-relaxed">
-            Record spoken research thoughts, lectures, or workshop tasks. Nexovia transforms your authentic ideas
+            Record spoken research thoughts, lectures, or workshop tasks. Nexovian transforms your authentic ideas
             into structured academic assignments and professional A4 PDFs.
           </p>
         </div>
@@ -441,7 +441,7 @@ export const AcademicVoiceView: React.FC = () => {
                 <span className="w-2 h-2 rounded-full bg-amber-500" />
                 <span>Free Plan ({tierStatus.remainingDocuments} left)</span>
                 <span className="text-[10px] text-amber-600 dark:text-amber-400 font-bold ml-1">
-                  R50/mo
+                  R60/mo
                 </span>
               </>
             )}

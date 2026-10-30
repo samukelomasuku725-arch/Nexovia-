@@ -182,7 +182,7 @@ export const TrackCatalog: React.FC = () => {
 
                     {isCompleted && (
                       <button
-                        onClick={() => generateCertificate(track.id, 'Nexovia Scholar')}
+                        onClick={() => generateCertificate(track.id, 'Nexovian Scholar')}
                         className="flex items-center justify-center gap-1.5 py-1.5 px-3 text-xs font-semibold text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/40 hover:bg-amber-100 rounded-lg transition-colors"
                       >
                         <Award className="w-3.5 h-3.5" />

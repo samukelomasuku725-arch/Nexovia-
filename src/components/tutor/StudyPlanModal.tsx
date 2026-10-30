@@ -49,7 +49,7 @@ export const StudyPlanModal: React.FC<Props> = ({ onClose }) => {
       const plan = await createStudyPlan(availableTime, targetDate);
       setGeneratedPlan(plan);
     } catch (err: any) {
-      setError(err?.message || "Nexovia couldn't generate a study plan right now.");
+      setError(err?.message || "Nexovian couldn't generate a study plan right now.");
     } finally {
       setIsLoading(false);
     }

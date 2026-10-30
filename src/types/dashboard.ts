@@ -2,7 +2,7 @@
  * @license
  * SPDX-License-Identifier: Apache-2.0
  * 
- * BRIGHTPATH ACADEMY - PHASE 8: STUDENT DASHBOARD & MASTERY TYPES
+ * NEXOVIA - PHASE 8: STUDENT DASHBOARD & MASTERY TYPES
  */
 
 import { SALanguageCode } from './index';

@@ -420,7 +420,7 @@ export const HigherEdPathwayView: React.FC = () => {
 
                       {mod.topics.length === 0 ? (
                         <p className="text-xs text-slate-500 italic py-2">
-                          University lecture modules configured. Launch Nexovia AI for specialized syllabus assistance.
+                          University lecture modules configured. Launch Nexovian AI for specialized syllabus assistance.
                         </p>
                       ) : (
                         mod.topics.map(topic => {

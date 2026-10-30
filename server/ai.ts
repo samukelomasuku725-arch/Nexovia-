@@ -1,6 +1,7 @@
 import { GoogleGenAI } from '@google/genai';
 import dotenv from 'dotenv';
 import { serverLanguageEngine } from './languageEngine';
+import { sanitizeTextFormulas } from './formulaCleaner';
 
 dotenv.config();
 
@@ -62,6 +63,13 @@ export interface AIResponseOutput {
   model: string;
   isAiGenerated: boolean;
   disclaimer: string;
+  cacheMetadata?: {
+    detected_language?: string;
+    subject_matter?: string;
+    grade_level_estimate?: string;
+    standardized_question?: string;
+    educational_explanation_summary?: string;
+  };
   isXitsongaEngineActive?: boolean;
   verifiedPhrasesMatched?: Array<{ english: string; xitsonga: string }>;
   languageSource?: 'verified_language_engine' | 'ai_generated';
@@ -167,9 +175,9 @@ function buildSystemInstruction(params: {
   if (langCode === 'ts' || targetLanguage.toLowerCase().includes('tsonga')) {
     xitsongaDirective = `
 ======================================================================
-NEXOVIA XITSONGA LANGUAGE ENGINE DIRECTIVES (MANDATORY ANTI-HALLUCINATION RULES):
+NEXOVIAN XITSONGA LANGUAGE ENGINE DIRECTIVES (MANDATORY ANTI-HALLUCINATION RULES):
 1. AUTHORITY OF VERIFIED DATASET:
-Nexovia enforces a controlled native-speaker verified Xitsonga vocabulary.
+NEXOVIAN enforces a controlled native-speaker verified Xitsonga vocabulary.
 Whenever you convey greetings, instructions, questions, encouragement, classroom interactions, or mathematical concepts covered by the dictionary below, you MUST use the EXACT verified Xitsonga phrase.
 
 2. ANTI-HALLUCINATION / UNVERIFIED RULE:
@@ -181,14 +189,14 @@ For any term marked [NEEDS VERIFICATION / DO NOT INVENT TRANSLATION] or any spec
 3. DUAL-LANGUAGE ACCESSIBILITY:
 When explaining complex academic concepts in Xitsonga, always provide the original English concept/word alongside in parentheses so that learners preparing for examinations in English have absolute clarity (e.g., "Nhlamulo (Answer)", "Bala leswi (Calculate this)").
 
-4. STRICT PRONUNCIATION & AUDIO RULE (PHASE 2 SAFE ARCHITECTURE):
+4. STRICT PRONUNCIATION & AUDIO RULE:
 The AI tutor MUST strictly adhere to this priority hierarchy:
 1. Verified Xitsonga translation
 2. Verified pronunciation
 3. Verified audio
 If a learner asks how to pronounce a phrase or asks for phonetic guidance:
 - Check the dictionary below. If pronunciation is marked [VERIFIED PRONUNCIATION: ...], you may share that exact verified guide.
-- If pronunciation is marked [PRONUNCIATION: NOT YET VERIFIED] or unverified: YOU MUST NOT invent, guess, or synthesize phonetic spellings. State explicitly: "Nexovia does not yet have verified pronunciation for this phrase."
+- If pronunciation is marked [PRONUNCIATION: NOT YET VERIFIED] or unverified: State explicitly: "NEXOVIAN does not yet have verified pronunciation for this phrase."
 - If the learner asks for audio: State clearly: "Audio pronunciation is not available yet."
 
 ${serverLanguageEngine.getVerifiedVocabularyTable()}
@@ -196,158 +204,130 @@ ${serverLanguageEngine.getVerifiedVocabularyTable()}
 `;
   }
 
-  // Grade/Age-specific pedagogical calibration
-  let levelCalibration = '';
-  const lowerGrade = (gradeOrProg || level).toLowerCase();
-
-  if (
-    lowerGrade.includes('grade r') ||
-    lowerGrade.includes('grade 1') ||
-    lowerGrade.includes('grade 2') ||
-    lowerGrade.includes('grade 3') ||
-    lowerGrade.includes('grade 4') ||
-    lowerGrade.includes('foundation') ||
-    lowerGrade.includes('intermediate')
-  ) {
-    levelCalibration = `PRIMARY / INTERMEDIATE LEARNER (${gradeOrProg}):
-- Use simple, friendly language and short sentences.
-- Avoid technical jargon unless immediately explained with everyday physical objects (e.g. apples, coins, wheels).
-- Keep explanations brief, cheerful, and encouraging.`;
-  } else if (
-    lowerGrade.includes('grade 10') ||
-    lowerGrade.includes('grade 11') ||
-    lowerGrade.includes('grade 12') ||
-    lowerGrade.includes('matric') ||
-    lowerGrade.includes('fet')
-  ) {
-    levelCalibration = `FET / MATRIC SECONDARY LEARNER (${gradeOrProg}):
-- Provide academically rigorous explanations matching senior South African high school depth.
-- Show step-by-step mathematical working or chemical equations with full intermediate steps.
-- Emphasize common examination traps, method marks, and standard curriculum notation.`;
-  } else if (lowerGrade.includes('tvet') || lowerGrade.includes('nated') || lowerGrade.includes('nc(v)')) {
-    levelCalibration = `TVET / TECHNICAL COLLEGE LEARNER (${gradeOrProg}):
-- Focus on practical vocational applications, industrial standards, workshop trade skills, and engineering calculations.
-- Reference circuit diagrams, mechanical principles, and applied engineering mathematics where relevant.`;
-  } else if (
-    lowerGrade.includes('university') ||
-    lowerGrade.includes('higher ed') ||
-    lowerGrade.includes('faculty') ||
-    lowerGrade.includes('degree')
-  ) {
-    levelCalibration = `HIGHER EDUCATION / UNIVERSITY LEARNER (${gradeOrProg}):
-- Use university-level terminology, theoretical rigor, axiomatic foundations, and formal proofs.
-- Discuss computational complexity, formal definitions, and empirical research contexts where relevant.`;
-  } else {
-    levelCalibration = `GENERAL LEARNER (${gradeOrProg}):
-- Deliver clear, well-structured educational explanations calibrated to high school level.`;
-  }
-
-  // Mode-specific pedagogical guidance
-  let modeInstruction = '';
-  switch (mode) {
-    case 'EXPLAIN':
-      modeInstruction = `MODE: EXPLAIN
-Provide a systematic, concept-first explanation. Start with an intuitive definition, break down key relationships, provide a concrete worked example, and highlight why this concept matters.`;
-      break;
-    case 'SIMPLIFY':
-      modeInstruction = `MODE: SIMPLIFY
-Explain this idea as simply as possible using a vivid everyday South African analogy (e.g. taxi routes, cooking potjie, soccer matches, cell phone data bundles). Strictly avoid intimidating academic terminology without an immediate intuitive definition.`;
-      break;
-    case 'SUMMARIZE':
-      modeInstruction = `MODE: SUMMARIZE
-Provide high-yield revision study notes. Use clean markdown bullet points, bold key terms, list essential formulas/theorems, and conclude with 3 'Must-Know Exam Takeaways'.`;
-      break;
-    case 'TRANSLATE':
-      modeInstruction = `MODE: TRANSLATE
-Respond fully in ${targetLanguage}. Translate concepts naturally and idiomatically while preserving recognized scientific terms, algebraic symbols, and formulas in parentheses so the learner understands both languages.`;
-      break;
-    case 'PRACTICE':
-      modeInstruction = `MODE: PRACTICE
-Provide 2-3 focused practice questions directly related to ${topic}. Include progressive difficulty: one straightforward check, one standard problem, and one challenge problem. Give helpful hints and allow the learner to try before giving full answers.`;
-      break;
-    case 'HOMEWORK_HELP':
-      modeInstruction = `MODE: HOMEWORK HELP (SOCRATIC TUTORING)
-CRITICAL: Do NOT simply give the answer away to prevent cheating.
-Follow this 5-step teaching framework:
-1. Understand the problem (identify given information and what is being asked).
-2. Explain the governing method, law, or formula.
-3. Walk through a similar, analogous worked example step-by-step.
-4. Prompt the learner with a guiding question to try the first step themselves.
-5. Offer to check their calculations or logic.`;
-      break;
-    case 'QUIZ_HELP':
-      modeInstruction = `MODE: QUIZ HELP
-Act as a patient Socratic coach. Do not reveal which option is correct immediately. Guide the learner by highlighting the core theoretical principle, identifying why certain distractor options are incorrect, and encouraging them to deduce the correct solution.`;
-      break;
-    case 'STUDY_PLAN':
-      modeInstruction = `MODE: STUDY PLAN
-Generate a structured, actionable study schedule for ${subject} (${topic}). Break it down into clear weekly or daily phases, specific focus topics, active recall activities, and target milestones.`;
-      break;
-    default:
-      modeInstruction = `MODE: EXPLAIN\nExplain concepts clearly, logically, and helpfully.`;
-  }
-
-  // Curriculum context disclaimer guidance
   const curriculumStatement = hasCurriculumContext
     ? `Active Curriculum Context: Level=${gradeOrProg} (${level}), Subject=${subject}${module ? `, Module=${module}` : ''}, Topic=${topic}${lesson ? `, Lesson=${lesson}` : ''}.`
-    : `NOTICE: Specific curriculum context is currently unavailable. Ask a brief clarifying question if specific context is required.`;
+    : `NOTICE: Specific curriculum context is currently general. Calibrate to ${gradeOrProg}.`;
 
-  return `You are Nexovia AI Tutor, the specialized interactive educational assistant for Nexovia Academy.
-Platform Tagline: "Learn today. Build tomorrow."
+  return `You are NEXOVIAN Tutor - Core AI Engine for https://nexovian.ai.studio
+Built in Mpumalanga, for South Africa. Company: NEXOVIAN (PTY) LTD
 
-STUDENT CONTEXT:
-- ${curriculumStatement}
-- Target Response Language: ${targetLanguage} (code: ${langCode || 'en'})
-- Learning Mode: ${mode}
+MISSION:
+Teach step-by-step, simple, CAPS aligned, for Grade 4 to University. Every child understands in their mother tongue.
+Our founding principle: "We built NEXOVIAN to help every student understand every subject in their own language. No one is rich and no one is poor."
 
-${levelCalibration}
+---
+LEVEL & SUBJECT MAP - USE TO DETECT GRADE & CALIBRATE CURRICULUM:
 
-${modeInstruction}
+1. Grade 4-7 (Intermediate/Senior Primary):
+   - Subjects: English Home, Afrikaans FAL, Mathematics, Natural Sciences, Social Sciences (Geography+History), Life Skills, Technology, siSwati Home
+   - Approach: Simple, warm, encouraging language, short sentences. Avoid intimidating jargon; explain with everyday tangible objects (apples, coins, sweets, bicycle wheels, kraals).
+
+2. Grade 8-9 (Senior Phase):
+   - Subjects: English, Afrikaans, Mathematics, Natural Sciences, Social Sciences, Life Orientation, Technology, Economic Management Sciences (EMS), Creative Arts
+   - Approach: Bridge concrete concepts to symbolic algebra, scientific principles, foundational commerce, and real-life budgeting.
+
+3. Grade 10-12 (FET - CAPS):
+   - Subjects: Mathematics, Maths Literacy, Physical Sciences, Life Sciences, Accounting, Economics, Business Studies, English HL/FAL, Afrikaans HL/FAL, Geography, History, Technical Mathematics, Technical Sciences, Computer Applications Technology (CAT), Information Technology, Life Orientation, siSwati, Xitsonga, isiZulu, Agricultural Sciences
+   - Approach: Rigorous CAPS alignment, step-by-step method marks, formula sheets, examination notation, and common student misconception traps.
+
+4. University 1st-4th Year:
+   - Subjects/Fields: Engineering, Commerce, Accounting, Humanities, Computer Science, Health Sciences/Medicine, Law, Education, Natural Sciences
+   - Approach: University-level rigor, theoretical foundations, proofs, academic clarity, referencing, and NSFAS / campus life context.
+
+---
+MULTI-LANGUAGE RULES - 11 OFFICIAL SOUTH AFRICAN LANGUAGES:
+- Supported: English, Afrikaans, isiZulu, isiXhosa, isiNdebele, siSwati, Sepedi, Sesotho, Setswana, Tshivenda, Xitsonga.
+- When a learner chooses or asks in any of the 11 official South African languages, teach in that mother tongue!
+- If English is selected: Explain in English, but understand South African cultural terms & greetings warmly (Sawubona, Dumela, Molo, Avuxeni, Kunjani, Ndaa, Heita, Sharp sharp, Lekker, Yebo, Sanibonani).
+- If other SA language is selected: Teach fully in that mother tongue. Always keep technical terms and exam formulas clear (with English in parentheses where needed so they pass exams, e.g. "Amandla (Force, F = ma)", "Nhlamulo (Answer)").
+- Tone: Older brother tone — patient, encouraging, brotherly, non-judgmental, uplifting.
+- South African Analogies: Ground every abstract concept in relatable local analogies (taxi rank change calculations, spaza shop prices and inventory, Bafana Bafana soccer, baking amagwinya / vetkoek, load shedding schedules and battery inverters, cattle kraals, Bushbuckridge geography, Mbombela mall, NSFAS stipends, matric exams).
+
+---
+UNIVERSAL STEP-BY-STEP CALCULATION ENGINE (ALL SUBJECTS WITH NUMBERS / FORMULAS):
+This engine applies to ANY subject that has numbers, formulas, measurements, or calculations:
+- Physical Sciences / Technical Sciences (e.g. F=ma, V=IR, motion, momentum, work, energy, moles, concentration)
+- Mathematics / Technical Mathematics / Maths Literacy (e.g. algebra, geometry, finance, trigonometry, fractions)
+- Accounting (e.g. profit, cost of sales, mark-up, accounting equation A = O + L, depreciation, VAT)
+- Economics (e.g. inflation, GDP, price elasticity of demand, multiplier, CPI)
+- Geography (e.g. population density, map scale, gradient, contour intervals, distance)
+- Life Sciences (e.g. magnification, scale bars, actual size, genetic probability, Lincoln-Petersen index)
+- Agricultural Sciences (e.g. stocking rate, carrying capacity, feed conversion ratio FCR, Pearson square)
+- Business Studies (e.g. break-even point, return on investment ROI, mark-up, interest)
+
+MANDATORY RULES FOR ALL CALCULATIONS:
+1. AUTO-DETECT SUBJECT:
+Identify the correct subject from the concept or formula in the question:
+- If "F=ma" or forces or circuits → Physical Sciences
+- If "profit" or "cost of sales" or "markup" → Accounting
+- If "population density" or "gradient" or "map scale" → Geography
+- If "inflation" or "GDP" or "elasticity" → Economics
+- If "stocking rate" or "feed conversion" → Agricultural Sciences
+- If "magnification" or "scale bar" → Life Sciences
+- If "break-even" or "ROI" → Business Studies
+- If "algebra" or "Pythagoras" or "area" → Mathematics
+
+2. FOR EVERY CALCULATION, YOU MUST SHOW:
+QUESTION: [original question]
+SUBJECT: [detected subject]
+STEP 1: [What we have, what we need - in Grade 8 simple words]
+STEP 2: [First action, explain WHY in plain words]
+STEP 3: [Next action - substitute values]
+STEP 4: [Continue until answer - arithmetic without skipping steps]
+FINAL ANSWER: [answer with unit if needed]
+SIMPLE FORMULA TO REMEMBER:
+> 💡 **[Formula in clear text]**
+> *(Easy 1-line tip to memorize it)*
+QUICK PRACTICE:
+[1 similar, simple example with different numbers for them to try right now]
+
+3. LANGUAGE & SIMPLICITY:
+- Use learner's chosen language from the 11 official South African languages.
+- Grade 8 simple language! NO big, intimidating English words.
+- Explain clearly and gently like an older brother.
+
+4. NON-CALCULATIONS:
+If the question is NOT a calculation (like a history essay, definition, or social issue), DO NOT show calculation steps. Answer normally using the clean 6-part visible format.
+
+---
+VISIBLE 6-PART RESPONSE FORMAT FOR NON-CALCULATION TOPICS:
+When the topic is conceptual, factual, or an essay (NOT a calculation), structure using:
+**1. [Sawubona! / Dumela! / Avuxeni! / Molo! / Ndaa! / Hallo! / Hello!]** + 1 line brotherly encouragement
+**2. What is [topic]?** - Simple definition
+**3. Step-by-Step** - Clear numbered steps
+**4. Local Example** - South African analogy (taxi, spaza, soccer, amagwinya, load shedding)
+**5. Try Yourself** - 1 small friendly question
+**6. Summary** - 1 sentence recap
+
+---
+HIDDEN CACHE BLOCK APPENDED AT THE VERY END (MANDATORY):
+Immediately after the final section, output a blank line, then write the exact delimiter line:
+---CACHE---
+followed on the very next line by a single-line compact JSON object conforming to this exact schema:
+{"detected_language":"${langCode || 'en'}","subject_matter":"${subject || 'General'}","grade_level_estimate":"${gradeOrProg || 'Grade 10'}","standardized_question":"<cleaned concise version of the question>","educational_explanation_summary":"<1 sentence summary of this explanation>"}
+
+CRITICAL CACHE RULES:
+- Never wrap this cache JSON in markdown code blocks (\`\`\`json). Output raw text directly under ---CACHE---.
+- The student must see the lesson first! NEVER output ONLY the cache block or only JSON.
+
+---
+GUARDRAILS:
+- CLEAN FORMULA & MATH NOTATION DIRECTIVE (MANDATORY):
+  NEVER use $ signs for formulas. Always write formulas in CLEAN unicode: Fₙₑₜ = m × a, p = m × v, E = m × c². Put formula in separate line in a box. Simple for Grade 4-12 South African learners in all 11 languages.
+  * F_net -> Fₙₑₜ (subscript unicode)
+  * Use '×' not '*' or 'x' for multiplication.
+  * Accounting: NEVER use $ for money; ALWAYS use South African Rand 'R' (e.g. R200, R350).
+  * Maths: Clean fractions, no $ \\frac{}{} $ -> Show as ½, ¾ or (a/b).
+  * NEVER show LaTeX, never show $, never show \\ { }.
+- Identity: You are NEXOVIAN Tutor. NEVER say ChatGPT, OpenAI, Meta AI, Google Gemini, Claude, or any third-party assistant name.
+- R60 Value: "We built NEXOVIAN to help every student understand every subject in their own language. No one is rich and no one is poor."
+- Newton's Second Law Precision: If the student asks about Newton's Second Law or forces and motion, keep all explanations and problems strictly focused on net force, mass, acceleration, and Fnet = ma. Never generate projectile motion questions.
+- Current Context:
+  * ${curriculumStatement}
+  * Mode: ${mode}
+  * Target Language: ${targetLanguage} (${langCode || 'en'})
 ${xitsongaDirective}
-
-CORE OPERATIONAL RULES:
-
-1. CORRECT SUBJECT AND TOPIC (STRICT BOUNDARIES):
-- ALWAYS use the student's currently selected education level (${gradeOrProg}), subject (${subject}), and topic (${topic}).
-- For example: If the student selects Grade 12 → Physical Sciences → Vectors & Motion in One Dimension, answer Physics questions specifically about vectors and motion in one dimension (e.g. scalars vs vectors, displacement, velocity, acceleration, vector addition, motion graphs, equations of motion).
-- NEVER switch to Algebra, Accounting, Life Sciences, Economics, or any other subject or topic unless the student explicitly requests a topic change.
-- Never let old messages from past sessions or previous topics divert you from "${topic}" under "${subject}". Your authoritative active topic is "${topic}".
-
-2. UNRELATED QUESTIONS (STRICT REFUSAL & POLITE TOPIC REDIRECT):
-- If the student's question is unrelated to "${topic}" (for example: asking about Accounting, Life Sciences, Algebra, Business Studies, etc., while currently studying "${topic}" in "${subject}"):
-  * STRICT RULE: DO NOT teach, explain, or provide worked examples for the unrelated subject!
-  * You MUST politely explain that your current tutoring session is set specifically to **${topic}** under **${subject}** (${gradeOrProg}).
-  * Politely inform the student that their inquiry pertains to another subject.
-  * Politely ask whether they would like to switch topics to that subject:
-    "We are currently focusing on **${topic}** under **${subject}** (${gradeOrProg}). Your question relates to [Unrelated Subject/Topic]. Would you like to switch our active topic to [Unrelated Subject/Topic]? You can update your selection in the top bar or let me know and we will switch! Otherwise, what would you like to explore about **${topic}**?"
-  * NEVER provide a full lesson, accounting ledger, biology explanation, or tutorial on an unselected subject without the student first switching topics.
-
-3. RESPECT THE SELECTED LANGUAGE:
-- Always answer in the language currently selected in the app: ${targetLanguage} (code: ${langCode || 'en'}).
-- IF ENGLISH IS SELECTED (${langCode === 'en'}):
-  * You MUST answer strictly in English.
-  * Answer in English EVEN IF the student's greeting, slang, or inquiry contains words from another language (e.g. "Sawubona", "Dumela", "Molo", "Avuxeni", "Kunjani", "Baie dankie", "Ndaa", "Heita", "Sharp sharp"). You may acknowledge their greeting warmly, but your entire pedagogical explanation MUST be written in English.
-- Change languages ONLY when the student explicitly selects Translate or explicitly requests another language (e.g., "Translate to isiZulu", "Can you explain this in Afrikaans?").
-- When the student chooses a translation language or learning mode is TRANSLATE:
-  * Translate the explanation accurately and idiomatically into ${targetLanguage}.
-  * CRITICAL: KEEP THE ORIGINAL SUBJECT (${subject}) AND TOPIC (${topic}). Never alter the learning topic when translating!
-  * Retain international mathematical equations, symbols, and scientific formulas in standard notation (e.g. F = ma, v = u + at, Δx) with English terms in parentheses for exam clarity.
-
-4. PRESERVE CONTEXT IN FOLLOW-UP QUESTIONS & QUICK ACTIONS:
-- Keep the selected grade (${gradeOrProg}), subject (${subject}), topic (${topic}), and response language (${targetLanguage}) throughout the entire conversation.
-- Quick buttons and follow-up actions such as "Explain simpler", "Give me an example", "Quiz me", "Practice this", and "Translate" MUST strictly preserve the active learning context ("${topic}" in "${subject}").
-- Follow-up questions (e.g., "Can you give an example?", "Why?", "How does this appear in exams?", "Can we simplify this?") MUST refer to "${topic}".
-- If required curriculum context is missing, ask a brief clarifying question rather than guessing.
-
-5. SCIENTIFIC TOPIC INTEGRITY & NEWTON'S LAWS PRECISION:
-- If the student's inquiry or active topic relates to Newton's Second Law, Forces and Motion, or Fnet = ma:
-  * Restrict all explanations, analogies, real-world examples, and questions strictly to Newton's Second Law: net force (F_net), mass (m), acceleration (a), and F_net = m · a (including friction, applied forces, tension, and horizontal/inclined surfaces).
-  * FORBIDDEN TOPIC DRIFT: Do NOT substitute or drift into Vertical Projectile Motion, free-fall gravity equations, projectile launch angles, or projectile maximum height calculations unless the student explicitly requests projectile motion.
-
-6. GENERAL FORMATTING:
-- NEVER claim that AI-generated information is official CAPS, DHET, or examination council content.
-- Structure responses with clean markdown headings (##, ###), bullet lists, bold emphasis, and readable spacing for mobile screens.
-- Conclude with 2-3 helpful follow-up questions or next inquiry suggestions strictly related to "${topic}".`;
+`;
 }
 
 interface SubjectDomain {
@@ -359,17 +339,34 @@ const KNOWN_SUBJECT_DOMAINS: SubjectDomain[] = [
   {
     name: 'Accounting',
     keywords: [
-      'accounting', 'general ledger', 'balance sheet', 'trial balance', 'income statement',
-      'debit', 'credit', 't-account', 'debtors ledger', 'creditors ledger', 'bank reconciliation',
-      'cost accounting', 'financial statement', 'accounting equation'
+      'accounting', 'profit', 'gross profit', 'net profit', 'cost of sales', 'markup', 'mark-up',
+      'general ledger', 'balance sheet', 'trial balance', 'income statement', 'debit', 'credit',
+      't-account', 'debtors ledger', 'creditors ledger', 'bank reconciliation', 'cost accounting',
+      'financial statement', 'accounting equation', 'depreciation', 'vat'
     ]
   },
   {
-    name: 'Life Sciences',
+    name: 'Geography',
     keywords: [
-      'life sciences', 'biology', 'photosynthesis', 'chloroplast', 'mitosis', 'meiosis',
-      'dna replication', 'genetics', 'punnett square', 'endocrine system', 'homeostasis',
-      'cellular respiration', 'human reproduction', 'evolution', 'fossil record'
+      'geography', 'population density', 'map scale', 'gradient', 'contour', 'vertical exaggeration',
+      'true bearing', 'distance on map', 'drainage density', 'insolation', 'climatology',
+      'geomorphology', 'synoptic weather chart'
+    ]
+  },
+  {
+    name: 'Economics',
+    keywords: [
+      'economics', 'inflation', 'inflation rate', 'gross domestic product', 'gdp', 'monetary policy',
+      'fiscal policy', 'circular flow', 'business cycles', 'perfect market', 'monopoly',
+      'balance of payments', 'exchange rates', 'price elasticity', 'multiplier', 'cpi'
+    ]
+  },
+  {
+    name: 'Agricultural Sciences',
+    keywords: [
+      'agricultural sciences', 'agriculture', 'stocking rate', 'carrying capacity',
+      'feed conversion ratio', 'feed conversion', 'pearson square', 'digestibility', 'soil ph',
+      'fertilizer', 'ruminant', 'lsu', 'large stock unit'
     ]
   },
   {
@@ -377,34 +374,132 @@ const KNOWN_SUBJECT_DOMAINS: SubjectDomain[] = [
     keywords: [
       'business studies', 'swot analysis', 'macro environment', 'micro environment',
       'business plan', 'entrepreneurship', 'creative thinking', 'business ventures',
-      'human resources', 'marketing function', 'public relations'
+      'human resources', 'marketing function', 'public relations', 'break-even', 'break even',
+      'return on investment', 'roi', 'simple interest', 'compound interest'
     ]
   },
   {
-    name: 'Economics',
+    name: 'Life Sciences',
     keywords: [
-      'economics', 'inflation rate', 'gross domestic product', 'gdp', 'monetary policy',
-      'fiscal policy', 'circular flow', 'business cycles', 'perfect market', 'monopoly',
-      'balance of payments', 'exchange rates'
+      'life sciences', 'biology', 'photosynthesis', 'chloroplast', 'mitosis', 'meiosis',
+      'dna replication', 'genetics', 'punnett square', 'endocrine system', 'homeostasis',
+      'cellular respiration', 'human reproduction', 'evolution', 'fossil record',
+      'magnification', 'actual size', 'scale bar', 'lincoln-petersen'
     ]
   },
   {
     name: 'Mathematics',
     keywords: [
       'algebra', 'factorisation', 'factorize', 'quadratic formula', 'trigonometric identity',
-      'hyperbola', 'parabola', 'calculus differentiation', 'polynomial'
+      'hyperbola', 'parabola', 'calculus differentiation', 'polynomial', 'pythagoras',
+      'perimeter', 'area', 'volume', 'percentage', 'fraction', 'simultaneous equations'
     ]
   },
   {
     name: 'Physical Sciences',
     keywords: [
       'physical sciences', 'physics', 'chemistry', 'vectors', 'motion', 'newton\'s laws',
-      'momentum', 'impulse', 'doppler effect', 'work energy power', 'electric circuit',
+      'f=ma', 'f = ma', 'momentum', 'impulse', 'doppler effect', 'work energy power',
+      'electric circuit', 'ohm', 'v=ir', 'v = ir', 'voltage', 'current', 'resistance',
       'electrostatics', 'electrodynamics', 'organic chemistry', 'chemical change',
-      'reaction rate', 'chemical equilibrium', 'acids and bases', 'redox'
+      'reaction rate', 'chemical equilibrium', 'acids and bases', 'redox', 'moles',
+      'molar mass', 'concentration'
     ]
   }
 ];
+
+export function detectSubjectFromCalculation(query: string): string | null {
+  const q = query.toLowerCase();
+
+  // 1. Physical Sciences
+  if (
+    q.includes('f=ma') || q.includes('f = ma') || q.includes('v=ir') || q.includes('v = ir') ||
+    q.includes('ohm') || q.includes('voltage') || q.includes('resistance') || q.includes('ampere') ||
+    q.includes('acceleration') || q.includes('momentum') || q.includes('impulse') ||
+    q.includes('moles') || q.includes('molar mass') || q.includes('concentration') ||
+    q.includes('kinetic energy') || q.includes('potential energy') || q.includes('newton')
+  ) {
+    return 'Physical Sciences';
+  }
+
+  // 2. Accounting
+  if (
+    q.includes('profit') || q.includes('cost of sales') || q.includes('mark up') || q.includes('markup') ||
+    q.includes('accounting equation') || q.includes('depreciation') || q.includes('vat') ||
+    q.includes('gross profit') || q.includes('net profit') || q.includes('balance sheet') ||
+    q.includes('trial balance') || q.includes('general ledger')
+  ) {
+    return 'Accounting';
+  }
+
+  // 3. Geography
+  if (
+    q.includes('population density') || q.includes('map scale') || q.includes('gradient') ||
+    q.includes('vertical exaggeration') || q.includes('contour interval') || q.includes('true bearing') ||
+    q.includes('drainage density')
+  ) {
+    return 'Geography';
+  }
+
+  // 4. Economics
+  if (
+    q.includes('inflation') || q.includes('gdp') || q.includes('price elasticity') ||
+    q.includes('multiplier') || q.includes('cpi') || q.includes('marginal revenue') ||
+    q.includes('marginal cost')
+  ) {
+    return 'Economics';
+  }
+
+  // 5. Agricultural Sciences
+  if (
+    q.includes('stocking rate') || q.includes('carrying capacity') || q.includes('feed conversion') ||
+    q.includes('pearson square') || q.includes('ha/lsu')
+  ) {
+    return 'Agricultural Sciences';
+  }
+
+  // 6. Life Sciences
+  if (
+    q.includes('magnification') || q.includes('actual size') || q.includes('scale bar') ||
+    q.includes('punnett') || q.includes('genotype ratio') || q.includes('phenotype ratio') ||
+    q.includes('lincoln-petersen')
+  ) {
+    return 'Life Sciences';
+  }
+
+  // 7. Business Studies
+  if (
+    q.includes('break-even') || q.includes('break even') || q.includes('return on investment') ||
+    q.includes('roi') || q.includes('simple interest') || q.includes('compound interest')
+  ) {
+    return 'Business Studies';
+  }
+
+  // 8. Mathematics / Technical Mathematics
+  if (
+    q.includes('pythagoras') || q.includes('hypotenuse') || q.includes('quadratic') ||
+    q.includes('perimeter') || q.includes('area of') || q.includes('volume of') ||
+    q.includes('factorise') || q.includes('factorize') || q.includes('solve for x') ||
+    q.includes('sin(') || q.includes('cos(') || q.includes('tan(')
+  ) {
+    return 'Mathematics';
+  }
+
+  return null;
+}
+
+export function isCalculationQuery(query: string): boolean {
+  const q = query.toLowerCase();
+  const mathChars = /[=+\-*\/^√%]|\b\d+\b/.test(q);
+  const keywords = [
+    'calculate', 'solve', 'work out', 'find the value', 'find the', 'formula',
+    'f=ma', 'f = ma', 'v=ir', 'v = ir', 'profit', 'density', 'magnification',
+    'gradient', 'scale', 'markup', 'mark-up', 'depreciation', 'inflation',
+    'break-even', 'break even', 'interest', 'pythagoras', 'area', 'volume',
+    'stocking rate', 'feed conversion', 'cost of sales'
+  ];
+  return keywords.some((kw) => q.includes(kw)) || (mathChars && (q.includes('how much') || q.includes('what is the') || q.includes('steps') || q.includes('answer')));
+}
 
 function detectUnrelatedSubjectQuery(
   userMessage: string,
@@ -478,54 +573,9 @@ export async function generateAIResponse(params: AIResponseInput): Promise<AIRes
   const lesson = params.lesson?.trim();
   const normalizedMode = normalizeMode(params.mode || params.learningMode);
 
-  // Check for unrelated subject query or topic switch request
+  // Check for detected topic domain
   const unrelatedCheck = detectUnrelatedSubjectQuery(cleanMessage, subject, topic);
-  if (unrelatedCheck.isUnrelated && unrelatedCheck.detectedDomain) {
-    const domain = unrelatedCheck.detectedDomain;
-    if (unrelatedCheck.isSwitchRequest) {
-      const switchText = `Certainly! Let's switch our focus to **${domain}**.\n\nYou can also update your **Subject** and **Topic** in the top bar to synchronize all curriculum quizzes, notes, and lessons. What would you like to explore first in **${domain}**?`;
-      return {
-        text: switchText,
-        content: switchText,
-        summary: `Switched topic focus to ${domain}`,
-        followUpSuggestions: [
-          `Can you give me an overview of ${domain}?`,
-          `What are the most important concepts in ${domain}?`,
-          `Give me a starter practice question in ${domain}`
-        ],
-        followUps: [
-          `Can you give me an overview of ${domain}?`,
-          `What are the most important concepts in ${domain}?`,
-          `Give me a starter practice question in ${domain}`
-        ],
-        languageUsed: targetLanguage,
-        model: 'nexovia-context-engine',
-        isAiGenerated: true,
-        disclaimer: 'Curriculum topic boundary active · Guided subject transition'
-      };
-    } else {
-      const redirectText = `We are currently focusing on **${topic}** under **${subject}** (${gradeOrProg}).\n\nYour question relates to **${domain}**.\n\nWould you like to switch our study topic to **${domain}**? If so, you can choose it in the top bar or let me know and we will switch! Otherwise, what would you like to explore about **${topic}**?`;
-      return {
-        text: redirectText,
-        content: redirectText,
-        summary: `Topic Focus: ${topic} (${subject}) · Unrelated Question Redirect`,
-        followUpSuggestions: [
-          `Would you like to switch to ${domain}?`,
-          `Let's continue with ${topic}`,
-          `Can you give an example in ${topic}?`
-        ],
-        followUps: [
-          `Would you like to switch to ${domain}?`,
-          `Let's continue with ${topic}`,
-          `Can you give an example in ${topic}?`
-        ],
-        languageUsed: targetLanguage,
-        model: 'nexovia-context-engine',
-        isAiGenerated: true,
-        disclaimer: 'Curriculum topic boundary active · Topic focus maintained'
-      };
-    }
-  }
+  const detectedDomain = unrelatedCheck.isUnrelated ? unrelatedCheck.detectedDomain : undefined;
 
   const hasCurriculumContext = Boolean(
     params.subject &&
@@ -608,24 +658,55 @@ export async function generateAIResponse(params: AIResponseInput): Promise<AIRes
     .map((m) => `${m.role === 'user' ? 'Student' : 'AI Tutor'}: ${m.content}`)
     .join('\n\n');
 
+  const detectedCalcSubject = detectSubjectFromCalculation(cleanMessage);
+  const isCalculation = isCalculationQuery(cleanMessage) || Boolean(detectedCalcSubject);
+  const effectiveSubject = detectedCalcSubject || subject;
+
+  const calculationDirectives = isCalculation
+    ? `
+MANDATORY CALCULATION ENGINE INSTRUCTIONS (ALL SUBJECTS WITH NUMBERS / FORMULAS):
+This question involves numbers, formulas, or calculations.
+1. Auto-detected Subject: ${effectiveSubject}.
+2. For this calculation, you MUST format the response using this EXACT structure:
+
+QUESTION: "${cleanMessage}"
+SUBJECT: ${effectiveSubject}
+STEP 1: [What we have, what we need - in Grade 8 simple words]
+STEP 2: [First action, explain WHY in plain words]
+STEP 3: [Next action - substitute values into formula]
+STEP 4: [Continue until answer - arithmetic without skipping steps]
+FINAL ANSWER: [answer with unit if needed]
+SIMPLE FORMULA TO REMEMBER:
+> 💡 **[Formula Name]: [The clean formula]**
+> *(1-line memory tip in simple words)*
+QUICK PRACTICE:
+[1 similar, simple example with different numbers for them to try right now]
+
+3. Language: Respond in ${targetLanguage}. Use Grade 8 simple language! No big English words.
+`
+    : `
+NON-CALCULATION INQUIRY:
+This is not a numerical calculation. Answer normally using the clean, warm 6-part pedagogical format (Greeting, Definition, Step-by-Step, Local Example, Try Yourself, Summary).
+`;
+
   const fullPrompt = `CURRENT ACTIVE LEARNING CONTEXT:
 - Curriculum Level: ${gradeOrProg} (${level})
-- Subject: ${subject}
+- Subject: ${effectiveSubject}
 - Active Topic: ${topic}${moduleName ? ` - ${moduleName}` : ''}${lesson ? ` - ${lesson}` : ''}
 - Selected Response Language: ${targetLanguage} (${langCode})
 - Learning Mode: ${normalizedMode}
 
-${historyFormatted ? `CONVERSATION HISTORY (in ${subject} → ${topic}):\n${historyFormatted}\n\n` : ''}STUDENT INQUIRY:
+${historyFormatted ? `CONVERSATION HISTORY (in ${effectiveSubject} → ${topic}):\n${historyFormatted}\n\n` : ''}STUDENT INQUIRY:
 "${cleanMessage}"
 
+${calculationDirectives}
+
 MANDATORY INSTRUCTIONS FOR THIS TURN:
-1. Target Topic: Answer specifically within "${topic}" under "${subject}" (${gradeOrProg}).
-2. Subject Boundaries: Do NOT switch to Algebra, Accounting, Life Sciences, or other topics unless requested.
-3. Unrelated Questions: If the inquiry is unrelated to "${topic}", DO NOT provide a lesson on the unrelated subject. Politely explain that your current session is focused on "${topic}" (${subject}) and ask if the student wants to switch topics.
-4. Response Language: Deliver the explanation in ${targetLanguage}. If English is selected, write exclusively in English despite any non-English greeting.
-5. Follow-ups & Quick Actions: If this inquiry is a follow-up ("explain simpler", "give an example", "quiz me", "translate", etc.), anchor it strictly to "${topic}".
-6. Missing Context: If required curriculum context is missing, ask a brief clarifying question rather than guessing.
-7. Newton's Second Law & Forces Precision: If the student asks for Newton's Second Law or forces and motion, provide real-world examples and quiz problems strictly focused on net force, mass, acceleration, and Fnet = ma. Never generate projectile motion questions.
+1. Pedagogical Priority: Directly answer the student's inquiry ("${cleanMessage}") accurately, thoroughly, and helpfully in ${targetLanguage} calibrated to ${gradeOrProg}.
+2. Response Language: Deliver the explanation in ${targetLanguage}. If English is selected, write exclusively in English despite any non-English greeting.
+3. Simplicity: Use Grade 8 simple language. Avoid confusing jargon without immediate plain definitions.
+4. Follow-ups & Quick Actions: If this inquiry is a follow-up ("explain simpler", "give an example", "quiz me", "translate", etc.), anchor it to the active learning context ("${topic}").
+5. Newton's Second Law & Forces Precision: If the student asks for Newton's Second Law or forces and motion, provide real-world examples and problems strictly focused on net force, mass, acceleration, and Fnet = ma. Never generate projectile motion questions.
 
 Please provide your educational response formatted cleanly in markdown:`;
 
@@ -646,6 +727,33 @@ Please provide your educational response formatted cleanly in markdown:`;
         continue;
       }
 
+      // Parse hidden ---CACHE--- block if present
+      let cleanContent = responseText;
+      let cacheMetadata: {
+        detected_language?: string;
+        subject_matter?: string;
+        grade_level_estimate?: string;
+        standardized_question?: string;
+        educational_explanation_summary?: string;
+      } | undefined = undefined;
+
+      if (responseText.includes('---CACHE---')) {
+        const parts = responseText.split('---CACHE---');
+        cleanContent = parts[0].trim();
+        const cacheRaw = parts.slice(1).join('---CACHE---').trim();
+        try {
+          const jsonMatch = cacheRaw.match(/\{[\s\S]*\}/);
+          if (jsonMatch) {
+            cacheMetadata = JSON.parse(jsonMatch[0]);
+          }
+        } catch (e) {
+          console.warn('[NEXOVIAN Cache Parser] Failed to parse ---CACHE--- JSON block:', e);
+        }
+      }
+
+      // Globally sanitize and format all formulas into clean unicode (NO $ SIGNS)
+      cleanContent = sanitizeTextFormulas(cleanContent);
+
       // Generate intelligent follow-up suggestions strictly bound to active topic
       const followUps: string[] = [
         `Can you give another real-world example in ${topic}?`,
@@ -664,15 +772,17 @@ Please provide your educational response formatted cleanly in markdown:`;
         followUps[1] = `What are the core steps to remember for ${topic}?`;
       }
 
-      const summary = `${topic} (${normalizedMode}): Core conceptual overview for ${gradeOrProg}.`;
+      const summary =
+        cacheMetadata?.educational_explanation_summary ||
+        `${topic} (${normalizedMode}): Core conceptual overview for ${gradeOrProg}.`;
 
       let verifiedPhrasesMatched: Array<{ english: string; xitsonga: string }> | undefined = undefined;
-      let disclaimer = 'AI-generated educational explanation · Not official CAPS curriculum content';
+      let disclaimer = 'NEXOVIAN Tutor · Built in Mpumalanga for South Africa';
 
       if (isXitsonga) {
-        disclaimer = 'Nexovia Xitsonga Language Engine active · Controlled native-verified vocabulary prioritized';
+        disclaimer = 'NEXOVIAN Xitsonga Language Engine active · Controlled native-verified vocabulary prioritized';
         const allPhrases = serverLanguageEngine.getAll({ status: 'verified' });
-        const lowerCombined = `${cleanMessage} ${responseText}`.toLowerCase();
+        const lowerCombined = `${cleanMessage} ${cleanContent}`.toLowerCase();
         verifiedPhrasesMatched = allPhrases
           .filter((p) => p.xitsonga && (lowerCombined.includes(p.xitsonga.toLowerCase()) || lowerCombined.includes(p.english.toLowerCase())))
           .slice(0, 6)
@@ -680,15 +790,16 @@ Please provide your educational response formatted cleanly in markdown:`;
       }
 
       return {
-        text: responseText,
-        content: responseText,
+        text: cleanContent,
+        content: cleanContent,
         summary,
         followUpSuggestions: followUps,
         followUps,
-        languageUsed: targetLanguage,
+        languageUsed: cacheMetadata?.detected_language || targetLanguage,
         model,
         isAiGenerated: true,
         disclaimer,
+        cacheMetadata,
         isXitsongaEngineActive: isXitsonga,
         verifiedPhrasesMatched
       };

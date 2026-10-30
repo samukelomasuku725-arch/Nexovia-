@@ -17,11 +17,18 @@ interface I18nContextType {
 
 const I18nContext = createContext<I18nContextType | undefined>(undefined);
 
-const LANGUAGE_STORAGE_KEY = 'brightpath_academy_language';
+const LANGUAGE_STORAGE_KEY = 'nexovia_language';
 
 export const I18nProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [language, setLanguageState] = useState<SALanguageCode>(() => {
     try {
+      if (typeof window !== 'undefined') {
+        const params = new URLSearchParams(window.location.search);
+        const urlLang = params.get('lang') as SALanguageCode;
+        if (urlLang && (TRANSLATIONS[urlLang] || SA_LANGUAGES.some(l => l.code === urlLang))) {
+          return urlLang;
+        }
+      }
       const stored = localStorage.getItem(LANGUAGE_STORAGE_KEY) as SALanguageCode;
       if (stored && TRANSLATIONS[stored]) {
         return stored;
@@ -37,7 +44,7 @@ export const I18nProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       setLanguageState(newLang);
       try {
         localStorage.setItem(LANGUAGE_STORAGE_KEY, newLang);
-        window.dispatchEvent(new CustomEvent('brightpath_language_changed', { detail: newLang }));
+        window.dispatchEvent(new CustomEvent('nexovia_language_changed', { detail: newLang }));
       } catch {
         // Ignore storage errors
       }
@@ -52,10 +59,10 @@ export const I18nProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         setLanguageState(lang);
       }
     };
-    window.addEventListener('brightpath_language_changed', handleGlobalLang);
+    window.addEventListener('nexovia_language_changed', handleGlobalLang);
     window.addEventListener('storage', handleGlobalLang);
     return () => {
-      window.removeEventListener('brightpath_language_changed', handleGlobalLang);
+      window.removeEventListener('nexovia_language_changed', handleGlobalLang);
       window.removeEventListener('storage', handleGlobalLang);
     };
   }, [language]);

@@ -42,6 +42,9 @@ import { SpeakerButton } from '../audio/SpeakerButton';
 import { PronunciationDisplay } from '../audio/PronunciationDisplay';
 import { PronunciationPracticeModal } from '../audio/PronunciationPracticeModal';
 import { LanguageRecord } from '../../types/language';
+import { AnswerFeedbackWidget } from '../feedback/AnswerFeedbackWidget';
+import { CleanFormulaRenderer } from '../common/CleanFormulaRenderer';
+import { cleanFormulaString } from '../../utils/formulaCleaner';
 
 export const AITutorView: React.FC = () => {
   const {
@@ -97,6 +100,22 @@ export const AITutorView: React.FC = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [activeConversation?.messages, isTutorLoading]);
 
+  const cleanMessageContent = (text: string) => {
+    if (!text) return '';
+    const raw = text.split('---CACHE---')[0].trim();
+    return cleanFormulaString(raw);
+  };
+
+  const renderMessageLesson = (rawText: string) => {
+    if (!rawText) return null;
+    return (
+      <CleanFormulaRenderer
+        content={rawText}
+        language={learningContext.language}
+      />
+    );
+  };
+
   const handleSendMessage = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     if (!inputMessage.trim() || isTutorLoading) return;
@@ -106,7 +125,7 @@ export const AITutorView: React.FC = () => {
   };
 
   const handleCopy = (id: string, text: string) => {
-    navigator.clipboard.writeText(text);
+    navigator.clipboard.writeText(cleanMessageContent(text));
     setCopiedMsgId(id);
     setTimeout(() => setCopiedMsgId(null), 1500);
   };
@@ -115,7 +134,7 @@ export const AITutorView: React.FC = () => {
     saveLearningItem({
       type: learningContext.mode === 'summarize' ? 'summary' : 'explanation',
       title: `${learningContext.topic} - ${learningContext.mode.toUpperCase()}`,
-      content: msg.content,
+      content: cleanMessageContent(msg.content),
       subject: learningContext.subject,
       topic: learningContext.topic,
       language: learningContext.language,
@@ -159,23 +178,90 @@ export const AITutorView: React.FC = () => {
 
   // Learning Action Handlers — strictly preserving subject, topic, and grade context
   const handlePracticeThis = async () => {
+    const topicDesc = learningContext.topic
+      ? `${learningContext.topic} (${learningContext.subject || 'Curriculum'})`
+      : learningContext.subject
+      ? `${learningContext.subject} fundamentals`
+      : 'core curriculum concepts';
     await sendMessageToTutor(
-      `Generate 2-3 focused practice questions for ${learningContext.topic} (${learningContext.subject}, ${learningContext.gradeOrProgramme || learningContext.educationLevel}) with progressive difficulty. Give me hints first rather than full answers.`,
+      `Generate 2-3 focused practice questions for ${topicDesc} (${learningContext.gradeOrProgramme || learningContext.educationLevel}) with progressive difficulty. Give me hints first rather than full answers.`,
       'practice'
     );
   };
 
   const handleExplainSimpler = async () => {
+    const topicDesc = learningContext.topic
+      ? `${learningContext.topic} (${learningContext.subject || 'Curriculum'})`
+      : learningContext.subject
+      ? `${learningContext.subject} fundamentals`
+      : 'this curriculum concept';
     await sendMessageToTutor(
-      `Can you explain ${learningContext.topic} (${learningContext.subject}, ${learningContext.gradeOrProgramme || learningContext.educationLevel}) much more simply using an intuitive everyday South African analogy?`,
+      `Can you explain ${topicDesc} (${learningContext.gradeOrProgramme || learningContext.educationLevel}) much more simply using an intuitive everyday South African analogy?`,
       'simplify'
     );
   };
 
   const handleGiveExample = async () => {
+    const topicDesc = learningContext.topic
+      ? `${learningContext.topic} (${learningContext.subject || 'Curriculum'})`
+      : learningContext.subject
+      ? `${learningContext.subject} fundamentals`
+      : 'this topic';
     await sendMessageToTutor(
-      `Can you provide a concrete, step-by-step real-world example illustrating ${learningContext.topic} (${learningContext.subject}, ${learningContext.gradeOrProgramme || learningContext.educationLevel})?`,
+      `Can you provide a concrete, step-by-step real-world example illustrating ${topicDesc} (${learningContext.gradeOrProgramme || learningContext.educationLevel})?`,
       'explain'
+    );
+  };
+
+  const handleExplainAgainInMyLanguage = async (msg: any) => {
+    const prevUserQuestion = (() => {
+      const allMsgs = activeConversation?.messages || [];
+      const idx = allMsgs.findIndex((m) => m.id === msg.id);
+      for (let i = idx - 1; i >= 0; i--) {
+        if (allMsgs[i].role === 'user') return allMsgs[i].content;
+      }
+      return learningContext.topic || learningContext.subject || 'this calculation';
+    })();
+
+    await sendMessageToTutor(
+      `Please explain "${prevUserQuestion}" again step-by-step in ${currentLangObj.name}. Use simple Grade 8 words, no big English words. Make sure to show:
+QUESTION:
+SUBJECT:
+STEP 1: [What we have, what we need - in simple words]
+STEP 2: [First action, explain WHY]
+STEP 3: [Next action - substitute values]
+STEP 4: [Continue until answer]
+FINAL ANSWER:
+SIMPLE FORMULA TO REMEMBER:
+QUICK PRACTICE:`,
+      'explain',
+      learningContext.language
+    );
+  };
+
+  const handleGiveAnotherExample = async (msg: any) => {
+    const prevUserQuestion = (() => {
+      const allMsgs = activeConversation?.messages || [];
+      const idx = allMsgs.findIndex((m) => m.id === msg.id);
+      for (let i = idx - 1; i >= 0; i--) {
+        if (allMsgs[i].role === 'user') return allMsgs[i].content;
+      }
+      return learningContext.topic || learningContext.subject || 'this topic';
+    })();
+
+    await sendMessageToTutor(
+      `Give me another calculation example on "${prevUserQuestion}" with different numbers. Use ${currentLangObj.name} and Grade 8 simple words. Show:
+QUESTION:
+SUBJECT:
+STEP 1: [What we have, what we need]
+STEP 2: [First action, explain WHY]
+STEP 3: [Next action]
+STEP 4: [Continue until answer]
+FINAL ANSWER:
+SIMPLE FORMULA TO REMEMBER:
+QUICK PRACTICE:`,
+      'practice',
+      learningContext.language
     );
   };
 
@@ -389,7 +475,7 @@ export const AITutorView: React.FC = () => {
             </div>
           </div>
 
-          {/* Nexovia Xitsonga Language Engine Active Banner */}
+          {/* Nexovian Xitsonga Language Engine Active Banner */}
           {learningContext.language === 'ts' && (
             <div className="px-4 py-2.5 bg-gradient-to-r from-amber-500/15 via-amber-400/10 to-transparent border-b border-amber-500/30 flex flex-wrap items-center justify-between gap-3 text-xs">
               <div className="flex items-center gap-2.5">
@@ -398,7 +484,7 @@ export const AITutorView: React.FC = () => {
                 </div>
                 <div>
                   <div className="flex items-center gap-1.5 font-bold text-slate-900 dark:text-white">
-                    <span>Nexovia Xitsonga Language Engine Active</span>
+                    <span>Nexovian Xitsonga Language Engine Active</span>
                     <span className="px-1.5 py-0.5 rounded text-[9px] uppercase tracking-wider bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 font-mono font-bold">
                       140 Entries · 80 Verified Native
                     </span>
@@ -465,51 +551,137 @@ export const AITutorView: React.FC = () => {
                   {APP_CONFIG.appName} AI Tutor
                 </h3>
                 <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1.5 leading-relaxed">
-                  Ready to assist in <strong className="text-slate-700 dark:text-slate-300">{learningContext.subject}</strong>: {learningContext.topic} ({learningContext.gradeOrProgramme || learningContext.educationLevel}) in <strong className="text-slate-700 dark:text-slate-300">{currentLangObj.name}</strong>.
+                  {learningContext.subject && learningContext.topic ? (
+                    <>
+                      Ready to assist in <strong className="text-slate-700 dark:text-slate-300">{learningContext.subject}</strong>: {learningContext.topic} ({learningContext.gradeOrProgramme || learningContext.educationLevel}) in <strong className="text-slate-700 dark:text-slate-300">{currentLangObj.name}</strong>.
+                    </>
+                  ) : learningContext.subject ? (
+                    <>
+                      Ready for <strong className="text-slate-700 dark:text-slate-300">{learningContext.subject}</strong> ({learningContext.gradeOrProgramme || learningContext.educationLevel}) in <strong className="text-slate-700 dark:text-slate-300">{currentLangObj.name}</strong>. Select a topic above or ask any question!
+                    </>
+                  ) : (
+                    <>
+                      Ready to assist for <strong className="text-slate-700 dark:text-slate-300">{learningContext.gradeOrProgramme || 'your grade'}</strong> in <strong className="text-slate-700 dark:text-slate-300">{currentLangObj.name}</strong>. Choose a subject above or ask any question to begin!
+                    </>
+                  )}
                 </p>
 
                 <div className="mt-6 flex flex-col gap-2">
                   <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider text-left">
                     Suggested Inquiries:
                   </span>
-                  <button
-                    onClick={() =>
-                      sendMessageToTutor(
-                        `Explain the fundamental concepts of ${learningContext.topic} step-by-step for ${learningContext.gradeOrProgramme || learningContext.educationLevel}.`
-                      )
-                    }
-                    className="p-3 bg-white dark:bg-slate-900 hover:bg-amber-50 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-800 rounded-xl text-xs text-left text-slate-700 dark:text-slate-200 transition-colors shadow-sm"
-                  >
-                    💡 "Explain the fundamental concepts of {learningContext.topic} step-by-step."
-                  </button>
-                  <button
-                    onClick={() =>
-                      sendMessageToTutor(
-                        `Give me a practical everyday South African analogy to simplify ${learningContext.topic}.`,
-                        'simplify'
-                      )
-                    }
-                    className="p-3 bg-white dark:bg-slate-900 hover:bg-amber-50 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-800 rounded-xl text-xs text-left text-slate-700 dark:text-slate-200 transition-colors shadow-sm"
-                  >
-                    ✨ "Give me a practical everyday analogy to simplify {learningContext.topic}."
-                  </button>
-                  <button
-                    onClick={() =>
-                      sendMessageToTutor(
-                        `Generate 2-3 realistic practice questions for ${learningContext.topic} with progressive difficulty.`,
-                        'practice'
-                      )
-                    }
-                    className="p-3 bg-white dark:bg-slate-900 hover:bg-amber-50 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-800 rounded-xl text-xs text-left text-slate-700 dark:text-slate-200 transition-colors shadow-sm"
-                  >
-                    🎯 "Practice this: Generate 2-3 realistic practice questions for {learningContext.topic}."
-                  </button>
-                  <button
-                    onClick={() => setIsStudyPlanOpen(true)}
-                    className="p-3 bg-white dark:bg-slate-900 hover:bg-amber-50 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-800 rounded-xl text-xs text-left text-slate-700 dark:text-slate-200 transition-colors shadow-sm"
-                  >
-                    📅 "Create a study plan for {learningContext.topic}."
-                  </button>
+                  {learningContext.topic ? (
+                    <>
+                      <button
+                        onClick={() =>
+                          sendMessageToTutor(
+                            `Explain the fundamental concepts of ${learningContext.topic} step-by-step for ${learningContext.gradeOrProgramme || learningContext.educationLevel}.`
+                          )
+                        }
+                        className="p-3 bg-white dark:bg-slate-900 hover:bg-amber-50 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-800 rounded-xl text-xs text-left text-slate-700 dark:text-slate-200 transition-colors shadow-sm"
+                      >
+                        💡 "Explain the fundamental concepts of {learningContext.topic} step-by-step."
+                      </button>
+                      <button
+                        onClick={() =>
+                          sendMessageToTutor(
+                            `Give me a practical everyday South African analogy to simplify ${learningContext.topic}.`,
+                            'simplify'
+                          )
+                        }
+                        className="p-3 bg-white dark:bg-slate-900 hover:bg-amber-50 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-800 rounded-xl text-xs text-left text-slate-700 dark:text-slate-200 transition-colors shadow-sm"
+                      >
+                        ✨ "Give me a practical everyday analogy to simplify {learningContext.topic}."
+                      </button>
+                      <button
+                        onClick={() =>
+                          sendMessageToTutor(
+                            `Generate 2-3 realistic practice questions for ${learningContext.topic} with progressive difficulty.`,
+                            'practice'
+                          )
+                        }
+                        className="p-3 bg-white dark:bg-slate-900 hover:bg-amber-50 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-800 rounded-xl text-xs text-left text-slate-700 dark:text-slate-200 transition-colors shadow-sm"
+                      >
+                        🎯 "Practice this: Generate 2-3 realistic practice questions for {learningContext.topic}."
+                      </button>
+                      <button
+                        onClick={() => setIsStudyPlanOpen(true)}
+                        className="p-3 bg-white dark:bg-slate-900 hover:bg-amber-50 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-800 rounded-xl text-xs text-left text-slate-700 dark:text-slate-200 transition-colors shadow-sm"
+                      >
+                        📅 "Create a study plan for {learningContext.topic}."
+                      </button>
+                    </>
+                  ) : learningContext.subject ? (
+                    <>
+                      <button
+                        onClick={() =>
+                          sendMessageToTutor(
+                            `What are the most important core concepts in ${learningContext.subject} for ${learningContext.gradeOrProgramme || 'my grade'}?`
+                          )
+                        }
+                        className="p-3 bg-white dark:bg-slate-900 hover:bg-amber-50 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-800 rounded-xl text-xs text-left text-slate-700 dark:text-slate-200 transition-colors shadow-sm"
+                      >
+                        💡 "What are the most important core concepts in {learningContext.subject}?"
+                      </button>
+                      <button
+                        onClick={() =>
+                          sendMessageToTutor(
+                            `Can you give me an overview and study roadmap for ${learningContext.subject}?`,
+                            'simplify'
+                          )
+                        }
+                        className="p-3 bg-white dark:bg-slate-900 hover:bg-amber-50 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-800 rounded-xl text-xs text-left text-slate-700 dark:text-slate-200 transition-colors shadow-sm"
+                      >
+                        ✨ "Give me an overview and study roadmap for {learningContext.subject}."
+                      </button>
+                      <button
+                        onClick={() =>
+                          sendMessageToTutor(
+                            `Give me a starter diagnostic practice problem in ${learningContext.subject}.`,
+                            'practice'
+                          )
+                        }
+                        className="p-3 bg-white dark:bg-slate-900 hover:bg-amber-50 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-800 rounded-xl text-xs text-left text-slate-700 dark:text-slate-200 transition-colors shadow-sm"
+                      >
+                        🎯 "Give me a starter diagnostic practice problem in {learningContext.subject}."
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <button
+                        onClick={() =>
+                          sendMessageToTutor(
+                            `What subjects are covered in ${learningContext.gradeOrProgramme || 'my grade'} and how should I prioritize my study time?`
+                          )
+                        }
+                        className="p-3 bg-white dark:bg-slate-900 hover:bg-amber-50 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-800 rounded-xl text-xs text-left text-slate-700 dark:text-slate-200 transition-colors shadow-sm"
+                      >
+                        📚 "What subjects are covered in {learningContext.gradeOrProgramme || 'my grade'}?"
+                      </button>
+                      <button
+                        onClick={() =>
+                          sendMessageToTutor(
+                            `How can I set up an effective daily study plan for ${learningContext.gradeOrProgramme || 'my grade'}?`,
+                            'study_plan'
+                          )
+                        }
+                        className="p-3 bg-white dark:bg-slate-900 hover:bg-amber-50 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-800 rounded-xl text-xs text-left text-slate-700 dark:text-slate-200 transition-colors shadow-sm"
+                      >
+                        📅 "How can I set up an effective daily study plan?"
+                      </button>
+                      <button
+                        onClick={() =>
+                          sendMessageToTutor(
+                            `What are the best problem-solving strategies for South African exams?`,
+                            'simplify'
+                          )
+                        }
+                        className="p-3 bg-white dark:bg-slate-900 hover:bg-amber-50 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-800 rounded-xl text-xs text-left text-slate-700 dark:text-slate-200 transition-colors shadow-sm"
+                      >
+                        ✨ "What are the best problem-solving strategies for exams?"
+                      </button>
+                    </>
+                  )}
                 </div>
               </div>
             )}
@@ -562,7 +734,7 @@ export const AITutorView: React.FC = () => {
                           {/* Audio read-aloud controls (Listen, Pause, Resume, Stop) */}
                           <MessageAudioControls
                             messageId={msg.id}
-                            content={msg.content}
+                            content={cleanMessageContent(msg.content)}
                             language={learningContext.language}
                             onOpenCapabilityModal={() => setIsVoiceSettingsOpen(true)}
                           />
@@ -596,9 +768,9 @@ export const AITutorView: React.FC = () => {
                       </div>
                     )}
 
-                    {/* Content formatted with markdown styling */}
-                    <div className="prose dark:prose-invert max-w-none text-xs sm:text-sm leading-relaxed whitespace-pre-wrap font-sans">
-                      {msg.content}
+                    {/* Content formatted with markdown styling and formula highlight box */}
+                    <div className="max-w-none text-xs sm:text-sm leading-relaxed font-sans">
+                      {renderMessageLesson(msg.content)}
                     </div>
 
                     {/* Phase 3: Verified Phrase Pronunciation Card if direct translation retrieved */}
@@ -623,10 +795,10 @@ export const AITutorView: React.FC = () => {
                       <div className="mt-3 p-3 rounded-xl bg-amber-50/90 dark:bg-amber-950/40 border border-amber-300 dark:border-amber-800 text-xs">
                         <div className="flex items-center gap-2 font-bold text-amber-900 dark:text-amber-200">
                           <AlertCircle className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0" />
-                          <span>Nexovia Language Engine Notice: Unverified Translation</span>
+                          <span>Nexovian Language Engine Notice: Unverified Translation</span>
                         </div>
                         <p className="mt-1 text-[11px] text-amber-800 dark:text-amber-300 leading-relaxed">
-                          Nexovia strictly prohibits artificial translation guessing. This phrase is tracked and flagged for native speaker curriculum verification. English explanations remain available.
+                          Nexovian strictly prohibits artificial translation guessing. This phrase is tracked and flagged for native speaker curriculum verification. English explanations remain available.
                         </p>
                       </div>
                     )}
@@ -678,17 +850,51 @@ export const AITutorView: React.FC = () => {
                         <ShieldCheck className="w-3 h-3 text-slate-400 shrink-0" />
                         <span>
                           {msg.disclaimer || (learningContext.language === 'ts'
-                            ? 'Nexovia Xitsonga Language Engine · Controlled native-verified vocabulary prioritized · Unverified terms retain English meaning'
-                            : 'AI-generated educational explanation · Not official CAPS curriculum content')}
+                            ? 'NEXOVIAN Xitsonga Language Engine · Controlled native-verified vocabulary prioritized'
+                            : 'NEXOVIAN Tutor · Built in Mpumalanga for South Africa')}
                         </span>
                       </div>
                     )}
 
-                    {/* LEARNING ACTIONS ROW (Practice, Simplify, Example, Translate, Quiz, Save) */}
+                    {/* Was this helpful? 👍 Yes / 👎 No (Low-cost feedback feature) */}
                     {isAssistant && (
-                      <div className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800">
-                        <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block mb-2">
-                          Next Learning Actions:
+                      <AnswerFeedbackWidget
+                        question={(() => {
+                          const allMsgs = activeConversation?.messages || [];
+                          const idx = allMsgs.findIndex((m) => m.id === msg.id);
+                          for (let i = idx - 1; i >= 0; i--) {
+                            if (allMsgs[i].role === 'user') return allMsgs[i].content;
+                          }
+                          return activeConversation?.title || learningContext.topic || 'General Question';
+                        })()}
+                        answer={cleanMessageContent(msg.content)}
+                      />
+                    )}
+
+                    {/* CORE BUTTONS (Rule 4: Explain again in [my language] + Give me another example) */}
+                    {isAssistant && (
+                      <div className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800 space-y-2.5">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <button
+                            onClick={() => handleExplainAgainInMyLanguage(msg)}
+                            className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-bold rounded-xl bg-[#facc15] hover:bg-yellow-400 text-[#0F172A] shadow-xs transition-colors"
+                            title={`Explain again in ${currentLangObj.name}`}
+                          >
+                            <RotateCcw className="w-3.5 h-3.5" />
+                            <span>Explain again in {currentLangObj.name}</span>
+                          </button>
+                          <button
+                            onClick={() => handleGiveAnotherExample(msg)}
+                            className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold rounded-xl bg-slate-900 dark:bg-slate-800 hover:bg-slate-800 dark:hover:bg-slate-700 text-white border border-slate-700 dark:border-slate-600 shadow-xs transition-colors"
+                            title="Give me another step-by-step example with different numbers"
+                          >
+                            <Sparkles className="w-3.5 h-3.5 text-[#facc15]" />
+                            <span>Give me another example</span>
+                          </button>
+                        </div>
+
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block pt-1 mb-2">
+                          More Learning Actions:
                         </span>
                         <div className="flex flex-wrap gap-1.5">
                           <button

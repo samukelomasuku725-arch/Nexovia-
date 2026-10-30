@@ -12,6 +12,9 @@ import {
 import { useLearning } from '../../context/LearningContext';
 import { GeneratedQuiz } from '../../types';
 import { multilingualEducationalService } from '../../services/language/multilingualEducationalService';
+import { AnswerFeedbackWidget } from '../feedback/AnswerFeedbackWidget';
+import { CleanFormulaRenderer } from '../common/CleanFormulaRenderer';
+import { cleanFormulaString } from '../../utils/formulaCleaner';
 
 interface Props {
   quiz: GeneratedQuiz;
@@ -268,7 +271,7 @@ export const PracticeQuizModal: React.FC<Props> = ({ quiz, onClose }) => {
                 </div>
 
                 <h4 className="text-sm sm:text-base font-semibold text-slate-900 dark:text-white mb-3">
-                  {q.question}
+                  {cleanFormulaString(q.question)}
                 </h4>
 
                 {/* Multiple Choice & True/False Options */}
@@ -303,7 +306,7 @@ export const PracticeQuizModal: React.FC<Props> = ({ quiz, onClose }) => {
                           <span className="w-5 h-5 rounded-full border border-current flex items-center justify-center text-[10px] shrink-0 font-mono">
                             {String.fromCharCode(65 + optIdx)}
                           </span>
-                          <span>{opt}</span>
+                          <span>{cleanFormulaString(opt)}</span>
                         </button>
                       );
                     })}
@@ -321,7 +324,7 @@ export const PracticeQuizModal: React.FC<Props> = ({ quiz, onClose }) => {
                     />
                     {submitted && (
                       <div className="mt-2 text-xs font-semibold text-slate-600 dark:text-slate-300">
-                        Expected Answer: <span className="text-amber-600 dark:text-amber-400 font-mono">{q.correctAnswer}</span>
+                        Expected Answer: <span className="text-amber-600 dark:text-amber-400 font-mono">{cleanFormulaString(q.correctAnswer)}</span>
                       </div>
                     )}
                   </div>
@@ -329,10 +332,18 @@ export const PracticeQuizModal: React.FC<Props> = ({ quiz, onClose }) => {
 
                 {/* Explanation Card */}
                 {submitted && (
-                  <div className="mt-3 p-3 bg-white dark:bg-slate-900 rounded-lg text-xs leading-relaxed text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-800">
-                    <strong>{uiStrings.explanationPrefix || 'Explanation: '}</strong>
-                    {q.explanation}
-                  </div>
+                  <>
+                    <div className="mt-3 p-3 bg-white dark:bg-slate-900 rounded-lg text-xs leading-relaxed text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-800">
+                      <strong className="text-amber-600 dark:text-amber-400 block mb-1">
+                        {uiStrings.explanationPrefix || 'Explanation: '}
+                      </strong>
+                      <CleanFormulaRenderer content={q.explanation} />
+                    </div>
+                    <AnswerFeedbackWidget
+                      question={q.question}
+                      answer={q.explanation || q.correctAnswer || ''}
+                    />
+                  </>
                 )}
               </div>
             );

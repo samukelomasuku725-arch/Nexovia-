@@ -1,7 +1,7 @@
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
- * Nexovia Xitsonga Language Engine - Phase 2 Speaker Button
+ * Nexovian Xitsonga Language Engine - Phase 2 Speaker Button
  * 
  * Reusable 🔊 Listen button adhering strictly to Phase 2 rules:
  * - IF verified audio exists: plays audio with animated waves indicator.

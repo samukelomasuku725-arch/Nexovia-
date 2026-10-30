@@ -59,7 +59,7 @@ export const MasteryThresholdsModal: React.FC<Props> = ({
                 Mastery Scale Thresholds
               </h3>
               <p className="text-xs text-slate-500 dark:text-slate-400">
-                Configure Nexovia's heuristic mastery progression bands
+                Configure Nexovian's heuristic mastery progression bands
               </p>
             </div>
           </div>
@@ -77,7 +77,7 @@ export const MasteryThresholdsModal: React.FC<Props> = ({
           <div className="p-3 rounded-xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/40 text-xs text-amber-900 dark:text-amber-300 flex items-start gap-2.5">
             <Info className="w-4 h-4 shrink-0 text-amber-600 dark:text-amber-400 mt-0.5" />
             <div>
-              <span className="font-semibold block mb-0.5">Nexovia Learning Heuristic Notice</span>
+              <span className="font-semibold block mb-0.5">Nexovian Learning Heuristic Notice</span>
               The mastery score is an internal adaptive metric calculated from practice accuracy, recent assessments, difficulty weighting, and spaced review. It is not an officially accredited CAPS or TVET examination mark.
             </div>
           </div>

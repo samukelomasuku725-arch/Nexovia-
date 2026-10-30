@@ -2,7 +2,7 @@
  * @license
  * SPDX-License-Identifier: Apache-2.0
  * 
- * NEXOVIA ACADEMY - PHASE 8: NOTIFICATIONS DRAWER & MODAL
+ * NEXOVIAN ACADEMY - PHASE 8: NOTIFICATIONS DRAWER & MODAL
  * 
  * Scalable in-app notification center for:
  * - Study reminders

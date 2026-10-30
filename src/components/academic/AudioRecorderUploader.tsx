@@ -1,7 +1,7 @@
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
- * Nexovia Academic Voice - Audio Recorder & Uploader
+ * Nexovian Academic Voice - Audio Recorder & Uploader
  */
 
 import React, { useState, useRef, useEffect } from 'react';
@@ -353,7 +353,7 @@ export const AudioRecorderUploader: React.FC<Props> = ({
           <Info className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
           <div className="text-[11px] leading-relaxed">
             <strong>Multilingual Academic Adaptation Active:</strong> You can record your concepts in{' '}
-            {SA_LANGUAGES.find((l) => l.code === selectedLanguage)?.name || 'your mother tongue'}. Nexovia will
+            {SA_LANGUAGES.find((l) => l.code === selectedLanguage)?.name || 'your mother tongue'}. Nexovian will
             transcribe your authentic spoken ideas and synthesize them into a formal tertiary or TVET academic document
             with specialized glossaries and dual-language precision.
           </div>

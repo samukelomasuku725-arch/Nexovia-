@@ -125,6 +125,102 @@ function formReducer(state: State, action: Action): State {
                 ],
                 correctIndex: 1,
                 explanation: 'Optimistic UI must be safely reversible: retaining the previous state snapshot allows instantaneous rollback without corrupting application memory.'
+              },
+              {
+                id: 'q-fs-1-3',
+                question: 'Which of the following represents an "impossible state" caused by disjoint boolean flags?',
+                options: [
+                  '{ isLoading: false, isError: false }',
+                  '{ isLoading: true, isError: true }',
+                  '{ isLoading: false, isError: true }',
+                  '{ isLoading: true, isError: false }'
+                ],
+                correctIndex: 1,
+                explanation: 'An application cannot be simultaneously actively fetching data and displaying a terminal error screen; disjoint booleans fail because they permit this combination.'
+              },
+              {
+                id: 'q-fs-1-4',
+                question: 'In TypeScript, what property distinguishes each variant within a discriminated union state machine?',
+                options: [
+                  'A common literal discriminant property (such as status: "loading" | "success").',
+                  'A private class method.',
+                  'An exported CSS module class name.',
+                  'A random UUID generated at runtime.'
+                ],
+                correctIndex: 0,
+                explanation: 'A shared literal property (like status or type) acts as the discriminant, allowing TypeScript to narrow the state object in switch or if statements.'
+              },
+              {
+                id: 'q-fs-1-5',
+                question: 'What is the primary user experience problem that optimistic UI solves on mobile networks?',
+                options: [
+                  'It decreases phone battery temperature.',
+                  'It eliminates perceived network latency (such as 350ms round-trips) by immediately updating client state.',
+                  'It automatically validates credit card numbers.',
+                  'It reduces screen resolution to save bandwidth.'
+                ],
+                correctIndex: 1,
+                explanation: 'On mobile networks with noticeable round-trip latency, optimistic UI provides immediate tactile feedback for actions like likes or toggles.'
+              },
+              {
+                id: 'q-fs-1-6',
+                question: 'When is it safe to discard the rollback snapshot taken during an optimistic mutation?',
+                options: [
+                  'Immediately after the user taps the button.',
+                  'After a fixed 500ms setTimeout timer fires.',
+                  'Only after an HTTP 200 payload confirms server persistence.',
+                  'When the browser window loses focus.'
+                ],
+                correctIndex: 2,
+                explanation: 'The rollback snapshot must remain in memory until the server confirms the mutation was persisted. Clearing it prematurely leaves the client unable to recover from failures.'
+              },
+              {
+                id: 'q-fs-1-7',
+                question: 'If an optimistic mutation is rejected by the server with an HTTP 500 error, what should the client do?',
+                options: [
+                  'Crash the application and clear all local storage.',
+                  'Invoke the rollback handler to restore the snapshot and surface a retry affordance.',
+                  'Silently leave the optimistic change visible on screen.',
+                  'Redirect the learner to the homepage.'
+                ],
+                correctIndex: 1,
+                explanation: 'On failure, the client must roll back to the pre-mutation snapshot to maintain data consistency and inform the user with a retry option.'
+              },
+              {
+                id: 'q-fs-1-8',
+                question: 'According to the lesson takeaways, how should derived computations (e.g. filtered items or total counts) be managed?',
+                options: [
+                  'Synchronized across multiple independent useState variables in useEffect.',
+                  'Computed inside useMemo or pure selectors rather than stored as duplicate state.',
+                  'Saved into separate cookies after every keypress.',
+                  'Transferred to the server via WebSocket.'
+                ],
+                correctIndex: 1,
+                explanation: 'Keeping derived state in useMemo or pure selectors prevents desynchronization bugs and eliminates redundant re-render cascades.'
+              },
+              {
+                id: 'q-fs-1-9',
+                question: 'In the lesson reducer sandbox, what state object is returned upon a "SUBMIT_SUCCESS" action?',
+                options: [
+                  '{ status: "idle" }',
+                  '{ status: "submitting" }',
+                  '{ status: "success", timestamp: Date.now(), payload: action.payload }',
+                  '{ status: "error", error: new Error("Failed") }'
+                ],
+                correctIndex: 2,
+                explanation: 'The reducer transitions from "submitting" to "success" with the current timestamp and the action payload returned from the operation.'
+              },
+              {
+                id: 'q-fs-1-10',
+                question: 'What is the consequence of applying an optimistic update without capturing a prior snapshot boundary?',
+                options: [
+                  'If the network request fails, the application cannot restore previous state and client memory is corrupted.',
+                  'The browser security sandbox blocks all future HTTP requests.',
+                  'The application automatically reloads the entire operating system.',
+                  'TypeScript throws a compiler error during runtime.'
+                ],
+                correctIndex: 0,
+                explanation: 'Without a prior snapshot, any server rejection leaves the user interface out of sync with actual server reality with no way to restore consistency.'
               }
             ],
             audioScript: 'Welcome to Lesson 1: Zero-Latency State Flow. We explore deterministic state machines and optimistic client transitions to deliver fluid, bug-free web experiences.'
@@ -150,7 +246,7 @@ function formReducer(state: State, action: Action): State {
                   body: 'When a user holds a modern phone one-handed, the thumb sweeps naturally across the lower third of the display. Placing primary navigation tabs and critical actions at the top forces reach fatigue or two-handed repositioning.',
                   callout: {
                     type: 'info',
-                    text: 'BrightPath adheres to the 15% Mobile Sticky Cap: top and bottom navigation bars together consume less than 15% of vertical space, dedicating 85% to uninterrupted learning.'
+                    text: 'NEXOVIA adheres to the 15% Mobile Sticky Cap: top and bottom navigation bars together consume less than 15% of vertical space, dedicating 85% to uninterrupted learning.'
                   }
                 },
                 {
@@ -184,10 +280,123 @@ export function IconButton({ icon: Icon, label, onClick }: Props) {
             quiz: [
               {
                 id: 'q-fs-2-1',
-                question: 'What is the recommended minimum interactive hitbox dimension for touch devices under WCAG guidelines?',
-                options: ['24 x 24px', '32 x 32px', '44 x 44px', '72 x 72px'],
+                question: 'According to the lesson’s mobile touch guidelines, what is the minimum recommended interactive hitbox dimension for touch targets?',
+                options: [
+                  '24 x 24px',
+                  '32 x 32px',
+                  '44 x 44px',
+                  '72 x 72px'
+                ],
                 correctIndex: 2,
-                explanation: 'A minimum 44 x 44px target prevents mistaps and accommodates the average human thumb pad footprint.'
+                explanation: 'The lesson specifies a minimum 44 x 44px hitbox container to accommodate human thumb pads and prevent mistaps, regardless of how small the visual icon inside appears.'
+              },
+              {
+                id: 'q-fs-2-2',
+                question: 'Where does the "natural thumb zone" lie when a user holds a modern smartphone one-handed?',
+                options: [
+                  'The top 20% of the screen near the notification bar.',
+                  'The bottom 40% of the viewport across the natural radial sweep of the thumb.',
+                  'The extreme top-left corner exclusively.',
+                  'Along the right vertical bezel only.'
+                ],
+                correctIndex: 1,
+                explanation: 'Human biomechanics dictate that the thumb sweeps naturally across the lower third to bottom 40% of the display; primary navigation placed here eliminates reach fatigue.'
+              },
+              {
+                id: 'q-fs-2-3',
+                question: 'Under NEXOVIA’s 15% Mobile Sticky Cap guideline, what proportion of vertical viewport space must remain dedicated to core learning content?',
+                options: [
+                  'At least 50%',
+                  'At least 70%',
+                  'At least 85%',
+                  'Exactly 100% with no navigation chrome permitted'
+                ],
+                correctIndex: 2,
+                explanation: 'The 15% sticky cap ensures that combined top and bottom fixed chrome consumes less than 15% of vertical height, preserving at least 85% for uninterrupted learning.'
+              },
+              {
+                id: 'q-fs-2-4',
+                question: 'If a user interface requires a compact 20px visual icon, how should its interactive touch target be engineered on mobile viewports?',
+                options: [
+                  'Shrink the clickable container to exactly 20 x 20px to match the visual asset.',
+                  'Enclose the 20px visual icon within an interactive touch container of at least 44 x 44px.',
+                  'Increase the phone’s display zoom level automatically.',
+                  'Disable touch gestures and require an external keyboard.'
+                ],
+                correctIndex: 1,
+                explanation: 'Visual footprint and interactive hitbox are decoupled: an icon can be styled at 18px or 20px, but its interactive container must expand to at least 44 x 44px.'
+              },
+              {
+                id: 'q-fs-2-5',
+                question: 'In the lesson’s TouchButton component, which CSS utility combination creates an accessible touch container around a compact icon?',
+                options: [
+                  'absolute top-0 left-0 w-full h-full',
+                  'min-h-[44px] min-w-[44px] flex items-center justify-center',
+                  'text-[10px] p-0 m-0',
+                  'overflow-hidden max-h-[20px] max-w-[20px]'
+                ],
+                correctIndex: 1,
+                explanation: 'The utility classes min-h-[44px] min-w-[44px] flex items-center justify-center guarantee the touch target meets the 44px guideline while centering the visual icon.'
+              },
+              {
+                id: 'q-fs-2-6',
+                question: 'Why does the lesson suggest using negative tap-margin offsets as an alternative technique for touch hitboxes?',
+                options: [
+                  'It shrinks the file size of the production bundle.',
+                  'It expands the interactive touch-receptive area without altering visible component layout spacing.',
+                  'It encrypts touch coordinates before dispatching server requests.',
+                  'It hides the element from desktop viewports.'
+                ],
+                correctIndex: 1,
+                explanation: 'Negative tap-margin offsets enlarge the invisible touch-receptive hitbox around tightly spaced icons without bloating visible spacing or disrupting layout flow.'
+              },
+              {
+                id: 'q-fs-2-7',
+                question: 'When implementing an interactive IconButton that displays only an SVG icon and no visible text, what attribute is essential for screen reader accessibility?',
+                options: [
+                  'aria-label with a descriptive text label',
+                  'data-testid="button"',
+                  'tabindex="-1"',
+                  'alt="icon" on the button container'
+                ],
+                correctIndex: 0,
+                explanation: 'Icon-only buttons lack inner text for assistive tech; adding an aria-label provides screen readers with an intelligible description of the button’s action.'
+              },
+              {
+                id: 'q-fs-2-8',
+                question: 'In the lesson’s TouchButton code, what purpose does the active:scale-95 transition-transform class serve?',
+                options: [
+                  'It reduces GPU memory usage during scroll gestures.',
+                  'It provides immediate visual press feedback by subtly scaling down the button upon touch.',
+                  'It automatically submits the surrounding HTML form.',
+                  'It rotates the icon 90 degrees counter-clockwise.'
+                ],
+                correctIndex: 1,
+                explanation: 'The active:scale-95 transition provides immediate visual press feedback by subtly scaling down the button while it is active. This helps users see that their tap was registered; it is visual feedback, not literal haptic feedback.'
+              },
+              {
+                id: 'q-fs-2-9',
+                question: 'In the lesson’s bottom tab bar layout exercise, what is the recommended minimum touch height for primary navigation items?',
+                options: [
+                  '24px',
+                  '32px',
+                  '48px',
+                  '80px'
+                ],
+                correctIndex: 2,
+                explanation: 'The sandbox layout exercise specifies a minimum touch height of 48px for bottom tab bars, ensuring comfortable finger targets during frequent navigation switching.'
+              },
+              {
+                id: 'q-fs-2-10',
+                question: 'A mobile screen of 800px total height features a 70px sticky header, a 65px sticky footer, and positions its primary call-to-action button near the top of the screen. Why does this design violate the lesson guidelines?',
+                options: [
+                  'Combined sticky chrome consumes 16.875% of height (exceeding the 15% cap), and placing the primary action near the top places it outside the intended bottom thumb zone.',
+                  'Sticky navigation is forbidden on screens with total heights below 1000px.',
+                  'Primary action buttons must always be positioned inside a floating modal.',
+                  'Buttons placed near the top automatically trigger browser reload gestures.'
+                ],
+                correctIndex: 0,
+                explanation: 'The combined sticky chrome height is 70px + 65px = 135px. The calculation is 135 ÷ 800 × 100 = 16.875%, which exceeds the lesson\'s 15% guideline. Furthermore, positioning the primary call-to-action near the top forces reach fatigue because it is outside the intended bottom thumb zone (the lower 40% of the viewport).'
               }
             ],
             audioScript: 'Lesson 2 focuses on Mobile-First Touch Ergonomics. Discover how thumb reach zones, 44px touch targets, and sticky height caps create intuitive smartphone experiences.'

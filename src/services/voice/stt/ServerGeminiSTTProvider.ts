@@ -7,7 +7,7 @@ import {
 
 export class ServerGeminiSTTProvider implements SpeechToTextProvider {
   readonly id = 'gemini-server';
-  readonly name = 'BrightPath Gemini Multimodal Audio';
+  readonly name = 'NEXOVIA Gemini Multimodal Audio';
   readonly description = 'Server-side AI transcription with accurate South African dialect adaptation.';
 
   private mediaRecorder: MediaRecorder | null = null;

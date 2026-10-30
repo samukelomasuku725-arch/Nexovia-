@@ -1,37 +1,57 @@
+/**
+ * @license
+ * SPDX-License-Identifier: Apache-2.0
+ * 
+ * NEXOVIAN - SUPABASE AUTH CONTEXT
+ * 
+ * Directly connects to Supabase Auth:
+ * - Session tracking on mount & real-time onAuthStateChange
+ * - Email + Password SignUp / SignIn
+ * - Google Sign-In via OAuth
+ * - Passwordless Magic Link via OTP
+ * - Automatic profile sync to Supabase `profiles` table
+ * - Logout / SignOut
+ */
+
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { supabase } from '../supabase';
+import type { User, Session } from '@supabase/supabase-js';
 
 export interface UserProfile {
   id: string;
   name: string;
   email: string;
   role?: string;
-  educationLevel: string;
-  gradeOrProgramme: string;
-  preferredLanguage: string;
-  popiaConsent?: boolean;
-  popiaConsentDate?: string;
+  educationLevel?: string;
+  gradeOrProgramme?: string;
+  preferredLanguage?: string;
+  focusSubjects?: string[];
   isMinor?: boolean;
   guardianEmail?: string;
   guardianConsent?: boolean;
-  createdAt: string;
+  popiaConsent?: boolean;
+  popiaConsentDate?: string;
+  createdAt?: string;
   updatedAt?: string;
 }
 
 interface AuthContextType {
   user: UserProfile | null;
+  supabaseUser: User | null;
+  session: Session | null;
   isAuthenticated: boolean;
-  token: string | null;
-  login: (email: string, password?: string) => Promise<UserProfile>;
-  register: (data: {
-    name: string;
-    email: string;
-    password?: string;
-    educationLevel?: string;
-    gradeOrProgramme?: string;
-    preferredLanguage?: string;
-  }) => Promise<UserProfile>;
+  isLoading: boolean;
+  signUpWithEmail: (email: string, password: string, fullName?: string, preferredLanguage?: string) => Promise<any>;
+  signInWithEmail: (email: string, password: string, rememberMe?: boolean) => Promise<any>;
+  signInWithGoogle: () => Promise<any>;
+  signInWithMagicLink: (email: string) => Promise<any>;
+  resetPassword: (email: string) => Promise<any>;
+  logout: () => Promise<void>;
+  isApp: boolean;
+  // Backwards compatibility methods
+  login: (email: string, password?: string) => Promise<any>;
+  register: (data: any) => Promise<any>;
   updateProfile: (data: Partial<UserProfile>) => Promise<UserProfile>;
-  logout: () => void;
   isAuthModalOpen: boolean;
   setIsAuthModalOpen: (open: boolean) => void;
   authModalMode: 'login' | 'register';
@@ -39,140 +59,373 @@ interface AuthContextType {
   passkeySupported: boolean;
 }
 
-const TOKEN_KEY = 'bp_session_token_v1';
-const USER_KEY = 'bp_session_user_v1';
-
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+const LOCAL_USER_KEY = 'nexovian_auth_user_v2';
+const REMEMBER_ME_KEY = 'nexovian_remember_me';
+const TAB_SESSION_KEY = 'nexovian_tab_session';
+
+/**
+ * Detects if the app is running as an installed PWA or native app.
+ */
+export function checkIsApp(): boolean {
+  if (typeof window === 'undefined') return false;
+  const isStandalone = window.matchMedia && window.matchMedia('(display-mode: standalone)').matches;
+  const isIos = (window.navigator as any).standalone === true;
+  const isNative = localStorage.getItem('is_native_app') === 'true';
+  return Boolean(isStandalone || isIos || isNative);
+}
+
+export async function syncUserProfileToSupabase(
+  user: { id: string; email?: string; created_at?: string },
+  fullName = '',
+  languagePreference = 'en'
+) {
+  try {
+    const { error } = await supabase.from('profiles').upsert(
+      {
+        id: user.id,
+        email: user.email || '',
+        full_name: fullName || user.email?.split('@')[0] || '',
+        created_at: user.created_at || new Date().toISOString(),
+        language_preference: languagePreference,
+        updated_at: new Date().toISOString()
+      },
+      { onConflict: 'id' }
+    );
+    if (error) {
+      console.warn('Note on Supabase profiles sync:', error.message);
+    }
+  } catch (err) {
+    console.warn('Supabase profiles sync error:', err);
+  }
+}
+
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [token, setToken] = useState<string | null>(() => {
-    return localStorage.getItem(TOKEN_KEY) || null;
-  });
+  const [supabaseUser, setSupabaseUser] = useState<User | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const [authModalMode, setAuthModalMode] = useState<'login' | 'register'>('register');
+  const [passkeySupported] = useState(false);
 
   const [user, setUser] = useState<UserProfile | null>(() => {
     try {
-      const stored = localStorage.getItem(USER_KEY);
+      const stored = localStorage.getItem(LOCAL_USER_KEY);
       return stored ? JSON.parse(stored) : null;
     } catch {
       return null;
     }
   });
 
-  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
-  const [authModalMode, setAuthModalMode] = useState<'login' | 'register'>('login');
-  const [passkeySupported, setPasskeySupported] = useState(false);
-
+  // Initialize Supabase session on mount
   useEffect(() => {
-    if (typeof window !== 'undefined' && window.PublicKeyCredential) {
-      setPasskeySupported(true);
+    let mounted = true;
+    const isApp = checkIsApp();
+
+    async function initSession() {
+      try {
+        const { data: { session: initialSession }, error } = await supabase.auth.getSession();
+        if (error) {
+          console.warn('Error fetching Supabase session:', error.message);
+        }
+
+        if (mounted) {
+          // If website and Remember Me was not set, and this is a new browser visit (no tab session),
+          // clear the session so the user is prompted with login on every visit!
+          const isRemembered = localStorage.getItem(REMEMBER_ME_KEY) === 'true';
+          const isTabActive = sessionStorage.getItem(TAB_SESSION_KEY) === 'true';
+
+          if (!isApp && !isRemembered && !isTabActive && initialSession) {
+            // Website visitor without Remember Me: prompt login on new visit
+            await supabase.auth.signOut();
+            setSession(null);
+            setSupabaseUser(null);
+            setUser(null);
+            localStorage.removeItem(LOCAL_USER_KEY);
+            setIsLoading(false);
+            return;
+          }
+
+          if (initialSession?.user) {
+            setSession(initialSession);
+            setSupabaseUser(initialSession.user);
+
+            const profile: UserProfile = {
+              id: initialSession.user.id,
+              email: initialSession.user.email || '',
+              name:
+                initialSession.user.user_metadata?.full_name ||
+                initialSession.user.email?.split('@')[0] ||
+                'Learner',
+              preferredLanguage:
+                initialSession.user.user_metadata?.language_preference || 'en',
+              createdAt: initialSession.user.created_at
+            };
+
+            setUser(profile);
+            localStorage.setItem(LOCAL_USER_KEY, JSON.stringify(profile));
+            sessionStorage.setItem(TAB_SESSION_KEY, 'true');
+            // Sync to Supabase profiles table
+            syncUserProfileToSupabase(initialSession.user, profile.name, profile.preferredLanguage);
+          } else {
+            // Check if there was no active supabase session
+            setSession(null);
+            setSupabaseUser(null);
+            // If there was only an old local session without real Supabase session, clear it to ensure genuine auth check
+            setUser(null);
+            localStorage.removeItem(LOCAL_USER_KEY);
+          }
+        }
+      } catch (err) {
+        console.warn('Supabase auth initialization error:', err);
+      } finally {
+        if (mounted) {
+          setIsLoading(false);
+        }
+      }
     }
+
+    initSession();
+
+    // Listen to real-time Supabase auth state changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, currentSession) => {
+        if (!mounted) return;
+
+        if (currentSession?.user) {
+          setSession(currentSession);
+          setSupabaseUser(currentSession.user);
+
+          const lang = currentSession.user.user_metadata?.language_preference || 'en';
+          const profile: UserProfile = {
+            id: currentSession.user.id,
+            email: currentSession.user.email || '',
+            name:
+              currentSession.user.user_metadata?.full_name ||
+              currentSession.user.email?.split('@')[0] ||
+              'Learner',
+            preferredLanguage: lang,
+            createdAt: currentSession.user.created_at
+          };
+
+          setUser(profile);
+          localStorage.setItem(LOCAL_USER_KEY, JSON.stringify(profile));
+          setIsAuthModalOpen(false);
+
+          // Save user to Supabase profiles table with email, full_name, created_at, language preference
+          await syncUserProfileToSupabase(currentSession.user, profile.name, lang);
+        } else {
+          setSession(null);
+          setSupabaseUser(null);
+          setUser(null);
+          localStorage.removeItem(LOCAL_USER_KEY);
+        }
+        setIsLoading(false);
+      }
+    );
+
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
   }, []);
 
-  // Verify session on mount if token exists
+  // Listen to beforeunload to sign out unremembered website visitors
   useEffect(() => {
-    if (token && !user) {
-      fetch('/api/auth/me', {
-        headers: { Authorization: `Bearer ${token}` }
-      })
-        .then((res) => res.json())
-        .then((data) => {
-          if (data.success && data.data) {
-            setUser(data.data);
-            localStorage.setItem(USER_KEY, JSON.stringify(data.data));
-          } else {
-            logout();
-          }
-        })
-        .catch(() => {
-          // keep local fallback if offline
-        });
-    }
-  }, [token]);
+    const handleBeforeUnload = () => {
+      const isApp = checkIsApp();
+      const isRemembered = localStorage.getItem(REMEMBER_ME_KEY) === 'true';
+      if (!isApp && !isRemembered) {
+        // Sign out when closing tab/browser on website without Remember Me
+        supabase.auth.signOut().catch(() => {});
+      }
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+    };
+  }, []);
 
-  const login = async (email: string, password = ''): Promise<UserProfile> => {
-    const res = await fetch('/api/auth/login', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password })
+  // Sign up with Email + Password + Full Name + Language preference
+  const signUpWithEmail = async (
+    email: string,
+    password: string,
+    fullName = '',
+    preferredLanguage = 'en'
+  ) => {
+    const displayName = fullName.trim() || email.split('@')[0];
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        data: {
+          full_name: displayName,
+          language_preference: preferredLanguage
+        }
+      }
     });
-    const json = await res.json();
-    if (!res.ok || !json.success) {
-      throw new Error(json.message || 'Login failed.');
+
+    if (error) {
+      throw error;
     }
 
-    const { token: newToken, user: newUser } = json.data;
-    setToken(newToken);
-    setUser(newUser);
-    localStorage.setItem(TOKEN_KEY, newToken);
-    localStorage.setItem(USER_KEY, JSON.stringify(newUser));
-    setIsAuthModalOpen(false);
-    return newUser;
+    if (data.user) {
+      await syncUserProfileToSupabase(data.user, displayName, preferredLanguage);
+
+      const profile: UserProfile = {
+        id: data.user.id,
+        email: data.user.email || email,
+        name: displayName,
+        preferredLanguage,
+        createdAt: data.user.created_at
+      };
+      setUser(profile);
+      setSupabaseUser(data.user);
+      localStorage.setItem(LOCAL_USER_KEY, JSON.stringify(profile));
+      sessionStorage.setItem(TAB_SESSION_KEY, 'true');
+    }
+
+    return data;
   };
 
-  const register = async (data: {
-    name: string;
-    email: string;
-    password?: string;
-    educationLevel?: string;
-    gradeOrProgramme?: string;
-    preferredLanguage?: string;
-  }): Promise<UserProfile> => {
-    const res = await fetch('/api/auth/register', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data)
+  // Sign in with Email + Password
+  const signInWithEmail = async (email: string, password: string, rememberMe = false) => {
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email,
+      password
     });
-    const json = await res.json();
-    if (!res.ok || !json.success) {
-      throw new Error(json.message || 'Registration failed.');
+
+    if (error) {
+      throw error;
     }
 
-    const { token: newToken, user: newUser } = json.data;
-    setToken(newToken);
-    setUser(newUser);
-    localStorage.setItem(TOKEN_KEY, newToken);
-    localStorage.setItem(USER_KEY, JSON.stringify(newUser));
-    setIsAuthModalOpen(false);
-    return newUser;
+    if (rememberMe) {
+      localStorage.setItem(REMEMBER_ME_KEY, 'true');
+    } else {
+      localStorage.removeItem(REMEMBER_ME_KEY);
+    }
+    sessionStorage.setItem(TAB_SESSION_KEY, 'true');
+
+    if (data.user) {
+      const lang = data.user.user_metadata?.language_preference || 'en';
+      const name = data.user.user_metadata?.full_name || email.split('@')[0];
+      await syncUserProfileToSupabase(data.user, name, lang);
+
+      const profile: UserProfile = {
+        id: data.user.id,
+        email: data.user.email || email,
+        name,
+        preferredLanguage: lang,
+        createdAt: data.user.created_at
+      };
+      setUser(profile);
+      setSupabaseUser(data.user);
+      localStorage.setItem(LOCAL_USER_KEY, JSON.stringify(profile));
+    }
+
+    return data;
+  };
+
+  // Reset password
+  const resetPassword = async (email: string) => {
+    const { data, error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: window.location.origin
+    });
+
+    if (error) {
+      throw error;
+    }
+
+    return data;
+  };
+
+  // Google OAuth Sign In
+  const signInWithGoogle = async () => {
+    const { data, error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: window.location.origin
+      }
+    });
+
+    if (error) {
+      throw error;
+    }
+
+    return data;
+  };
+
+  // Magic Link Sign In (OTP)
+  const signInWithMagicLink = async (email: string) => {
+    const { data, error } = await supabase.auth.signInWithOtp({
+      email,
+      options: {
+        emailRedirectTo: window.location.origin
+      }
+    });
+
+    if (error) {
+      throw error;
+    }
+
+    return data;
+  };
+
+  // Logout / SignOut
+  const logout = async () => {
+    try {
+      await supabase.auth.signOut();
+    } catch (err) {
+      console.warn('Supabase signOut error:', err);
+    } finally {
+      setSession(null);
+      setSupabaseUser(null);
+      setUser(null);
+      localStorage.removeItem(LOCAL_USER_KEY);
+      localStorage.removeItem(REMEMBER_ME_KEY);
+      sessionStorage.removeItem(TAB_SESSION_KEY);
+    }
+  };
+
+  // Backward-compatible wrappers
+  const login = async (email: string, password = ''): Promise<any> => {
+    return signInWithEmail(email, password);
+  };
+
+  const register = async (data: any): Promise<any> => {
+    return signUpWithEmail(data.email, data.password || 'TemporaryPassword123!', data.name || '', data.preferredLanguage || 'en');
   };
 
   const updateProfile = async (updates: Partial<UserProfile>): Promise<UserProfile> => {
-    if (!token) throw new Error('Not authenticated.');
-    const res = await fetch('/api/auth/profile', {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`
-      },
-      body: JSON.stringify(updates)
-    });
-    const json = await res.json();
-    if (!res.ok || !json.success) {
-      throw new Error(json.message || 'Profile update failed.');
+    if (!user) throw new Error('Not authenticated.');
+    const updated = { ...user, ...updates };
+    setUser(updated);
+    localStorage.setItem(LOCAL_USER_KEY, JSON.stringify(updated));
+    if (supabaseUser) {
+      await syncUserProfileToSupabase(supabaseUser, updated.name || '', updated.preferredLanguage || 'en');
     }
-    const updatedUser = json.data;
-    setUser(updatedUser);
-    localStorage.setItem(USER_KEY, JSON.stringify(updatedUser));
-    return updatedUser;
-  };
-
-  const logout = () => {
-    setToken(null);
-    setUser(null);
-    localStorage.removeItem(TOKEN_KEY);
-    localStorage.removeItem(USER_KEY);
+    return updated;
   };
 
   return (
     <AuthContext.Provider
       value={{
         user,
-        isAuthenticated: Boolean(user && token),
-        token,
+        supabaseUser,
+        session,
+        isAuthenticated: Boolean(user && user.email),
+        isLoading,
+        signUpWithEmail,
+        signInWithEmail,
+        signInWithGoogle,
+        signInWithMagicLink,
+        resetPassword,
+        logout,
+        isApp: checkIsApp(),
         login,
         register,
         updateProfile,
-        logout,
         isAuthModalOpen,
         setIsAuthModalOpen,
         authModalMode,

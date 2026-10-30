@@ -1,7 +1,7 @@
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
- * BrightPath Language Engine - Core Controlled Vocabulary Service
+ * NEXOVIA Language Engine - Core Controlled Vocabulary Service
  * 
  * CORE RULES:
  * 1. Prioritize controlled, verified Xitsonga vocabulary instead of freely inventing translations.
@@ -22,8 +22,8 @@ import {
 } from '../../types/language';
 import { INITIAL_XITSONGA_DATASET } from '../../data/xitsongaLanguageData';
 
-const STORAGE_KEY = 'brightpath_language_phrases_v1';
-const AUDIT_STORAGE_KEY = 'brightpath_language_audit_v1';
+const STORAGE_KEY = 'nexovia_language_phrases_v1';
+const AUDIT_STORAGE_KEY = 'nexovia_language_audit_v1';
 
 export class LanguageEngineService {
   private phrases: Map<string, LanguageRecord> = new Map();
@@ -212,7 +212,7 @@ export class LanguageEngineService {
         english: lookupResult.english,
         xitsonga: null,
         entry: lookupResult.entry,
-        message: 'This term is tracked in BrightPath but awaits native verification.'
+        message: 'This term is tracked in NEXOVIA but awaits native verification.'
       };
     }
 

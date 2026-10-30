@@ -1,7 +1,7 @@
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
- * BrightPath Language Engine - Multilingual Architecture
+ * NEXOVIA Language Engine - Multilingual Architecture
  */
 
 export type LanguageEntryStatus = 'verified' | 'needs_verification' | 'ai_generated' | 'unverified';

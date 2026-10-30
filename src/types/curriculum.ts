@@ -2,7 +2,7 @@
  * @license
  * SPDX-License-Identifier: Apache-2.0
  * 
- * BRIGHTPATH ACADEMY - PHASE 6: CAPS CURRICULUM ENGINE TYPES
+ * NEXOVIA - PHASE 6: CAPS CURRICULUM ENGINE TYPES
  * 
  * Hierarchy:
  * Education Level -> Grade -> Subject -> Phase -> Term -> Topic -> Subtopic -> Lesson -> Learning Objective -> Activity -> Practice -> Assessment

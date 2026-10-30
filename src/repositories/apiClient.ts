@@ -2,7 +2,7 @@
  * @license
  * SPDX-License-Identifier: Apache-2.0
  * 
- * BRIGHTPATH ACADEMY - CENTRALIZED API CLIENT
+ * NEXOVIA - CENTRALIZED API CLIENT
  * 
  * Provides:
  * - Uniform request headers & correlation IDs (X-Request-ID)
@@ -148,7 +148,7 @@ export const apiClient = new ApiClient({
   baseUrl: '',
   tokenGetter: () => {
     try {
-      return localStorage.getItem('brightpath_auth_token');
+      return localStorage.getItem('nexovia_auth_token');
     } catch {
       return null;
     }

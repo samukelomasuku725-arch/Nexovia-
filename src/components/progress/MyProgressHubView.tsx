@@ -2,7 +2,7 @@
  * @license
  * SPDX-License-Identifier: Apache-2.0
  * 
- * NEXOVIA ACADEMY - UNIFIED MY PROGRESS HUB VIEW
+ * NEXOVIAN ACADEMY - UNIFIED MY PROGRESS HUB VIEW
  * 
  * Clean, beginner-friendly progress tracking:
  * - Clear 4 tabs: Overview, Mastery Tree, Learning Trends, Certificates & Saved

@@ -1,7 +1,7 @@
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
- * Nexovia Xitsonga Language Engine - Admin Audio & Pronunciation Hub (Phase 2)
+ * Nexovian Xitsonga Language Engine - Admin Audio & Pronunciation Hub (Phase 2)
  * 
  * CORE ADMIN RULES:
  * 1. Only authorized administrators (ADMIN, SUPER_ADMIN, CURRICULUM_ADMIN) can upload/modify.
@@ -215,7 +215,7 @@ export const AdminAudioUploadModal: React.FC<AdminAudioUploadModalProps> = ({
   const handleSave = () => {
     if (!isAdmin) {
       setStatusMessage({
-        text: 'Access Denied: Only authorized Nexovia administrators can modify audio records.',
+        text: 'Access Denied: Only authorized Nexovian administrators can modify audio records.',
         isError: true
       });
       return;

@@ -161,7 +161,7 @@ export const AdaptiveDashboardView: React.FC = () => {
             Personalized Learning Journey
           </h1>
           <p className="mt-1 text-xs sm:text-sm text-slate-600 dark:text-slate-400 max-w-2xl leading-relaxed">
-            Nexovia's multi-signal heuristics continuously analyze what you know, target weak areas, schedule spaced recall, and determine your next best lesson.
+            Nexovian's multi-signal heuristics continuously analyze what you know, target weak areas, schedule spaced recall, and determine your next best lesson.
           </p>
         </div>
 
@@ -201,7 +201,7 @@ export const AdaptiveDashboardView: React.FC = () => {
         <div className="flex items-start gap-2.5">
           <Info className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
           <div className="text-slate-700 dark:text-slate-300">
-            <strong className="text-slate-900 dark:text-white">Nexovia Heuristic Model: </strong>
+            <strong className="text-slate-900 dark:text-white">Nexovian Heuristic Model: </strong>
             Mastery is calculated from practice accuracy (25%), recent assessments (40%), difficulty factors (15%), improvement trends (10%), and spaced recall retention. This represents an internal learning guide, not an official standardized exam result.
           </div>
         </div>

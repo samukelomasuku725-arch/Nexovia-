@@ -1,7 +1,7 @@
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
- * Nexovia Xitsonga Language Engine - Pronunciation Practice (Phase 2 Foundation)
+ * Nexovian Xitsonga Language Engine - Pronunciation Practice (Phase 2 Foundation)
  * 
  * Learner workflow:
  * 1. Listen to verified reference audio (if available)

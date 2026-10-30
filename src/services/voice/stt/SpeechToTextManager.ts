@@ -49,7 +49,7 @@ export class SpeechToTextManager {
       },
       {
         id: 'gemini-server',
-        name: 'BrightPath Gemini Multimodal AI',
+        name: 'NEXOVIA Gemini Multimodal AI',
         supported: this.serverGeminiProvider.isSupported(),
         description: 'High-accuracy neural transcription supporting all South African education terminology.'
       }
