@@ -42,29 +42,21 @@ import { CreateAccountScreen } from './components/auth/CreateAccountScreen';
 import { SubscriptionBanner } from './components/subscription/SubscriptionBanner';
 import { isAdminUser } from './services/antiAbuseService';
 import { LogoIcon } from './components/common/LogoIcon';
-import { APP_CONFIG } from './config/brand';
 import { 
   ArrowRight, 
   Sparkles, 
   Camera,
   Compass,
-  Zap,
-  Target,
-  Shield, 
-  Cpu, 
-  Code, 
-  BookOpen, 
   MessageSquare, 
   School, 
   Briefcase, 
   GraduationCap, 
-  ShieldCheck,
   Award 
 } from 'lucide-react';
 
 const MainLayout: React.FC = () => {
   const { currentTab, setCurrentTab, tracks, openLesson, adaptiveProfile } = useLearning();
-  const { isAuthenticated, isLoading, user, logout } = useAuth();
+  const { isAuthenticated, isLoading, user } = useAuth();
   const { t } = useTranslation();
 
   if (isLoading) {
@@ -78,12 +70,12 @@ const MainLayout: React.FC = () => {
     );
   }
 
-  // FIXED: SHOW LANDING PAGE BEFORE LOGIN (NOT CreateAccountScreen)
-  // This is your Trust Fix + Step-by-Step Calculator entry point
+  // === FIXED: SHOW LANDING BEFORE LOGIN ===
   if (!isAuthenticated) {
     if (currentTab === 'about') {
       return (
         <div className="min-h-screen flex flex-col bg-slate-50">
+          <Navbar />
           <AboutUsView />
           <Footer />
           <MobileTabBar />
@@ -93,7 +85,6 @@ const MainLayout: React.FC = () => {
     return <PublicLandingView />;
   }
 
-  // Admin route guard
   if (currentTab === 'adminBank' && !isAdminUser(user)) {
     setCurrentTab('home');
     if (typeof window !== 'undefined' && window.location.pathname.startsWith('/admin')) {
@@ -117,13 +108,9 @@ const MainLayout: React.FC = () => {
                     <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse shadow-[0_0_8px_#00f0ff]" />
                     <span>South African Unified Structure</span>
                   </div>
-                  <h2 className="font-display text-2xl font-bold text-slate-900 dark:text-white">
-                    Three Education Pathways
-                  </h2>
+                  <h2 className="font-display text-2xl font-bold text-slate-900 dark:text-white">Three Education Pathways</h2>
                 </div>
-                <p className="text-xs text-slate-500 dark:text-slate-400 max-w-md">
-                  From Grade R foundation skills to university degrees, all structured with verified curriculum frameworks.
-                </p>
+                <p className="text-xs text-slate-500 dark:text-slate-400 max-w-md">From Grade R foundation skills to university degrees, all structured with verified curriculum frameworks.</p>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div onClick={() => setCurrentTab('school')} className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 hover:border-cyan-500/50 rounded-2xl overflow-hidden shadow-sm hover:shadow-[0_0_20px_-5px_rgba(6,182,212,0.3)] transition-all cursor-pointer flex flex-col justify-between group active:scale-98">
@@ -131,107 +118,97 @@ const MainLayout: React.FC = () => {
                     <div className="relative h-44 overflow-hidden">
                       <img src="/src/assets/images/pathway_school_stem_1790752906177.jpg" alt="Science and mathematics educational workspace" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" referrerPolicy="no-referrer" />
                       <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-transparent" />
-                      <div className="absolute bottom-3 left-3 text-white">
-                        <span className="text-[10px] font-mono font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-cyan-500 text-slate-950 shadow-[0_0_10px_-2px_rgba(6,182,212,0.6)]">{t('pathwaySchoolBadge')}</span>
-                      </div>
+                      <div className="absolute bottom-3 left-3 text-white"><span className="text-[10px] font-mono font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-cyan-500 text-slate-950 shadow-[0_0_10px_-2px_rgba(6,182,212,0.6)]">{t('pathwaySchoolBadge')}</span></div>
                     </div>
                     <div className="p-5">
-                      <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400 mb-1">
-                        <School className="w-4 h-4 text-cyan-400" />
-                        <span>Foundation to FET Phases</span>
-                      </div>
+                      <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400 mb-1"><School className="w-4 h-4 text-cyan-400" /><span>Foundation to FET Phases</span></div>
                       <h3 className="font-display text-lg font-bold text-slate-900 dark:text-white">{t('pathwaySchoolTitle')}</h3>
                       <p className="mt-1 text-xs text-slate-600 dark:text-slate-300 leading-relaxed">Grade → Subject → Term → Topic → Subtopic → Lesson → Practice → Quiz → Mastery.</p>
                     </div>
                   </div>
-                  <div className="p-4 bg-slate-50 dark:bg-slate-950/60 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between">
-                    <span className="text-xs font-semibold text-cyan-500 dark:text-cyan-400">Explore 13 Grades</span>
-                    <ArrowRight className="w-4 h-4 text-cyan-400 group-hover:translate-x-1 transition-transform" />
-                  </div>
+                  <div className="p-4 bg-slate-50 dark:bg-slate-950/60 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between"><span className="text-xs font-semibold text-cyan-500 dark:text-cyan-400">Explore 13 Grades</span><ArrowRight className="w-4 h-4 text-cyan-400 group-hover:translate-x-1 transition-transform" /></div>
                 </div>
                 <div onClick={() => setCurrentTab('tvet')} className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-all cursor-pointer flex flex-col justify-between group active:scale-98">
                   <div>
                     <div className="relative h-44 overflow-hidden">
                       <img src="/src/assets/images/pathway_tvet_tech_1790752917493.jpg" alt="Technical workshop and engineering workbench" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" referrerPolicy="no-referrer" />
                       <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-transparent" />
-                      <div className="absolute bottom-3 left-3 text-white">
-                        <span className="text-[10px] font-mono font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-blue-500/80 text-white">{t('pathwayTvetBadge')}</span>
-                      </div>
+                      <div className="absolute bottom-3 left-3 text-white"><span className="text-[10px] font-mono font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-blue-500/80 text-white">{t('pathwayTvetBadge')}</span></div>
                     </div>
                     <div className="p-5">
-                      <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400 mb-1">
-                        <Briefcase className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-                        <span>NATED & NC(V) Certificates</span>
-                      </div>
+                      <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400 mb-1"><Briefcase className="w-4 h-4 text-blue-600 dark:text-blue-400" /><span>NATED & NC(V) Certificates</span></div>
                       <h3 className="font-display text-lg font-bold text-slate-900 dark:text-white">{t('pathwayTvetTitle')}</h3>
                       <p className="mt-1 text-xs text-slate-600 dark:text-slate-300 leading-relaxed">Qualification → Programme → Subject/Module → Topic → Lesson → Practice → Assessment.</p>
                     </div>
                   </div>
-                  <div className="p-4 bg-slate-50 dark:bg-slate-950/60 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between">
-                    <span className="text-xs font-semibold text-blue-600 dark:text-blue-400">Explore N1–N6 & L2–L4</span>
-                    <ArrowRight className="w-4 h-4 text-blue-500 group-hover:translate-x-1 transition-transform" />
-                  </div>
+                  <div className="p-4 bg-slate-50 dark:bg-slate-950/60 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between"><span className="text-xs font-semibold text-blue-600 dark:text-blue-400">Explore N1–N6 & L2–L4</span><ArrowRight className="w-4 h-4 text-blue-500 group-hover:translate-x-1 transition-transform" /></div>
                 </div>
                 <div onClick={() => setCurrentTab('higherEd')} className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-all cursor-pointer flex flex-col justify-between group active:scale-98">
                   <div>
                     <div className="relative h-44 overflow-hidden bg-slate-900 flex items-center justify-center p-6 text-center">
                       <div className="absolute inset-0 bg-gradient-to-br from-purple-900/40 via-slate-900 to-slate-950" />
-                      <div className="relative z-10">
-                        <GraduationCap className="w-12 h-12 text-purple-400 mx-auto mb-2" />
-                        <span className="text-xs text-purple-200 font-semibold block">UCT · Wits · UP · UJ · Stellenbosch · UNISA</span>
-                      </div>
-                      <div className="absolute bottom-3 left-3 text-white">
-                        <span className="text-[10px] font-mono font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-purple-500/80 text-white">{t('pathwayHigherEdBadge')}</span>
-                      </div>
+                      <div className="relative z-10"><GraduationCap className="w-12 h-12 text-purple-400 mx-auto mb-2" /><span className="text-xs text-purple-200 font-semibold block">UCT · Wits · UP · UJ · Stellenbosch · UNISA</span></div>
+                      <div className="absolute bottom-3 left-3 text-white"><span className="text-[10px] font-mono font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-purple-500/80 text-white">{t('pathwayHigherEdBadge')}</span></div>
                     </div>
                     <div className="p-5">
-                      <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400 mb-1">
-                        <GraduationCap className="w-4 h-4 text-purple-600 dark:text-purple-400" />
-                        <span>Multi-Institution Structure</span>
-                      </div>
+                      <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400 mb-1"><GraduationCap className="w-4 h-4 text-purple-600 dark:text-purple-400" /><span>Multi-Institution Structure</span></div>
                       <h3 className="font-display text-lg font-bold text-slate-900 dark:text-white">{t('pathwayHigherEdTitle')}</h3>
                       <p className="mt-1 text-xs text-slate-600 dark:text-slate-300 leading-relaxed">Institution → Faculty → Programme → Qualification → Module → Topic → Lesson.</p>
                     </div>
                   </div>
-                  <div className="p-4 bg-slate-50 dark:bg-slate-950/60 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between">
-                    <span className="text-xs font-semibold text-purple-600 dark:text-purple-400">Explore Degree Modules</span>
-                    <ArrowRight className="w-4 h-4 text-purple-500 group-hover:translate-x-1 transition-transform" />
-                  </div>
+                  <div className="p-4 bg-slate-50 dark:bg-slate-950/60 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between"><span className="text-xs font-semibold text-purple-600 dark:text-purple-400">Explore Degree Modules</span><ArrowRight className="w-4 h-4 text-purple-500 group-hover:translate-x-1 transition-transform" /></div>
                 </div>
               </div>
             </section>
             <section className="max-w-7xl mx-auto px-4 sm:px-6 mb-8 grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="bg-gradient-to-br from-cyan-950/40 via-slate-900/90 to-slate-950 text-white border border-cyan-500/30 hover:border-cyan-500/50 rounded-2xl p-5 sm:p-6 flex flex-col justify-between shadow-[0_0_20px_-5px_rgba(6,182,212,0.15)] transition-all">
                 <div>
-                  <div className="flex items-center justify-between mb-3">
-                    <div className="w-10 h-10 rounded-xl bg-cyan-400 text-slate-950 flex items-center justify-center font-bold shadow-[0_0_12px_rgba(6,182,212,0.5)]"><Camera className="w-5 h-5" /></div>
-                    <span className="text-[10px] font-mono font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">Phase 3 · Vision AI</span>
-                  </div>
+                  <div className="flex items-center justify-between mb-3"><div className="w-10 h-10 rounded-xl bg-cyan-400 text-slate-950 flex items-center justify-center font-bold shadow-[0_0_12px_rgba(6,182,212,0.5)]"><Camera className="w-5 h-5" /></div><span className="text-[10px] font-mono font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">Phase 3 · Vision AI</span></div>
                   <h3 className="font-display text-lg font-bold text-white">Scan & Learn</h3>
                   <p className="text-xs sm:text-sm text-slate-300 mt-1.5 leading-relaxed">Take a photo of textbook pages, homework questions, or circuit diagrams. Gemini analyzes clarity, explains step-by-step, generates quizzes, and answers follow-ups in 11 SA languages.</p>
                 </div>
-                <div className="mt-5 pt-4 border-t border-cyan-500/20 flex items-center justify-between">
-                  <span className="text-xs font-semibold text-cyan-300 font-mono">Camera · Gallery · 7 Modes</span>
-                  <button onClick={() => setCurrentTab('scan')} className="flex items-center gap-1.5 px-4 py-2 bg-gradient-to-r from-cyan-400 to-sky-300 hover:from-cyan-300 hover:to-sky-200 text-slate-950 font-bold rounded-xl text-xs shadow-[0_0_15px_-2px_rgba(6,182,212,0.4)] transition-transform active:scale-95"><Camera className="w-3.5 h-3.5" /><span>Open Scan & Learn</span></button>
-                </div>
+                <div className="mt-5 pt-4 border-t border-cyan-500/20 flex items-center justify-between"><span className="text-xs font-semibold text-cyan-300 font-mono">Camera · Gallery · 7 Modes</span><button onClick={() => setCurrentTab('scan')} className="flex items-center gap-1.5 px-4 py-2 bg-gradient-to-r from-cyan-400 to-sky-300 hover:from-cyan-300 hover:to-sky-200 text-slate-950 font-bold rounded-xl text-xs shadow-[0_0_15px_-2px_rgba(6,182,212,0.4)] transition-transform active:scale-95"><Camera className="w-3.5 h-3.5" /><span>Open Scan & Learn</span></button></div>
               </div>
               <div className="bg-gradient-to-br from-purple-950/40 via-slate-900/90 to-slate-950 text-white border border-purple-500/30 hover:border-purple-500/50 rounded-2xl p-5 sm:p-6 flex flex-col justify-between shadow-[0_0_20px_-5px_rgba(168,85,247,0.15)] transition-all">
                 <div>
-                  <div className="flex items-center justify-between mb-3">
-                    <div className="w-10 h-10 rounded-xl bg-purple-500 text-white flex items-center justify-center font-bold shadow-[0_0_12px_rgba(168,85,247,0.5)]"><Sparkles className="w-5 h-5 text-cyan-300" /></div>
-                    <span className="text-[10px] font-mono font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-purple-500/20 text-purple-300 border border-purple-500/30">11 SA Languages</span>
-                  </div>
+                  <div className="flex items-center justify-between mb-3"><div className="w-10 h-10 rounded-xl bg-purple-500 text-white flex items-center justify-center font-bold shadow-[0_0_12px_rgba(168,85,247,0.5)]"><Sparkles className="w-5 h-5 text-cyan-300" /></div><span className="text-[10px] font-mono font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-purple-500/20 text-purple-300 border border-purple-500/30">11 SA Languages</span></div>
                   <h3 className="font-display text-lg font-bold text-white">Conversational AI Tutor</h3>
                   <p className="text-xs sm:text-sm text-slate-300 mt-1.5 leading-relaxed">Socratic tutoring calibrated for Grade R–12 CAPS, TVET NATED Colleges, and University courses. Ask anything, simplify concepts, generate study plans, and master examinations.</p>
                 </div>
-                <div className="mt-5 pt-4 border-t border-purple-500/20 flex items-center justify-between">
-                  <span className="text-xs font-semibold text-purple-300 font-mono">Socratic · Study Plans · Practice</span>
-                  <button onClick={() => setCurrentTab('tutor')} className="flex items-center gap-1.5 px-4 py-2 bg-gradient-to-r from-purple-500 via-indigo-500 to-cyan-400 hover:from-purple-400 hover:to-cyan-300 text-white font-bold rounded-xl text-xs shadow-[0_0_15px_-2px_rgba(168,85,247,0.4)] transition-transform active:scale-95"><MessageSquare className="w-3.5 h-3.5" /><span>Launch AI Tutor</span></button>
-                </div>
+                <div className="mt-5 pt-4 border-t border-purple-500/20 flex items-center justify-between"><span className="text-xs font-semibold text-purple-300 font-mono">Socratic · Study Plans · Practice</span><button onClick={() => setCurrentTab('tutor')} className="flex items-center gap-1.5 px-4 py-2 bg-gradient-to-r from-purple-500 via-indigo-500 to-cyan-400 hover:from-purple-400 hover:to-cyan-300 text-white font-bold rounded-xl text-xs shadow-[0_0_15px_-2px_rgba(168,85,247,0.4)] transition-transform active:scale-95"><MessageSquare className="w-3.5 h-3.5" /><span>Launch AI Tutor</span></button></div>
               </div>
             </section>
-            <section className="max-w-7xl mx-auto px-4 sm:px-6 mb-8">
-              <DailyRoutineCard />
+            <section className="max-w-7xl mx-auto px-4 sm:px-6 mb-8"><DailyRoutineCard /></section>
+            <section className="max-w-7xl mx-auto px-4 sm:px-6 py-6">
+              <div className="flex items-center justify-between mb-6">
+                <div><div className="text-xs font-semibold uppercase tracking-wider text-amber-600 dark:text-amber-400 mb-1">Featured Curriculum</div><h2 className="font-display text-2xl font-bold text-slate-900 dark:text-white">Start Building Today</h2></div>
+                <button onClick={() => setCurrentTab('tracks')} className="flex items-center gap-1 text-xs font-semibold text-amber-700 dark:text-amber-300 hover:text-amber-800 transition-colors"><span>View All 4 Tracks</span><ArrowRight className="w-3.5 h-3.5" /></button>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {tracks.slice(0, 2).map((track) => {
+                  const firstLesson = track.modules[0]?.lessons[0];
+                  return (
+                    <div key={track.id} className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-shadow flex flex-col justify-between">
+                      <div className="p-6">
+                        <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 mb-2"><span className="font-semibold text-amber-600 dark:text-amber-400">{track.category}</span><span>{track.durationHours} Hours · {track.level}</span></div>
+                        <h3 className="font-display text-xl font-bold text-slate-900 dark:text-white">{track.title}</h3>
+                        <p className="mt-2 text-xs sm:text-sm text-slate-600 dark:text-slate-300 leading-relaxed">{track.description}</p>
+                        <div className="mt-4 flex flex-wrap gap-1.5 text-xs text-slate-500 dark:text-slate-400 font-medium">{track.skills.map((skill, sIdx) => (<span key={sIdx}>{skill}{sIdx < track.skills.length - 1 && <span className="mx-1 text-slate-300 dark:text-slate-700">·</span>}</span>))}</div>
+                      </div>
+                      <div className="p-4 bg-slate-50 dark:bg-slate-950/60 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between">
+                        <span className="text-xs text-slate-500">{track.modules.length} Modules · {track.modules.flatMap(m => m.lessons).length} Lessons</span>
+                        {firstLesson && (<button onClick={() => openLesson(firstLesson.id)} className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-slate-950 bg-amber-400 hover:bg-amber-300 rounded-lg shadow-sm transition-transform active:scale-95"><span>Start Lesson</span><ArrowRight className="w-3.5 h-3.5" /></button>)}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </section>
+            <section className="max-w-7xl mx-auto px-4 sm:px-6 my-10">
+              <div className="bg-gradient-to-r from-slate-900 to-slate-950 text-white rounded-2xl p-6 sm:p-8 border border-slate-800 shadow-xl flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+                <div><div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-amber-400 mb-1"><Sparkles className="w-4 h-4" /><span>Daily Quick-Fire Heuristics</span></div><h3 className="font-display text-xl sm:text-2xl font-bold">Test your understanding</h3><p className="mt-1 text-xs sm:text-sm text-slate-300 max-w-xl">Reinforce foundational concepts across Mathematics, Physical Sciences, Electrotechnics, and Computing.</p></div>
+                <button onClick={() => setCurrentTab('practice')} className="px-5 py-2.5 text-xs sm:text-sm font-bold text-slate-950 bg-amber-400 hover:bg-amber-300 rounded-xl transition-all shadow-md active:scale-95 whitespace-nowrap">Start Practice Review</button>
+              </div>
             </section>
           </div>
         )}
