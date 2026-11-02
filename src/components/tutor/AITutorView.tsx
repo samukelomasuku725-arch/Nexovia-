@@ -1,29 +1,27 @@
-import React, { useState, useRef } from 'react';
-import { Send, Calculator, Sparkles, Languages } from 'lucide-react';
+import React, { useState } from 'react';
+import { Send, Calculator, Languages } from 'lucide-react';
 
 type Lang = 'en' | 'zu' | 'xh' | 'af' | 'nso' | 'tn' | 'st' | 'ts' | 'ss' | 've' | 'nr';
 const LANG_NAMES: any = { en: 'English', zu: 'isiZulu', xh: 'isiXhosa', af: 'Afrikaans', nso: 'Sepedi', tn: 'Setswana', st: 'Sesotho', ts: 'Xitsonga', ss: 'siSwati', ve: 'Tshivenda', nr: 'isiNdebele' };
 
-function solveHandwritten(n: number, r: number, lang: Lang) {
+function solveHandwritten(n: number, r: number) {
   const topNums = Array.from({length: r}, (_, i) => n - i);
   const bottomNums = Array.from({length: r}, (_, i) => i + 1);
   let num = 1; topNums.forEach(v => num *= v);
   let den = 1; bottomNums.forEach(v => den *= v);
   const result = num / den;
-  const isSwati = lang === 'ss';
-  const isTsonga = lang === 'ts';
   const steps = [
-    { title: isSwati ? 'Ifomula' : isTsonga ? 'Fomula' : 'Formula', content: `nCr = n! / (r! × (n-r)!)\n= ${n}! / (${r}! × ${n-r}!)` },
-    { title: isSwati ? 'Faka emananisi' : isTsonga ? 'Nghenisa mimpimo' : 'Substitute', content: `= ${topNums.join(' × ')} / ${bottomNums.join(' × ')}\n(Susa i-factorial lenkhulu njengasesithombeni)` },
-    { title: isSwati ? 'Yenza lula' : isTsonga ? 'Olova' : 'Simplify & Cancel', content: `Bala ngezansi: ${bottomNums.join('×')} = ${den}\nBala ngetulu: ${topNums.join('×')} = ${num}\nHlukanisa: ${num} ÷ ${den}` },
-    { title: isSwati ? 'Imphendvulo' : isTsonga ? 'Nhlamulo' : 'Final Answer', content: `${n}C${r} = ${result} ✅\n\nTip: Hlukanisa izinombolo letincane kucala (5×4=20)!` }
+    { title: 'Ifomula / Formula', content: `nCr = n! / (r! × (n-r)!)\n= ${n}! / (${r}! × ${n-r}!)` },
+    { title: 'Faka emananisi / Substitute', content: `= ${topNums.join(' × ')} / ${bottomNums.join(' × ')}\n(Susa i-factorial lenkhulu njengasesithombeni)` },
+    { title: 'Yenza lula / Simplify', content: `Ngezansi: ${bottomNums.join('×')} = ${den}\nNgetulu: ${topNums.join('×')} = ${num}\nHlukanisa: ${num} ÷ ${den}` },
+    { title: 'Imphendvulo / Answer', content: `${n}C${r} = ${result} ✅\nTip: Hlukanisa letincane kucala!` }
   ];
   return { steps, result };
 }
 
 export const AITutorView: React.FC = () => {
   const [messages, setMessages] = useState<any[]>([
-    { role: 'assistant', text: 'Sawubona! Ngingu NEXOVIAN Tutor. Bhala umbuzo wakho we-Maths (njenge 25C5) - ngitakuchazela ngesinyathelo ngesinyathelo njengasesithombeni!' }
+    { role: 'assistant', text: 'Sawubona! Ngingu NEXOVIAN Tutor. Bhala 25C5 - ngitakuchazela njengasesithombeni!' }
   ]);
   const [input, setInput] = useState('');
   const [lang, setLang] = useState<Lang>('ss');
@@ -34,11 +32,11 @@ export const AITutorView: React.FC = () => {
     const match = input.match(/(\d+)\s*C\s*(\d+)/i);
     if (match) {
       const n = parseInt(match[1]); const r = parseInt(match[2]);
-      const solved = solveHandwritten(n, r, lang);
+      const solved = solveHandwritten(n, r);
       const botMsg = { role: 'assistant', type: 'math-steps', text: `Solved ${n}C${r} in ${LANG_NAMES[lang]}:`, steps: solved.steps, final: solved.result };
       setTimeout(() => setMessages(prev => [...prev, botMsg]), 500);
     } else {
-      const botMsg = { role: 'assistant', text: `[${LANG_NAMES[lang]}] Ngisacubungula: "${input}"\n\nNgitakunika:\n1. Ifomula\n2. Kufaka emananisi\n3. Kuchaza kancane kancane (njengasesithombeni)\n4. Imphendvulo yokugcina` };
+      const botMsg = { role: 'assistant', text: `Ngisacubungula: "${input}" - Njitakunika ifomula, kuchaza kancane kancane njengasesithombeni.` };
       setTimeout(() => setMessages(prev => [...prev, botMsg]), 600);
     }
     setInput('');
@@ -71,7 +69,7 @@ export const AITutorView: React.FC = () => {
         ))}
       </div>
       <div className="fixed bottom-16 md:bottom-0 left-0 right-0 bg-white border-t p-3 flex gap-2">
-        <input value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleSend()} placeholder="Bhala njenge: 25C5 noma 10C3" className="flex-1 bg-slate-100 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-cyan-400" />
+        <input value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleSend()} placeholder="Bhala: 25C5 noma 10C3" className="flex-1 bg-slate-100 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-cyan-400" />
         <button onClick={handleSend} className="bg-cyan-500 hover:bg-cyan-600 text-white p-2.5 rounded-xl"><Send className="w-5 h-5" /></button>
       </div>
     </div>
