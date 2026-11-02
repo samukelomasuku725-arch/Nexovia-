@@ -1,140 +1,246 @@
-import React, { useState } from 'react';
+rebrand to NEXOVIAN and update config
+Refactored branding, added Supabase dependency, updated build settings, and improved CSS layout reset for better cross-device consistency.
+main
+1 parent 
+de1134e
+ commit 
+f8ad2f8
+159 files changed
 
-type Subject = { id:string, name:string, icon:string, color:string, lessons: Lesson[] };
-type Lesson = { id:string, title:string, content:string, quiz: {q:string, options:string[], answer:number}[] };
-
-const SUBJECTS: Subject[] = [
-  {
-    id:'math', name:'Mathematics', icon:'📐', color:'#00ffff',
-    lessons:[
-      { id:'m1', title:'Algebra Basics - 9x×4', content:'When you see 9x×4, it means 9 multiplied by x multiplied by 4. So 9×4=36, answer is 36x. Example: If x=2, then 36x=72.', quiz:[{q:'What is 9x × 4?', options:['36x','13x','9x4','36'], answer:0}, {q:'If x=2, 36x = ?', options:['38','72','36','18'], answer:1}]},
-      { id:'m2', title:'Quadratic Equations', content:'Solve x²+5x+6=0. Factor: (x+2)(x+3)=0, so x=-2 or x=-3.', quiz:[{q:'Solve x²+5x+6=0', options:['x=2,3','x=-2,-3','x=1,6','x=0,5'], answer:1}]},
-    ]
-  },
-  {
-    id:'science', name:'Physical Science', icon:'🔬', color:'#8a2be2',
-    lessons:[
-      { id:'s1', title:'Newton Laws', content:'1st Law: Object stays unless force acts. 2nd: F=ma. 3rd: Every action has equal opposite reaction.', quiz:[{q:'F=ma is which law?', options:['1st','2nd','3rd','4th'], answer:1}]},
-    ]
-  },
-  {
-    id:'english', name:'English', icon:'📚', color:'#00ff88',
-    lessons:[
-      { id:'e1', title:'Essay Writing', content:'Structure: Introduction, Body (3 paragraphs), Conclusion. Use PEEL method.', quiz:[{q:'PEEL stands for?', options:['Point Evidence Explain Link','People Eat Easy Lunch','Point End','Prepare'], answer:0}]},
-    ]
-  },
-];
-
-export default function App(){
-  const [subject, setSubject] = useState<Subject>(SUBJECTS[0]);
-  const [lesson, setLesson] = useState<Lesson>(SUBJECTS[0].lessons[0]);
-  const [tab, setTab] = useState<'learn'|'quiz'|'tutor'>('learn');
-  const [quizIndex, setQuizIndex] = useState(0);
-  const [score, setScore] = useState(0);
-  const [showResult, setShowResult] = useState(false);
-  const [tutorQ, setTutorQ] = useState('');
-  const [tutorAns, setTutorAns] = useState<string[]>(['Sawubona! I am NEXOVIAN. Ask me about '+lesson.title]);
-
-  const askTutor = () => {
-    if(!tutorQ.trim()) return;
-    const q = tutorQ;
-    setTutorAns(a=>[...a, 'You: '+q]);
-    setTimeout(()=>{
-      let ans = `Great! About "${lesson.title}": ${lesson.content} \n\nFor "${q}" — remember: Break it into small steps, write formula, then solve.`;
-      if(q.includes('9x')) ans = '9x×4 = 36x. Why? 9×4=36, keep the x. So if x=3, answer is 108.';
-      setTutorAns(a=>[...a, 'NEXOVIAN: '+ans]);
-    },600);
-    setTutorQ('');
-  };
-
++15,109
+-3,531
+Lines changed: 15109 additions & 3531 deletions
+Some content is hidden
+Large Commits have some content hidden by default. Use the searchbox below for content that may be hidden.
+Search within code
+ 
+‎LogoIcon.jsx‎
+Original file line number	Diff line number	Diff line change
+@@ -0,0 +1,200 @@
+import React from 'react';
+/**
+ * NEXOVIA Official LogoIcon Component
+ * 
+ * Specifications:
+ * - Rounded square dark background #1e293b
+ * - Large letter N in center with neon cyan stroke #00ffff with glow effect filter drop-shadow 0 0 8px #00ffff
+ * - Inside the N, circuit lines and small brain icon at top left of N using paths and circles
+ * - Small dots and lines to look like circuit board inside N
+ * - Size: 40px x 40px, rounded corners 10px (rx="10")
+ * - Glow on hover
+ */
+export const LogoIcon = ({ className = '', size = 40, animated = true }) => {
   return (
-    <div style={{minHeight:'100vh', background:'#08080a', color:'white', display:'flex', flexDirection:'column'}}>
-      {/* TOP */}
-      <div style={{padding:'12px 16px', borderBottom:'1px solid #222', display:'flex', justifyContent:'space-between', alignItems:'center', position:'sticky', top:0, background:'#08080a', zIndex:10}}>
-        <b style={{letterSpacing:1}}>NEXOVIA LEARN</b>
-        <div style={{fontSize:12, background:'#111', padding:'6px 10px', borderRadius:20, border:'1px solid #222'}}>🔥 Streak 7 days</div>
-      </div>
-
-      <div style={{display:'flex', flex:1}}>
-        {/* SIDEBAR */}
-        <div style={{width:200, borderRight:'1px solid #1a1a1a', padding:12, display:'flex', flexDirection:'column', gap:8}}>
-          <p style={{fontSize:11, color:'#666', margin:'8px 0'}}>SUBJECTS</p>
-          {SUBJECTS.map(s=>(
-            <button key={s.id} onClick={()=>{setSubject(s); setLesson(s.lessons[0]); setTab('learn'); setShowResult(false);}} 
-              style={{textAlign:'left', padding:'10px 12px', borderRadius:10, border: subject.id===s.id?'1px solid '+s.color:'1px solid #1a1a1a', background: subject.id===s.id?'#111':'transparent', color: subject.id===s.id?'white':'#888', cursor:'pointer'}}>
-              {s.icon} {s.name}
-            </button>
-          ))}
-          <p style={{fontSize:11, color:'#666', margin:'16px 0 8px'}}>LESSONS</p>
-          {subject.lessons.map(l=>(
-            <button key={l.id} onClick={()=>{setLesson(l); setTab('learn'); setShowResult(false); setTutorAns(['Sawubona! Ask me about '+l.title]);}} 
-              style={{textAlign:'left', padding:'8px 10px', borderRadius:8, border:'none', background: lesson.id===l.id?'#1a1a1a':'transparent', color: lesson.id===l.id?'#00ffff':'#666', fontSize:13, cursor:'pointer'}}>
-              • {l.title}
-            </button>
-          ))}
-        </div>
-
-        {/* MAIN */}
-        <div style={{flex:1, padding:20, maxWidth:700}}>
-          <div style={{display:'flex', gap:8, marginBottom:16}}>
-            <button onClick={()=>setTab('learn')} style={{padding:'8px 14px', borderRadius:8, border:'none', background:tab==='learn'?'#00ffff':'#1a1a1a', color:tab==='learn'?'#000':'#888', fontWeight:700}}>Learn</button>
-            <button onClick={()=>setTab('quiz')} style={{padding:'8px 14px', borderRadius:8, border:'none', background:tab==='quiz'?'#00ffff':'#1a1a1a', color:tab==='quiz'?'#000':'#888', fontWeight:700}}>Quiz</button>
-            <button onClick={()=>setTab('tutor')} style={{padding:'8px 14px', borderRadius:8, border:'none', background:tab==='tutor'?'#8a2be2':'#1a1a1a', color:'white', fontWeight:700}}>Ask NEXOVIAN</button>
-          </div>
-
-          {tab==='learn' && (
-            <div>
-              <h2 style={{fontSize:26, marginBottom:8}}>{lesson.title}</h2>
-              <div style={{background:'#111', border:'1px solid #222', borderRadius:16, padding:20, lineHeight:1.6, color:'#ccc'}}>
-                {lesson.content}
-                <div style={{marginTop:16, padding:12, background:'#0a0a0a', borderRadius:10, borderLeft:'3px solid '+subject.color}}>
-                  <b style={{color:subject.color}}>Example:</b> For 9x×4 — multiply numbers first, keep variable.
-                </div>
-              </div>
-              <button onClick={()=>setTab('quiz')} style={{marginTop:16, background:'#00ffff', color:'#000', border:'none', padding:'12px 20px', borderRadius:10, fontWeight:800, width:'100%'}}>Take Quiz →</button>
-            </div>
-          )}
-
-          {tab==='quiz' && (
-            <div>
-              {!showResult ? (
-                <div style={{background:'#111', border:'1px solid #222', borderRadius:16, padding:20}}>
-                  <p style={{color:'#888', fontSize:13}}>Question {quizIndex+1} / {lesson.quiz.length}</p>
-                  <h3 style={{margin:'12px 0 16px'}}>{lesson.quiz[quizIndex].q}</h3>
-                  {lesson.quiz[quizIndex].options.map((opt,i)=>(
-                    <button key={i} onClick={()=>{
-                      if(i===lesson.quiz[quizIndex].answer) setScore(s=>s+1);
-                      if(quizIndex+1 < lesson.quiz.length) setQuizIndex(k=>k+1);
-                      else setShowResult(true);
-                    }} style={{display:'block', width:'100%', textAlign:'left', padding:'12px', margin:'8px 0', borderRadius:10, border:'1px solid #333', background:'#0a0a0a', color:'white'}}>
-                      {String.fromCharCode(65+i)}. {opt}
-                    </button>
-                  ))}
-                </div>
-              ) : (
-                <div style={{background:'#111', borderRadius:16, padding:30, textAlign:'center', border:'1px solid #222'}}>
-                  <h2 style={{fontSize:40}}>🎉</h2>
-                  <h3>Score: {score}/{lesson.quiz.length}</h3>
-                  <p style={{color:'#888'}}>{score===lesson.quiz.length?'Perfect! You mastered '+lesson.title:'Good try! Review lesson again.'}</p>
-                  <button onClick={()=>{setQuizIndex(0); setScore(0); setShowResult(false); setTab('learn');}} style={{marginTop:16, background:'#00ffff', color:'#000', border:'none', padding:'12px 20px', borderRadius:10, fontWeight:800}}>Next Lesson</button>
-                </div>
-              )}
-            </div>
-          )}
-
-          {tab==='tutor' && (
-            <div>
-              <div style={{background:'#0f0f12', border:'1px solid #222', borderRadius:16, padding:16, minHeight:300, marginBottom:12}}>
-                {tutorAns.map((m,i)=><div key={i} style={{margin:'8px 0', padding:'8px 12px', borderRadius:10, background: m.startsWith('You:')?'#00ffff22':'#1a1a1a', textAlign: m.startsWith('You:')?'right':'left', fontSize:14}}>{m}</div>)}
-              </div>
-              <div style={{display:'flex', gap:8}}>
-                <input value={tutorQ} onChange={e=>setTutorQ(e.target.value)} onKeyDown={e=>e.key==='Enter'&&askTutor()} placeholder={`Ask about ${lesson.title}...`} style={{flex:1, padding:12, borderRadius:10, background:'#111', border:'1px solid #333', color:'white'}}/>
-                <button onClick={askTutor} style={{background:'#8a2be2', color:'white', border:'none', padding:'0 18px', borderRadius:10}}>Send</button>
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
+    <div
+      className={`relative inline-flex items-center justify-center shrink-0 cursor-pointer group/logo ${className}`}
+      style={{ width: size, height: size }}
+      title="NEXOVIA"
+      aria-label="NEXOVIA Logo"
+    >
+      <svg
+        width={size}
+        height={size}
+        viewBox="0 0 40 40"
+        fill="none"
+        xmlns="http://www.w3.org/2000/svg"
+        className="w-full h-full transition-all duration-300 transform group-hover/logo:scale-105"
+        style={{
+          filter: 'drop-shadow(0 0 8px rgba(0, 255, 255, 0.75))',
+        }}
+      >
+        <defs>
+          {/* Neon Glow Filter */}
+          <filter id="neonCyanGlow" x="-30%" y="-30%" width="160%" height="160%">
+            <feDropShadow dx="0" dy="0" stdDeviation="2.5" floodColor="#00ffff" floodOpacity="0.9" />
+            <feDropShadow dx="0" dy="0" stdDeviation="4" floodColor="#00ffff" floodOpacity="0.45" />
+          </filter>
+          {/* Hover Pulsing Glow */}
+          <filter id="neonHoverGlow" x="-40%" y="-40%" width="180%" height="180%">
+            <feDropShadow dx="0" dy="0" stdDeviation="3.5" floodColor="#00ffff" floodOpacity="1" />
+            <feDropShadow dx="0" dy="0" stdDeviation="6" floodColor="#38bdf8" floodOpacity="0.6" />
+          </filter>
+          {/* Inner N Gradient Fill */}
+          <linearGradient id="innerNDark" x1="10" y1="9" x2="30" y2="31" gradientUnits="userSpaceOnUse">
+            <stop offset="0%" stopColor="#0f172a" stopOpacity="0.95" />
+            <stop offset="100%" stopColor="#090d16" stopOpacity="0.98" />
+          </linearGradient>
+          {/* Circuit Line Gradient */}
+          <linearGradient id="circuitCyanGrad" x1="10" y1="9" x2="30" y2="31" gradientUnits="userSpaceOnUse">
+            <stop offset="0%" stopColor="#00ffff" />
+            <stop offset="50%" stopColor="#38bdf8" />
+            <stop offset="100%" stopColor="#a855f7" />
+          </linearGradient>
+        </defs>
+        {/* 1. Rounded Square Dark Background (#0A0F1F, 40x40, rounded 10px) */}
+        <rect
+          x="0.5"
+          y="0.5"
+          width="39"
+          height="39"
+          rx="10"
+          fill="#0A0F1F"
+          stroke="#00ffff"
+          strokeWidth="1"
+          strokeOpacity="0.4"
+          className="transition-all duration-300 group-hover/logo:stroke-opacity-80 group-hover/logo:stroke-[#00ffff]"
+        />
+        {/* 2. Large Letter N in Center with Neon Cyan Stroke #00ffff and Glow */}
+        {/* N Geometry Base with Inner Depth */}
+        <path
+          d="M 10 31 L 10 9 L 15 9 L 25 24 L 25 9 L 30 9 L 30 31 L 25 31 L 15 16 L 15 31 Z"
+          fill="url(#innerNDark)"
+          stroke="#00ffff"
+          strokeWidth="1.6"
+          strokeLinejoin="round"
+          filter="url(#neonCyanGlow)"
+          className="transition-all duration-300 group-hover/logo:brightness-125"
+        />
+        {/* 3. Small Brain Icon at Top Left of N using paths & circles */}
+        <g id="miniBrainIcon" opacity="0.95">
+          {/* Left Brain Hemisphere Convolutions */}
+          <path
+            d="M 12.5 10.5 C 11.2 10.5 10.8 11.4 10.8 12.2 C 10.8 13.0 11.4 13.5 12.3 13.6 C 11.4 13.9 11.0 14.5 11.2 15.2 C 11.4 15.8 12.0 16.2 12.8 16.0"
+            fill="none"
+            stroke="#00ffff"
+            strokeWidth="0.8"
+            strokeLinecap="round"
+          />
+          {/* Right Brain Hemisphere Convolutions */}
+          <path
+            d="M 12.7 10.5 C 13.8 10.5 14.3 11.4 14.2 12.2 C 14.2 13.0 13.6 13.5 12.7 13.6 C 13.6 13.9 14.0 14.5 13.8 15.2 C 13.6 15.8 13.0 16.2 12.4 16.0"
+            fill="none"
+            stroke="#00ffff"
+            strokeWidth="0.8"
+            strokeLinecap="round"
+          />
+          {/* Neural Synapse Nodes in Brain */}
+          <circle cx="12.5" cy="11.8" r="0.75" fill="#00ffff" />
+          <circle cx="11.6" cy="14.2" r="0.6" fill="#38bdf8" />
+          <circle cx="13.4" cy="14.2" r="0.6" fill="#a855f7" />
+          <line x1="12.5" y1="11.8" x2="11.6" y2="14.2" stroke="#00ffff" strokeWidth="0.5" strokeOpacity="0.8" />
+          <line x1="12.5" y1="11.8" x2="13.4" y2="14.2" stroke="#00ffff" strokeWidth="0.5" strokeOpacity="0.8" />
+        </g>
+        {/* 4. Circuit Lines & Board Traces Inside N */}
+        <g id="circuitBoardTraces" opacity="0.85">
+          {/* Trace down the left stem from brain to bottom */}
+          <path
+            d="M 12.6 16.5 V 22 L 11.2 23.5 V 27 L 12.5 28.5 V 30"
+            fill="none"
+            stroke="url(#circuitCyanGrad)"
+            strokeWidth="0.8"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+          {/* Branch on left stem */}
+          <path
+            d="M 12.6 20 H 14.2"
+            fill="none"
+            stroke="#00ffff"
+            strokeWidth="0.75"
+            strokeLinecap="round"
+          />
+          {/* Trace along diagonal connector */}
+          <path
+            d="M 16 13.5 L 20 19.5 L 23.5 24.5"
+            fill="none"
+            stroke="#00ffff"
+            strokeWidth="0.85"
+            strokeDasharray="2.5 1"
+            strokeLinecap="round"
+          />
+          {/* Diagonal circuit branch */}
+          <path
+            d="M 18.2 16.8 L 19.8 15.5 H 22"
+            fill="none"
+            stroke="#38bdf8"
+            strokeWidth="0.7"
+            strokeLinecap="round"
+          />
+          {/* Trace on right stem */}
+          <path
+            d="M 27.5 10.5 V 15.5 L 28.8 17 V 23.5 L 27.5 25 V 29.5"
+            fill="none"
+            stroke="url(#circuitCyanGrad)"
+            strokeWidth="0.8"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+          {/* Horizontal circuit branches on right stem */}
+          <path
+            d="M 27.5 13.5 H 25.8"
+            fill="none"
+            stroke="#00ffff"
+            strokeWidth="0.75"
+            strokeLinecap="round"
+          />
+          <path
+            d="M 27.5 21 H 29"
+            fill="none"
+            stroke="#a855f7"
+            strokeWidth="0.75"
+            strokeLinecap="round"
+          />
+        </g>
+        {/* 5. Small Dots (Circuit Board Pads / Synapse Terminals) Inside N */}
+        <g id="circuitDots">
+          <circle cx="14.2" cy="20" r="0.8" fill="#00ffff" />
+          <circle cx="12.5" cy="30" r="0.8" fill="#00ffff" />
+          <circle cx="11.2" cy="27" r="0.65" fill="#38bdf8" />
+          <circle cx="22" cy="15.5" r="0.75" fill="#00ffff" />
+          <circle cx="20" cy="19.5" r="0.8" fill="#38bdf8" />
+          <circle cx="23.5" cy="24.5" r="0.8" fill="#a855f7" />
+          <circle cx="25.8" cy="13.5" r="0.8" fill="#00ffff" />
+          <circle cx="28.8" cy="17" r="0.65" fill="#38bdf8" />
+          <circle cx="29" cy="21" r="0.75" fill="#a855f7" />
+          <circle cx="27.5" cy="29.5" r="0.8" fill="#00ffff" />
+        </g>
+        {/* Outer Corner Micro Neon Accents */}
+        <circle cx="3" cy="3" r="0.7" fill="#00ffff" opacity="0.5" />
+        <circle cx="37" cy="3" r="0.7" fill="#a855f7" opacity="0.5" />
+        <circle cx="3" cy="37" r="0.7" fill="#00ffff" opacity="0.5" />
+        <circle cx="37" cy="37" r="0.7" fill="#a855f7" opacity="0.5" />
+      </svg>
     </div>
   );
-                   }
+};
+export default LogoIcon;
+‎_redirects‎
+Original file line number	Diff line number	Diff line change
+@@ -0,0 +1 @@
+/*    /index.html   200
+‎bun.lock‎
+Some generated files are not rendered by default. Learn more about customizing how changed files appear on GitHub.
+‎data_progress.json‎
+Original file line number	Diff line number	Diff line change
+@@ -1,15 +1,20 @@
+{
+  "guest_learner": {
+    "userId": "guest_learner",
+    "questionsAskedCount": 20,
+    "questionsAskedCount": 26,
+    "practiceSessionsCount": 1,
+    "quizAttempts": [],
+    "topicsStudied": [
+      "Algebra & Factorization",
+      "Newton's Laws of Motion",
+      "General Topic",
+      "Quadratic Equations",
+      "Vectors & Motion in One Dimension"
+      "Vectors & Motion in One Dimension",
+      "Photosynthesis",
+      "Electric Circuits & Ohm's Law",
+      "Forces & Motion",
+      "Financial Statements",
+      "Population Geography"
+    ],
+    "savedLearning": [],
+    "conversations": [
+@@ -149,7 +154,7 @@
+        "createdAt": "2026-09-30T07:58:01.276Z"
+      }
+    ],
+    "lastActiveDate": "2026-10-11",
+    "lastActiveDate": "2026-10-28",
+    "scanSessions": [
+      {
+        "id": "scan_1791050922110_h0x1y",
