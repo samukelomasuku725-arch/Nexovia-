@@ -1,246 +1,98 @@
-rebrand to NEXOVIAN and update config
-Refactored branding, added Supabase dependency, updated build settings, and improved CSS layout reset for better cross-device consistency.
-main
-1 parent 
-de1134e
- commit 
-f8ad2f8
-159 files changed
+import React, { useState } from 'react';
 
-+15,109
--3,531
-Lines changed: 15109 additions & 3531 deletions
-Some content is hidden
-Large Commits have some content hidden by default. Use the searchbox below for content that may be hidden.
-Search within code
- 
-‎LogoIcon.jsx‎
-Original file line number	Diff line number	Diff line change
-@@ -0,0 +1,200 @@
-import React from 'react';
-/**
- * NEXOVIA Official LogoIcon Component
- * 
- * Specifications:
- * - Rounded square dark background #1e293b
- * - Large letter N in center with neon cyan stroke #00ffff with glow effect filter drop-shadow 0 0 8px #00ffff
- * - Inside the N, circuit lines and small brain icon at top left of N using paths and circles
- * - Small dots and lines to look like circuit board inside N
- * - Size: 40px x 40px, rounded corners 10px (rx="10")
- * - Glow on hover
- */
-export const LogoIcon = ({ className = '', size = 40, animated = true }) => {
+export default function App(){
+  const [logged, setLogged] = useState(false);
+  const [showPass, setShowPass] = useState(false);
+
+  if(!logged){
+    return (
+      <div style={{minHeight:'100vh', background:'#f5f3ef', display:'flex', flexDirection:'column', alignItems:'center', padding:'20px 16px'}}>
+        <div style={{marginTop:10, color:'#6b7280', fontSize:14}}>English (UK) ▾</div>
+        <div style={{marginTop:50, display:'flex', flexDirection:'column', alignItems:'center'}}>
+          <div style={{width:110, height:110, borderRadius:'50%', background:'#111a2e', display:'flex', alignItems:'center', justifyContent:'center'}}>
+            <span style={{color:'#f5c518', fontSize:56, fontWeight:800, fontFamily:'serif'}}>N</span>
+          </div>
+          <h1 style={{marginTop:16, fontSize:28, fontWeight:900, letterSpacing:2, color:'#111a2e'}}>NEXOVIAN</h1>
+          <p style={{color:'#b45309', fontWeight:600}}>R60 / learner / month</p>
+        </div>
+        <div style={{width:'100%', maxWidth:380, marginTop:32, display:'flex', flexDirection:'column', gap:14}}>
+          <input placeholder="Mobile number or email address" style={{width:'100%', padding:'16px', borderRadius:12, border:'1px solid #e5e7eb', background:'white'}}/>
+          <div style={{position:'relative'}}>
+            <input type={showPass?'text':'password'} placeholder="Password" style={{width:'100%', padding:'16px', borderRadius:12, border:'1px solid #e5e7eb', background:'white'}}/>
+            <button onClick={()=>setShowPass(!showPass)} style={{position:'absolute', right:14, top:16, background:'none', border:'none'}}>👁️</button>
+          </div>
+          <label style={{display:'flex', gap:8, fontSize:14}}><input type="checkbox"/> Remember me</label>
+          <button onClick={()=>setLogged(true)} style={{marginTop:10, width:'100%', padding:'16px', borderRadius:24, background:'#ffcc00', border:'none', fontWeight:700, fontSize:16}}>Log in</button>
+          <button style={{textAlign:'center', background:'none', border:'none'}}>Forgotten password?</button>
+          <button style={{marginTop:60, width:'100%', padding:'16px', borderRadius:24, background:'transparent', border:'1.5px solid #111', fontWeight:700}}>Create Account - Get 1 Day Free</button>
+        </div>
+        <div style={{marginTop:'auto', paddingTop:30, fontSize:11, color:'#9ca3af'}}>© NEXOVIAN (PTY) LTD • Built in Mpumalanga</div>
+      </div>
+    );
+  }
+
+  // HOME DASHBOARD AFTER LOGIN - EXACT LIKE YOUR SCREENSHOT
   return (
-    <div
-      className={`relative inline-flex items-center justify-center shrink-0 cursor-pointer group/logo ${className}`}
-      style={{ width: size, height: size }}
-      title="NEXOVIA"
-      aria-label="NEXOVIA Logo"
-    >
-      <svg
-        width={size}
-        height={size}
-        viewBox="0 0 40 40"
-        fill="none"
-        xmlns="http://www.w3.org/2000/svg"
-        className="w-full h-full transition-all duration-300 transform group-hover/logo:scale-105"
-        style={{
-          filter: 'drop-shadow(0 0 8px rgba(0, 255, 255, 0.75))',
-        }}
-      >
-        <defs>
-          {/* Neon Glow Filter */}
-          <filter id="neonCyanGlow" x="-30%" y="-30%" width="160%" height="160%">
-            <feDropShadow dx="0" dy="0" stdDeviation="2.5" floodColor="#00ffff" floodOpacity="0.9" />
-            <feDropShadow dx="0" dy="0" stdDeviation="4" floodColor="#00ffff" floodOpacity="0.45" />
-          </filter>
-          {/* Hover Pulsing Glow */}
-          <filter id="neonHoverGlow" x="-40%" y="-40%" width="180%" height="180%">
-            <feDropShadow dx="0" dy="0" stdDeviation="3.5" floodColor="#00ffff" floodOpacity="1" />
-            <feDropShadow dx="0" dy="0" stdDeviation="6" floodColor="#38bdf8" floodOpacity="0.6" />
-          </filter>
-          {/* Inner N Gradient Fill */}
-          <linearGradient id="innerNDark" x1="10" y1="9" x2="30" y2="31" gradientUnits="userSpaceOnUse">
-            <stop offset="0%" stopColor="#0f172a" stopOpacity="0.95" />
-            <stop offset="100%" stopColor="#090d16" stopOpacity="0.98" />
-          </linearGradient>
-          {/* Circuit Line Gradient */}
-          <linearGradient id="circuitCyanGrad" x1="10" y1="9" x2="30" y2="31" gradientUnits="userSpaceOnUse">
-            <stop offset="0%" stopColor="#00ffff" />
-            <stop offset="50%" stopColor="#38bdf8" />
-            <stop offset="100%" stopColor="#a855f7" />
-          </linearGradient>
-        </defs>
-        {/* 1. Rounded Square Dark Background (#0A0F1F, 40x40, rounded 10px) */}
-        <rect
-          x="0.5"
-          y="0.5"
-          width="39"
-          height="39"
-          rx="10"
-          fill="#0A0F1F"
-          stroke="#00ffff"
-          strokeWidth="1"
-          strokeOpacity="0.4"
-          className="transition-all duration-300 group-hover/logo:stroke-opacity-80 group-hover/logo:stroke-[#00ffff]"
-        />
-        {/* 2. Large Letter N in Center with Neon Cyan Stroke #00ffff and Glow */}
-        {/* N Geometry Base with Inner Depth */}
-        <path
-          d="M 10 31 L 10 9 L 15 9 L 25 24 L 25 9 L 30 9 L 30 31 L 25 31 L 15 16 L 15 31 Z"
-          fill="url(#innerNDark)"
-          stroke="#00ffff"
-          strokeWidth="1.6"
-          strokeLinejoin="round"
-          filter="url(#neonCyanGlow)"
-          className="transition-all duration-300 group-hover/logo:brightness-125"
-        />
-        {/* 3. Small Brain Icon at Top Left of N using paths & circles */}
-        <g id="miniBrainIcon" opacity="0.95">
-          {/* Left Brain Hemisphere Convolutions */}
-          <path
-            d="M 12.5 10.5 C 11.2 10.5 10.8 11.4 10.8 12.2 C 10.8 13.0 11.4 13.5 12.3 13.6 C 11.4 13.9 11.0 14.5 11.2 15.2 C 11.4 15.8 12.0 16.2 12.8 16.0"
-            fill="none"
-            stroke="#00ffff"
-            strokeWidth="0.8"
-            strokeLinecap="round"
-          />
-          {/* Right Brain Hemisphere Convolutions */}
-          <path
-            d="M 12.7 10.5 C 13.8 10.5 14.3 11.4 14.2 12.2 C 14.2 13.0 13.6 13.5 12.7 13.6 C 13.6 13.9 14.0 14.5 13.8 15.2 C 13.6 15.8 13.0 16.2 12.4 16.0"
-            fill="none"
-            stroke="#00ffff"
-            strokeWidth="0.8"
-            strokeLinecap="round"
-          />
-          {/* Neural Synapse Nodes in Brain */}
-          <circle cx="12.5" cy="11.8" r="0.75" fill="#00ffff" />
-          <circle cx="11.6" cy="14.2" r="0.6" fill="#38bdf8" />
-          <circle cx="13.4" cy="14.2" r="0.6" fill="#a855f7" />
-          <line x1="12.5" y1="11.8" x2="11.6" y2="14.2" stroke="#00ffff" strokeWidth="0.5" strokeOpacity="0.8" />
-          <line x1="12.5" y1="11.8" x2="13.4" y2="14.2" stroke="#00ffff" strokeWidth="0.5" strokeOpacity="0.8" />
-        </g>
-        {/* 4. Circuit Lines & Board Traces Inside N */}
-        <g id="circuitBoardTraces" opacity="0.85">
-          {/* Trace down the left stem from brain to bottom */}
-          <path
-            d="M 12.6 16.5 V 22 L 11.2 23.5 V 27 L 12.5 28.5 V 30"
-            fill="none"
-            stroke="url(#circuitCyanGrad)"
-            strokeWidth="0.8"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-          {/* Branch on left stem */}
-          <path
-            d="M 12.6 20 H 14.2"
-            fill="none"
-            stroke="#00ffff"
-            strokeWidth="0.75"
-            strokeLinecap="round"
-          />
-          {/* Trace along diagonal connector */}
-          <path
-            d="M 16 13.5 L 20 19.5 L 23.5 24.5"
-            fill="none"
-            stroke="#00ffff"
-            strokeWidth="0.85"
-            strokeDasharray="2.5 1"
-            strokeLinecap="round"
-          />
-          {/* Diagonal circuit branch */}
-          <path
-            d="M 18.2 16.8 L 19.8 15.5 H 22"
-            fill="none"
-            stroke="#38bdf8"
-            strokeWidth="0.7"
-            strokeLinecap="round"
-          />
-          {/* Trace on right stem */}
-          <path
-            d="M 27.5 10.5 V 15.5 L 28.8 17 V 23.5 L 27.5 25 V 29.5"
-            fill="none"
-            stroke="url(#circuitCyanGrad)"
-            strokeWidth="0.8"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-          {/* Horizontal circuit branches on right stem */}
-          <path
-            d="M 27.5 13.5 H 25.8"
-            fill="none"
-            stroke="#00ffff"
-            strokeWidth="0.75"
-            strokeLinecap="round"
-          />
-          <path
-            d="M 27.5 21 H 29"
-            fill="none"
-            stroke="#a855f7"
-            strokeWidth="0.75"
-            strokeLinecap="round"
-          />
-        </g>
-        {/* 5. Small Dots (Circuit Board Pads / Synapse Terminals) Inside N */}
-        <g id="circuitDots">
-          <circle cx="14.2" cy="20" r="0.8" fill="#00ffff" />
-          <circle cx="12.5" cy="30" r="0.8" fill="#00ffff" />
-          <circle cx="11.2" cy="27" r="0.65" fill="#38bdf8" />
-          <circle cx="22" cy="15.5" r="0.75" fill="#00ffff" />
-          <circle cx="20" cy="19.5" r="0.8" fill="#38bdf8" />
-          <circle cx="23.5" cy="24.5" r="0.8" fill="#a855f7" />
-          <circle cx="25.8" cy="13.5" r="0.8" fill="#00ffff" />
-          <circle cx="28.8" cy="17" r="0.65" fill="#38bdf8" />
-          <circle cx="29" cy="21" r="0.75" fill="#a855f7" />
-          <circle cx="27.5" cy="29.5" r="0.8" fill="#00ffff" />
-        </g>
-        {/* Outer Corner Micro Neon Accents */}
-        <circle cx="3" cy="3" r="0.7" fill="#00ffff" opacity="0.5" />
-        <circle cx="37" cy="3" r="0.7" fill="#a855f7" opacity="0.5" />
-        <circle cx="3" cy="37" r="0.7" fill="#00ffff" opacity="0.5" />
-        <circle cx="37" cy="37" r="0.7" fill="#a855f7" opacity="0.5" />
-      </svg>
+    <div style={{minHeight:'100vh', background:'#0e1220', color:'white', paddingBottom:80}}>
+      <div style={{padding:16}}>
+        {/* Top */}
+        <div style={{background:'#171d31', borderRadius:16, padding:16}}>
+          <div style={{display:'flex', gap:8, marginBottom:20}}>
+            <span style={{padding:'8px 16px', background:'#232a45', borderRadius:20, fontSize:13}}>Economics</span>
+          </div>
+          <p style={{textAlign:'center', color:'#8b92b5', fontSize:14, marginBottom:12}}>Selected: <b style={{color:'white'}}>Mathematics</b></p>
+          <div style={{display:'flex', gap:10}}>
+            <button style={{flex:1, padding:'12px', borderRadius:12, background:'#ffcc00', color:'#111', border:'none', fontWeight:700, fontSize:13, display:'flex', alignItems:'center', justifyContent:'center', gap:6}}>✨ Ask AI About Mathematics</button>
+            <button style={{flex:1, padding:'12px', borderRadius:12, background:'#232a45', color:'white', border:'none', fontWeight:600, fontSize:13}}>📖 View All Lessons</button>
+          </div>
+        </div>
+
+        {/* Socratic Tutor */}
+        <div style={{background:'#171d31', borderRadius:16, padding:16, marginTop:16}}>
+          <div style={{display:'flex', gap:12, alignItems:'center'}}>
+            <div style={{width:44, height:44, borderRadius:'50%', background:'#ffcc00', display:'flex', alignItems:'center', justifyContent:'center', fontSize:20}}>✨</div>
+            <div>
+              <p style={{color:'#ffcc00', fontSize:11, fontWeight:700, letterSpacing:1}}>CONTEXTUAL AI GUIDANCE</p>
+              <h3 style={{fontSize:16, fontWeight:800}}>Ask Nexovian Socratic Tutor</h3>
+            </div>
+          </div>
+          <button style={{marginTop:12, padding:'8px 14px', borderRadius:20, background:'#232a45', border:'none', color:'white', fontSize:13}}>Open Full Tutor →</button>
+          <div style={{height:1, background:'#232a45', margin:'16px 0'}}></div>
+
+          {/* Cards */}
+          {[
+            {icon:'⚠️', title:'"Explain my weak areas"', sub:'Target: Quadratic Equations'},
+            {icon:'📈', title:'"Help me improve Mathematics"', sub:'Core algebra & functions'},
+            {icon:'📅', title:'"Create a study plan"', sub:'Personalized weekly schedule'},
+            {icon:'🎯', title:'"Practice my weakest topic"', sub:''},
+          ].map((c,i)=>(
+            <div key={i} style={{background:'#232a45', borderRadius:16, padding:14, display:'flex', gap:12, alignItems:'center', marginBottom:12}}>
+              <div style={{width:40, height:40, borderRadius:10, background:'#1e253e', display:'flex', alignItems:'center', justifyContent:'center'}}>{c.icon}</div>
+              <div style={{flex:1}}>
+                <p style={{fontWeight:700, fontSize:14}}>{c.title}</p>
+                <p style={{color:'#8b92b5', fontSize:12}}>{c.sub}</p>
+              </div>
+              <div style={{width:32, height:32, borderRadius:'50%', background:'#2a3252', display:'flex', alignItems:'center', justifyContent:'center'}}>›</div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Bottom Nav */}
+      <div style={{position:'fixed', bottom:0, left:0, right:0, background:'#171d31', borderTop:'1px solid #232a45', display:'flex', justifyContent:'space-around', padding:'8px 0'}}>
+        {[
+          {n:'Home', a:true, i:'🏠'},
+          {n:'Learn', a:false, i:'📖'},
+          {n:'AI Tutor', a:false, i:'✨'},
+          {n:'Voice Docs', a:false, i:'🎙️'},
+          {n:'Progress', a:false, i:'📈'},
+          {n:'More', a:false, i:'📚'},
+        ].map(b=>(
+          <div key={b.n} style={{display:'flex', flexDirection:'column', alignItems:'center', color: b.a?'#00d9ff':'#8b92b5', fontSize:11}}>
+            <span style={{fontSize:18}}>{b.i}</span>{b.n}{b.a&&<div style={{width:4, height:4, background:'#00d9ff', borderRadius:'50%', marginTop:2}}/>}
+          </div>
+        ))}
+      </div>
     </div>
   );
-};
-export default LogoIcon;
-‎_redirects‎
-Original file line number	Diff line number	Diff line change
-@@ -0,0 +1 @@
-/*    /index.html   200
-‎bun.lock‎
-Some generated files are not rendered by default. Learn more about customizing how changed files appear on GitHub.
-‎data_progress.json‎
-Original file line number	Diff line number	Diff line change
-@@ -1,15 +1,20 @@
-{
-  "guest_learner": {
-    "userId": "guest_learner",
-    "questionsAskedCount": 20,
-    "questionsAskedCount": 26,
-    "practiceSessionsCount": 1,
-    "quizAttempts": [],
-    "topicsStudied": [
-      "Algebra & Factorization",
-      "Newton's Laws of Motion",
-      "General Topic",
-      "Quadratic Equations",
-      "Vectors & Motion in One Dimension"
-      "Vectors & Motion in One Dimension",
-      "Photosynthesis",
-      "Electric Circuits & Ohm's Law",
-      "Forces & Motion",
-      "Financial Statements",
-      "Population Geography"
-    ],
-    "savedLearning": [],
-    "conversations": [
-@@ -149,7 +154,7 @@
-        "createdAt": "2026-09-30T07:58:01.276Z"
-      }
-    ],
-    "lastActiveDate": "2026-10-11",
-    "lastActiveDate": "2026-10-28",
-    "scanSessions": [
-      {
-        "id": "scan_1791050922110_h0x1y",
+}
