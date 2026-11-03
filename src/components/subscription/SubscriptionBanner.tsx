@@ -54,6 +54,12 @@ export const SubscriptionBanner: React.FC = () => {
   const [isProcessing, setIsProcessing] = useState(false);
 
   useEffect(() => {
+    // Instant SnapScan paid check: Never show subscription modal
+    if (typeof window !== 'undefined' && localStorage.getItem('nexovian_paid') === 'true') {
+      setSubStatus(null);
+      return;
+    }
+
     // STATE 1: Anonymous visitor -> Do not show subscription modal
     if (!user || !user.email) {
       setSubStatus(null);

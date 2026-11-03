@@ -79,6 +79,16 @@ const MainLayout: React.FC = () => {
   useEffect(() => {
     if (isLoading) return;
 
+    // Fully unlocked if user paid with SnapScan instant auto-unlock!
+    try {
+      if (localStorage.getItem('nexovian_paid') === 'true') {
+        if (currentTab === 'paywall') {
+          setCurrentTab('home');
+        }
+        return;
+      }
+    } catch (_) {}
+
     const isPublicTab = ['landing', 'login', 'signup', 'calculator', 'about', 'success', 'cancel', 'trial', 'paywall'].includes(currentTab);
     if (isPublicTab) return;
 
@@ -151,8 +161,12 @@ const MainLayout: React.FC = () => {
     return <CreateAccountScreen initialMode="signup" />;
   }
 
-  // 4. Route /paywall: Render Paywall screen (R60/month, Paystack inline, reasons)
+  // 4. Route /paywall: Render Paywall screen (R60/month, SnapScan, Paystack inline, reasons)
   if (currentTab === 'paywall') {
+    if (typeof window !== 'undefined' && localStorage.getItem('nexovian_paid') === 'true') {
+      setCurrentTab('home');
+      return null;
+    }
     return <PaywallView />;
   }
 

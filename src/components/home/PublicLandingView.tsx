@@ -2,35 +2,34 @@
  * @license
  * SPDX-License-Identifier: Apache-2.0
  * 
- * NEXOVIAN - NEW HOMEPAGE AT ROOT / (PUBLIC, NO LOGIN REQUIRED)
- * Modern Netflix-style: Black background #000000, Gold #FFD700, White text, mobile-first.
+ * NEXOVIAN - FULLY AUTOMATIC INSTANT ACCESS (SNAPSCAN AUTO-UNLOCK)
  * 
- * Hero:
- * - Headline: "Imagine a Netflix for Learning - One App from Grade 4 to University"
- * - Sub: "We don't change the exam paper. We change how you understand it."
- * - Sub2: "Original DBE Past Paper (English/Afrikaans) + Explain memo step-by-step in YOUR language"
- * - Badges: 11 languages: isiZulu, Sesotho, Afrikaans, Xitsonga, siSwati, Sepedi, Setswana, isiXhosa, Tshivenda, isiNdebele, English
- * - 2 Buttons: "Start FREE 2-Day Trial" -> /register | "Watch 20sec Demo" -> video modal
+ * FLOW:
+ * 1. User lands on nexovian.group, chooses language (11 languages) and grade (4 to University)
+ * 2. Clicks button "Unlock for R60 - Instant Access" / "Pay R60 with SnapScan"
+ * 3. Opens https://pos.snapscan.io/qr/NKJJYpV6 in new tab to pay
+ * 4. After paying, user returns to site and clicks "I Have Paid - Unlock App"
+ * 5. That button instantly unlocks full app content (localStorage.setItem('nexovian_paid', 'true'))
+ *    and shows success modal "Welcome to NEXOVIAN Premium! Choose your grade and language"
+ *    with "Access Granted - Start Learning" (no waiting for admin, 100% automated).
  * 
- * Features section (3 cards):
- * 1. CAPS notes & quizzes (Grade 4 to University)
- * 2. Instant homework help (Ask in your language)
- * 3. 4000+ DBE Past Papers with memo explanations
+ * Side-by-side buttons:
+ * - Button 1: "Pay R60 with SnapScan" -> https://pos.snapscan.io/qr/NKJJYpV6 (target _blank, blue)
+ * - Button 2: "I Have Paid - Unlock App"
  * 
- * Pricing section:
- * - FREE for 2 Days, then R60/month
- * - List: All grades, All 11 languages, Cancel anytime
- * - Button: "Start Learning Now"
+ * Timer:
+ * - When Pay button is clicked, after 10 seconds show popup: "Payment done? Click Unlock"
  * 
- * Trust footer:
- * "Built in Mpumalanga | Level 1 B-BBEE | 100% CAPS Aligned | Contact WhatsApp"
+ * Trust text:
+ * - "Payment verified by SnapScan to NEXOVIAN PTY LTD - Instant Auto Unlock"
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Play,
   Sparkles,
   Check,
+  CheckCircle2,
   ChevronDown,
   Languages,
   FileText,
@@ -42,25 +41,61 @@ import {
   BookOpen,
   GraduationCap,
   Layers,
-  ShieldCheck
+  ShieldCheck,
+  QrCode,
+  ExternalLink,
+  Unlock,
+  Clock,
+  School,
+  Briefcase
 } from 'lucide-react';
 import { useLearning } from '../../context/LearningContext';
 import { useAuth } from '../../context/AuthContext';
 import { SALanguageCode } from '../../types';
 
-const SA_LANGUAGES_BADGES = [
-  'isiZulu',
-  'Sesotho',
-  'Afrikaans',
-  'Xitsonga',
-  'siSwati',
-  'Sepedi',
-  'Setswana',
-  'isiXhosa',
-  'Tshivenda',
-  'isiNdebele',
-  'English'
+export interface LanguageOption {
+  code: SALanguageCode;
+  name: string;
+  native: string;
+  isNativeSpecial?: boolean;
+}
+
+export const ALL_11_LANGUAGES: LanguageOption[] = [
+  { code: 'en', name: 'English', native: 'English' },
+  { code: 'af', name: 'Afrikaans', native: 'Afrikaans' },
+  { code: 'zu', name: 'isiZulu', native: 'isiZulu' },
+  { code: 'xh', name: 'isiXhosa', native: 'isiXhosa' },
+  { code: 'nso', name: 'Sepedi', native: 'Sesotho sa Leboa' },
+  { code: 'st', name: 'Sesotho', native: 'Sesotho' },
+  { code: 'tn', name: 'Setswana', native: 'Setswana' },
+  { code: 'ss', name: 'siSwati', native: 'siSwati', isNativeSpecial: true },
+  { code: 'ts', name: 'Xitsonga', native: 'Xitsonga', isNativeSpecial: true },
+  { code: 've', name: 'Tshivenda', native: 'Tshivenḓa' },
+  { code: 'nr', name: 'isiNdebele', native: 'isiNdebele' }
 ];
+
+export interface GradeOption {
+  id: string;
+  name: string;
+  level: string;
+  badge: string;
+}
+
+export const ALL_GRADES: GradeOption[] = [
+  { id: 'grade-4', name: 'Grade 4', level: 'Intermediate Phase', badge: 'CAPS' },
+  { id: 'grade-5', name: 'Grade 5', level: 'Intermediate Phase', badge: 'CAPS' },
+  { id: 'grade-6', name: 'Grade 6', level: 'Intermediate Phase', badge: 'CAPS' },
+  { id: 'grade-7', name: 'Grade 7', level: 'Senior Phase', badge: 'CAPS' },
+  { id: 'grade-8', name: 'Grade 8', level: 'Senior Phase', badge: 'CAPS' },
+  { id: 'grade-9', name: 'Grade 9', level: 'Senior Phase', badge: 'CAPS' },
+  { id: 'grade-10', name: 'Grade 10', level: 'FET Phase', badge: 'CAPS' },
+  { id: 'grade-11', name: 'Grade 11', level: 'FET Phase', badge: 'CAPS' },
+  { id: 'grade-12', name: 'Grade 12', level: 'FET Phase (Matric)', badge: 'CAPS' },
+  { id: 'tvet', name: 'TVET Colleges', level: 'N1–N6 / NC(V)', badge: 'NATED' },
+  { id: 'university', name: 'University', level: 'Higher Education', badge: 'Degree' }
+];
+
+const SNAPSCAN_URL = 'https://pos.snapscan.io/qr/NKJJYpV6';
 
 const MEMO_DEMO_EXPLANATIONS: Record<string, string> = {
   isiZulu: 'Explanation in isiZulu: Okokuqala, susa u-3 ezinhlangothini zombili: 2x = 7 - 3 = 4. Bese uhlukanisa ngo-2 ezinhlangothini zombili ukuze uthole u-x: x = 4 / 2 = 2. Impendulo yokugcina ngu-x = 2.',
@@ -77,20 +112,93 @@ const MEMO_DEMO_EXPLANATIONS: Record<string, string> = {
 };
 
 export const PublicLandingView: React.FC = () => {
-  const { setCurrentTab } = useLearning();
+  const { setCurrentTab, setActiveLearningLanguage, updateLearningContext } = useLearning();
   const { isAuthenticated } = useAuth();
 
+  // User selections on landing page
+  const [selectedLang, setSelectedLang] = useState<SALanguageCode>('zu');
+  const [selectedGradeId, setSelectedGradeId] = useState<string>('grade-10');
+
+  // Instant Unlock State
+  const [isPaid, setIsPaid] = useState<boolean>(() => {
+    try {
+      return typeof window !== 'undefined' && localStorage.getItem('nexovian_paid') === 'true';
+    } catch {
+      return false;
+    }
+  });
+
+  // 10-Second Timer popup state
+  const [showPaymentDonePopup, setShowPaymentDonePopup] = useState(false);
+  const timerRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Success Modal
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+
+  // Memo Demo state
   const [demoLang, setDemoLang] = useState('isiZulu');
   const [isDemoDropdownOpen, setIsDemoDropdownOpen] = useState(false);
   const [isDemoModalOpen, setIsDemoModalOpen] = useState(false);
 
-  const handleStartTrial = () => {
-    setCurrentTab('signup');
+  // Clear timer on unmount
+  useEffect(() => {
+    return () => {
+      if (timerRef.current) clearTimeout(timerRef.current);
+    };
+  }, []);
+
+  const handleSnapScanPayClick = () => {
+    // 10-Second Timer: After user clicks Pay button, after 10 seconds show popup "Payment done? Click Unlock"
+    if (timerRef.current) clearTimeout(timerRef.current);
+    timerRef.current = setTimeout(() => {
+      setShowPaymentDonePopup(true);
+    }, 10000);
   };
 
-  const handleGoToLogin = () => {
-    setCurrentTab('login');
+  const handleUnlockApp = () => {
+    try {
+      // 1. Instantly set nexovian_paid = true in localStorage
+      localStorage.setItem('nexovian_paid', 'true');
+      localStorage.setItem(
+        'nexovian_subscription_override',
+        JSON.stringify({
+          status: 'active',
+          until: Date.now() + 365 * 24 * 60 * 60 * 1000
+        })
+      );
+
+      // 2. Save language and grade selections
+      localStorage.setItem('nexovian_academy_language', selectedLang);
+      localStorage.setItem('nexovian_selected_grade', selectedGradeId);
+
+      setActiveLearningLanguage(selectedLang);
+      const gradeObj = ALL_GRADES.find((g) => g.id === selectedGradeId);
+      if (gradeObj) {
+        updateLearningContext({
+          language: selectedLang,
+          gradeOrProgramme: gradeObj.name,
+          educationLevel: gradeObj.level
+        });
+      }
+    } catch (err) {
+      console.warn('Unlock storage notice:', err);
+    }
+
+    setIsPaid(true);
+    setShowPaymentDonePopup(false);
+    setShowSuccessModal(true);
   };
+
+  const handleStartLearning = () => {
+    setShowSuccessModal(false);
+    setCurrentTab('home');
+    if (typeof window !== 'undefined') {
+      window.history.pushState({}, '', '/app');
+    }
+  };
+
+  const selectedLangObj = ALL_11_LANGUAGES.find((l) => l.code === selectedLang) || ALL_11_LANGUAGES[2];
+  const selectedGradeObj = ALL_GRADES.find((g) => g.id === selectedGradeId) || ALL_GRADES[6];
 
   return (
     <div className="min-h-screen bg-[#000000] text-white font-sans antialiased selection:bg-[#FFD700] selection:text-black">
@@ -100,7 +208,10 @@ export const PublicLandingView: React.FC = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 h-20 flex items-center justify-between">
           
           {/* Logo NEXOVIAN Left */}
-          <div className="flex items-center gap-3 cursor-pointer" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
+          <div
+            className="flex items-center gap-3 cursor-pointer"
+            onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+          >
             <div className="w-10 h-10 rounded-full bg-[#FFD700] text-black flex items-center justify-center font-black text-xl shadow-lg">
               N
             </div>
@@ -124,7 +235,16 @@ export const PublicLandingView: React.FC = () => {
               <span>Step-by-Step Calculator</span>
             </button>
 
-            {isAuthenticated ? (
+            {isPaid ? (
+              <button
+                onClick={() => setCurrentTab('home')}
+                className="px-5 py-2.5 rounded-full bg-[#FFD700] hover:bg-yellow-400 text-black font-extrabold text-xs sm:text-sm shadow-md transition-all flex items-center gap-1.5 cursor-pointer"
+              >
+                <Unlock className="w-4 h-4 text-black" />
+                <span>Go to App (Unlocked)</span>
+                <ArrowRight className="w-4 h-4" />
+              </button>
+            ) : isAuthenticated ? (
               <button
                 onClick={() => setCurrentTab('home')}
                 className="px-5 py-2.5 rounded-full bg-[#FFD700] hover:bg-yellow-400 text-black font-bold text-xs sm:text-sm shadow-md transition-all flex items-center gap-1.5 cursor-pointer"
@@ -135,18 +255,19 @@ export const PublicLandingView: React.FC = () => {
             ) : (
               <>
                 <button
-                  onClick={handleGoToLogin}
-                  className="px-5 py-2 rounded-full border border-white/20 hover:border-white/40 text-white font-bold text-xs sm:text-sm transition-colors cursor-pointer"
+                  onClick={() => setCurrentTab('login')}
+                  className="px-4 py-2 rounded-full border border-white/20 hover:border-white/40 text-white font-bold text-xs sm:text-sm transition-colors cursor-pointer"
                 >
                   Login
                 </button>
 
-                <button
-                  onClick={handleStartTrial}
-                  className="px-5 py-2.5 rounded-full bg-[#FFD700] hover:bg-yellow-400 text-black font-black text-xs sm:text-sm shadow-lg shadow-yellow-500/20 transition-all cursor-pointer transform hover:scale-105 active:scale-95"
+                <a
+                  href="#instant-unlock"
+                  className="px-5 py-2.5 rounded-full bg-[#0077b6] hover:bg-[#023e8a] text-white font-black text-xs sm:text-sm shadow-lg shadow-blue-500/20 transition-all cursor-pointer transform hover:scale-105 active:scale-95 flex items-center gap-1.5"
                 >
-                  Start FREE 2-Day Trial
-                </button>
+                  <QrCode className="w-4 h-4" />
+                  <span>Unlock R60 Instant</span>
+                </a>
               </>
             )}
           </div>
@@ -157,7 +278,7 @@ export const PublicLandingView: React.FC = () => {
         {/* ========================================================
             HERO SECTION (NETFLIX AESTHETIC)
            ======================================================== */}
-        <section className="relative overflow-hidden pt-16 pb-20 sm:pt-24 sm:pb-32 px-4 sm:px-6 text-center border-b border-white/10">
+        <section className="relative overflow-hidden pt-12 pb-16 sm:pt-20 sm:pb-24 px-4 sm:px-6 text-center border-b border-white/10">
           
           {/* Subtle Netflix cinematic glow */}
           <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[350px] bg-[#FFD700]/10 rounded-full blur-[140px] pointer-events-none" />
@@ -185,43 +306,159 @@ export const PublicLandingView: React.FC = () => {
               Original DBE Past Paper (English/Afrikaans) + Explain memo step-by-step in YOUR language
             </p>
 
-            {/* 11 Languages Badges */}
-            <div className="mt-7 flex flex-wrap justify-center gap-2 max-w-2xl mx-auto">
-              {SA_LANGUAGES_BADGES.map((lang) => (
-                <span
-                  key={lang}
-                  className="px-3 py-1 rounded-full text-xs font-semibold bg-white/10 hover:bg-white/20 border border-white/15 text-white/90 transition-colors"
+            {/* Active Unlocked Status Banner if paid */}
+            {isPaid && (
+              <div className="mt-6 inline-flex items-center gap-2.5 px-5 py-2.5 rounded-2xl bg-emerald-500/20 border border-emerald-400 text-emerald-300 font-bold text-sm shadow-lg">
+                <CheckCircle2 className="w-5 h-5 text-emerald-400" />
+                <span>NEXOVIAN Premium Active — Full Access Unlocked</span>
+                <button
+                  onClick={handleStartLearning}
+                  className="ml-2 px-3 py-1 rounded-xl bg-emerald-400 text-black font-black text-xs hover:bg-emerald-300"
                 >
-                  {lang}
-                </span>
-              ))}
+                  Open Dashboard →
+                </button>
+              </div>
+            )}
+
+            {/* ========================================================
+                AUTOMATIC INSTANT ACCESS BOX (STEP 1 & STEP 2)
+               ======================================================== */}
+            <div id="instant-unlock" className="mt-10 max-w-3xl mx-auto bg-[#0c0c0c] border-2 border-[#FFD700]/80 rounded-3xl p-6 sm:p-8 text-left shadow-2xl relative overflow-hidden">
+              
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-5 border-b border-white/10">
+                <div>
+                  <div className="flex items-center gap-2 text-xs font-mono font-bold uppercase text-[#FFD700]">
+                    <Sparkles className="w-4 h-4 text-[#FFD700]" />
+                    <span>Instant Auto Access &bull; No Waiting</span>
+                  </div>
+                  <h3 className="font-display font-black text-xl sm:text-2xl text-white mt-1">
+                    Choose Your Language &amp; Grade &mdash; Unlock for R60
+                  </h3>
+                </div>
+                <div className="text-right sm:text-right shrink-0">
+                  <div className="text-2xl font-black text-[#FFD700]">R60</div>
+                  <div className="text-[11px] text-white/60">One-time / Monthly</div>
+                </div>
+              </div>
+
+              {/* 1. CHOOSE LANGUAGE (11 LANGUAGES) */}
+              <div className="mt-5">
+                <div className="flex items-center justify-between mb-2.5">
+                  <span className="text-xs font-mono font-bold uppercase tracking-wider text-white/80 flex items-center gap-1.5">
+                    <Languages className="w-4 h-4 text-[#FFD700]" />
+                    <span>1. Select Your Language (All 11 Official):</span>
+                  </span>
+                  <span className="text-xs text-[#FFD700] font-bold">
+                    {selectedLangObj.name} ({selectedLangObj.native})
+                  </span>
+                </div>
+
+                <div className="flex flex-wrap gap-2">
+                  {ALL_11_LANGUAGES.map((lang) => {
+                    const isSelected = selectedLang === lang.code;
+                    return (
+                      <button
+                        key={lang.code}
+                        type="button"
+                        onClick={() => setSelectedLang(lang.code)}
+                        className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
+                          isSelected
+                            ? 'bg-[#FFD700] text-black font-black shadow-md shadow-yellow-500/20 scale-105'
+                            : 'bg-white/10 hover:bg-white/20 text-white/90 border border-white/10'
+                        }`}
+                      >
+                        <span>{lang.name}</span>
+                        {lang.isNativeSpecial && <span className="ml-1 text-[10px]">⭐</span>}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* 2. CHOOSE GRADE (GRADE 4 TO UNIVERSITY) */}
+              <div className="mt-6">
+                <div className="flex items-center justify-between mb-2.5">
+                  <span className="text-xs font-mono font-bold uppercase tracking-wider text-white/80 flex items-center gap-1.5">
+                    <GraduationCap className="w-4 h-4 text-[#FFD700]" />
+                    <span>2. Select Grade (Grade 4 to University):</span>
+                  </span>
+                  <span className="text-xs text-[#FFD700] font-bold">
+                    {selectedGradeObj.name} &bull; {selectedGradeObj.level}
+                  </span>
+                </div>
+
+                <div className="flex flex-wrap gap-2">
+                  {ALL_GRADES.map((grade) => {
+                    const isSelected = selectedGradeId === grade.id;
+                    return (
+                      <button
+                        key={grade.id}
+                        type="button"
+                        onClick={() => setSelectedGradeId(grade.id)}
+                        className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
+                          isSelected
+                            ? 'bg-[#FFD700] text-black font-black shadow-md shadow-yellow-500/20 scale-105'
+                            : 'bg-white/10 hover:bg-white/20 text-white/90 border border-white/10'
+                        }`}
+                      >
+                        <span>{grade.name}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* 3. TWO BUTTONS SIDE BY SIDE */}
+              <div className="mt-8 pt-6 border-t border-white/10">
+                <div className="flex flex-col sm:flex-row items-stretch gap-3">
+                  
+                  {/* Button 1: Pay R60 with SnapScan */}
+                  <a
+                    href={SNAPSCAN_URL}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={handleSnapScanPayClick}
+                    className="flex-1 py-4 px-5 rounded-2xl bg-[#0077b6] hover:bg-[#023e8a] text-white font-black text-sm sm:text-base shadow-xl shadow-blue-600/30 transition-all transform hover:-translate-y-0.5 active:translate-y-0 flex items-center justify-center gap-2.5 text-center cursor-pointer"
+                  >
+                    <QrCode className="w-5 h-5 shrink-0" />
+                    <span>Pay R60 with SnapScan</span>
+                    <ExternalLink className="w-4 h-4 opacity-75 shrink-0 ml-0.5" />
+                  </a>
+
+                  {/* Button 2: I Have Paid - Unlock App */}
+                  <button
+                    type="button"
+                    onClick={handleUnlockApp}
+                    className="flex-1 py-4 px-5 rounded-2xl bg-[#FFD700] hover:bg-yellow-400 text-black font-black text-sm sm:text-base shadow-xl shadow-yellow-500/30 transition-all transform hover:-translate-y-0.5 active:translate-y-0 flex items-center justify-center gap-2.5 text-center cursor-pointer"
+                  >
+                    <CheckCircle2 className="w-5 h-5 text-black shrink-0" />
+                    <span>I Have Paid - Unlock App</span>
+                  </button>
+                </div>
+
+                {/* Trust Line */}
+                <div className="mt-3.5 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-white/60">
+                  <p className="flex items-center gap-1.5 text-white/80 font-medium">
+                    <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0" />
+                    <span>Payment verified by SnapScan to NEXOVIAN PTY LTD - Instant Auto Unlock</span>
+                  </p>
+                  <p className="text-[11px] text-white/40">
+                    No waiting for admin &bull; Instant unlock
+                  </p>
+                </div>
+              </div>
             </div>
 
-            {/* 2 CTA Buttons */}
-            <div className="mt-9 flex flex-col sm:flex-row items-center justify-center gap-4 max-w-md mx-auto">
-              <button
-                onClick={handleStartTrial}
-                className="w-full sm:w-auto px-8 py-4 rounded-2xl bg-[#FFD700] hover:bg-yellow-400 text-black font-black text-base shadow-xl shadow-yellow-500/25 transition-all transform hover:-translate-y-0.5 active:translate-y-0 cursor-pointer flex items-center justify-center gap-2"
-              >
-                <span>Start FREE 2-Day Trial</span>
-                <ArrowRight className="w-5 h-5" />
-              </button>
-
+            {/* Quick Demo CTA */}
+            <div className="mt-6 flex items-center justify-center">
               <button
                 onClick={() => setIsDemoModalOpen(true)}
-                className="w-full sm:w-auto px-7 py-4 rounded-2xl bg-white/10 hover:bg-white/15 text-white font-bold text-base border border-white/20 transition-all cursor-pointer flex items-center justify-center gap-2.5"
+                className="px-6 py-2.5 rounded-full bg-white/10 hover:bg-white/15 text-white font-bold text-xs sm:text-sm border border-white/20 transition-all cursor-pointer flex items-center gap-2"
               >
-                <div className="w-6 h-6 rounded-full bg-[#FFD700] text-black flex items-center justify-center font-bold">
-                  <Play className="w-3 h-3 fill-black ml-0.5" />
-                </div>
-                <span>Watch 20sec Demo</span>
+                <Play className="w-3.5 h-3.5 fill-[#FFD700] text-[#FFD700]" />
+                <span>Watch 20-sec DBE Memo Explainer Demo</span>
               </button>
             </div>
-
-            {/* Micro trust guarantee */}
-            <p className="mt-4 text-xs text-white/40">
-              ✓ 2 Days Free &bull; ✓ R60/month after &bull; ✓ Cancel anytime with 1 click
-            </p>
           </div>
         </section>
 
@@ -238,61 +475,61 @@ export const PublicLandingView: React.FC = () => {
             </h2>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 sm:gap-8">
             
             {/* Card 1: CAPS Notes & Quizzes */}
-            <div className="bg-[#0D0D0D] border border-white/10 hover:border-[#FFD700]/50 rounded-3xl p-7 transition-all duration-300 shadow-xl group flex flex-col justify-between">
+            <div className="bg-[#0D0D0D] border border-white/10 hover:border-[#FFD700]/50 rounded-3xl p-6 sm:p-8 flex flex-col justify-between transition-all group">
               <div>
-                <div className="w-14 h-14 rounded-2xl bg-[#FFD700]/10 text-[#FFD700] flex items-center justify-center font-bold mb-5 group-hover:scale-105 transition-transform">
-                  <BookOpen className="w-7 h-7" />
+                <div className="w-12 h-12 rounded-2xl bg-[#FFD700]/15 text-[#FFD700] flex items-center justify-center mb-5 group-hover:scale-110 transition-transform">
+                  <BookOpen className="w-6 h-6" />
                 </div>
                 <h3 className="font-display font-black text-xl text-white mb-2">
-                  CAPS Notes &amp; Quizzes (Grade 4 to University)
+                  CAPS notes &amp; quizzes (Grade 4 to University)
                 </h3>
-                <p className="text-sm text-white/70 leading-relaxed">
-                  Full Term 1 to Term 4 syllabus coverage for School, TVET (NATED N1&ndash;N6), and University modules with interactive quiz feedback.
+                <p className="text-xs sm:text-sm text-white/70 leading-relaxed">
+                  Full curriculum coverage aligned with DBE CAPS and TVET N1-N6. Interactive quizzes with instant diagnostic hints in your native language.
                 </p>
               </div>
-              <div className="pt-5 mt-6 border-t border-white/10 flex items-center justify-between text-xs font-bold text-[#FFD700]">
-                <span>Grades 4&ndash;12 &bull; TVET &bull; University</span>
+              <div className="mt-6 pt-4 border-t border-white/10 flex items-center justify-between text-xs text-[#FFD700] font-bold">
+                <span>13 Grades + TVET &bull; 800+ Quizzes</span>
                 <Check className="w-4 h-4" />
               </div>
             </div>
 
             {/* Card 2: Instant Homework Help */}
-            <div className="bg-[#0D0D0D] border border-white/10 hover:border-[#FFD700]/50 rounded-3xl p-7 transition-all duration-300 shadow-xl group flex flex-col justify-between">
+            <div className="bg-[#0D0D0D] border border-white/10 hover:border-[#FFD700]/50 rounded-3xl p-6 sm:p-8 flex flex-col justify-between transition-all group">
               <div>
-                <div className="w-14 h-14 rounded-2xl bg-[#FFD700]/10 text-[#FFD700] flex items-center justify-center font-bold mb-5 group-hover:scale-105 transition-transform">
-                  <Languages className="w-7 h-7" />
+                <div className="w-12 h-12 rounded-2xl bg-[#FFD700]/15 text-[#FFD700] flex items-center justify-center mb-5 group-hover:scale-110 transition-transform">
+                  <HelpCircle className="w-6 h-6" />
                 </div>
                 <h3 className="font-display font-black text-xl text-white mb-2">
-                  Instant Homework Help (Ask in Your Language)
+                  Instant homework help (Ask in your language)
                 </h3>
-                <p className="text-sm text-white/70 leading-relaxed">
-                  Stuck on a tricky concept? Ask questions and receive step-by-step teacher explanations in your mother tongue &mdash; in all 11 SA languages.
+                <p className="text-xs sm:text-sm text-white/70 leading-relaxed">
+                  Stuck on algebra, physics, or accounting? Ask any question in isiZulu, Sepedi, Afrikaans, or English and get simple, friendly explanations.
                 </p>
               </div>
-              <div className="pt-5 mt-6 border-t border-white/10 flex items-center justify-between text-xs font-bold text-[#FFD700]">
-                <span>11 Official Languages</span>
+              <div className="mt-6 pt-4 border-t border-white/10 flex items-center justify-between text-xs text-[#FFD700] font-bold">
+                <span>All 11 Official SA Languages</span>
                 <Check className="w-4 h-4" />
               </div>
             </div>
 
-            {/* Card 3: 4000+ DBE Past Papers with Memos */}
-            <div className="bg-[#0D0D0D] border border-white/10 hover:border-[#FFD700]/50 rounded-3xl p-7 transition-all duration-300 shadow-xl group flex flex-col justify-between">
+            {/* Card 3: 4000+ DBE Past Papers with Memo Explanations */}
+            <div className="bg-[#0D0D0D] border border-white/10 hover:border-[#FFD700]/50 rounded-3xl p-6 sm:p-8 flex flex-col justify-between transition-all group">
               <div>
-                <div className="w-14 h-14 rounded-2xl bg-[#FFD700]/10 text-[#FFD700] flex items-center justify-center font-bold mb-5 group-hover:scale-105 transition-transform">
-                  <FileText className="w-7 h-7" />
+                <div className="w-12 h-12 rounded-2xl bg-[#FFD700]/15 text-[#FFD700] flex items-center justify-center mb-5 group-hover:scale-110 transition-transform">
+                  <FileText className="w-6 h-6" />
                 </div>
                 <h3 className="font-display font-black text-xl text-white mb-2">
-                  4000+ DBE Past Papers with Memo Explanations
+                  4000+ DBE Past Papers with memo explanations
                 </h3>
-                <p className="text-sm text-white/70 leading-relaxed">
-                  National Senior Certificate (NSC) exam papers with official marking guidelines. Tap one button to translate any memo line-by-line.
+                <p className="text-xs sm:text-sm text-white/70 leading-relaxed">
+                  Real national examination papers with step-by-step memos translated into your home language so you never get lost in mathematical jargon.
                 </p>
               </div>
-              <div className="pt-5 mt-6 border-t border-white/10 flex items-center justify-between text-xs font-bold text-[#FFD700]">
-                <span>2018&ndash;2024 Exam Walkthroughs</span>
+              <div className="mt-6 pt-4 border-t border-white/10 flex items-center justify-between text-xs text-[#FFD700] font-bold">
+                <span>Official Memos &bull; Step-by-Step</span>
                 <Check className="w-4 h-4" />
               </div>
             </div>
@@ -300,71 +537,69 @@ export const PublicLandingView: React.FC = () => {
         </section>
 
         {/* ========================================================
-            INTERACTIVE MEMO EXPLANATION DEMO (EXPERIENCE IT NOW)
+            MEMO EXPLANATION FEATURE LIVE DEMO
            ======================================================== */}
-        <section className="py-14 sm:py-20 bg-[#0A0A0A] border-y border-white/10">
-          <div className="max-w-3xl mx-auto px-4 sm:px-6">
-            <div className="text-center mb-8">
+        <section className="py-16 sm:py-24 bg-[#0A0A0A] border-y border-white/10 px-4 sm:px-6">
+          <div className="max-w-4xl mx-auto">
+            <div className="text-center mb-10">
               <span className="text-xs uppercase font-mono font-bold text-[#FFD700] tracking-widest block mb-1">
-                SEE HOW IT WORKS
+                PATENT-PENDING LEARNING ENGINE
               </span>
-              <h2 className="font-display font-black text-2xl sm:text-3xl text-white">
-                Live Memo Explanation in 11 Languages
+              <h2 className="font-display font-black text-2xl sm:text-4xl text-white">
+                How Memo Translation Works in Real Life
               </h2>
               <p className="mt-2 text-xs sm:text-sm text-white/60">
-                DBE exam papers stay in English, but the underlying solution is explained in your mother tongue
+                Original DBE Past Paper (English) + Explanation in YOUR Mother Tongue
               </p>
             </div>
 
+            {/* Interactive Demo Card */}
             <div className="bg-[#121212] border border-white/15 rounded-3xl p-6 sm:p-8 shadow-2xl">
-              <div className="p-4 rounded-2xl bg-black border border-white/10 font-mono space-y-2">
-                <div className="flex items-center justify-between text-xs text-white/50 border-b border-white/10 pb-2">
-                  <span className="text-[#FFD700] font-bold">DBE Mathematics NSC Examination</span>
-                  <span>Paper 1 &bull; Question 1.1</span>
+              
+              {/* Question Header */}
+              <div className="p-4 rounded-2xl bg-white/5 border border-white/10 mb-5">
+                <div className="text-[11px] font-mono font-bold text-[#FFD700] uppercase tracking-wider mb-1">
+                  DBE Mathematics Paper 1 &bull; Question 1.1
                 </div>
-                <div className="text-base sm:text-lg font-bold text-white pt-1">
-                  Solve for x: <span className="text-[#FFD700]">2x + 3 = 7</span>
-                </div>
-                <div className="text-xs text-emerald-400 font-bold border-t border-white/10 pt-2 flex items-center justify-between">
-                  <span>Official Memo Solution:</span>
-                  <span className="bg-emerald-950/80 px-2 py-0.5 rounded text-emerald-300">
-                    x = 2 [2 Marks]
-                  </span>
-                </div>
+                <p className="text-base sm:text-lg font-bold text-white">
+                  Solve for x: <span className="font-mono text-[#FFD700]">2x + 3 = 7</span>
+                </p>
+                <p className="text-xs text-white/50 mt-1 font-mono">
+                  Official DBE Memo: 2x = 4 &rarr; x = 2 (2 marks)
+                </p>
               </div>
 
-              {/* Memo selector */}
-              <div className="mt-6 flex flex-col sm:flex-row items-center justify-between gap-3">
-                <div className="text-xs font-bold text-white/80 flex items-center gap-2">
-                  <HelpCircle className="w-4 h-4 text-[#FFD700]" />
-                  <span>Don&apos;t understand the memo? Get it in your language:</span>
+              {/* Action Banner with Language Dropdown */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 rounded-2xl bg-[#000000] border border-white/10 mb-4">
+                <div className="text-xs text-white/80">
+                  <span className="font-bold text-white block">Don&apos;t understand the official English memo?</span>
+                  <span className="text-white/60">Get it broken down step-by-step in your mother tongue:</span>
                 </div>
 
-                <div className="relative">
+                <div className="relative inline-block text-left shrink-0">
                   <button
                     onClick={() => setIsDemoDropdownOpen(!isDemoDropdownOpen)}
-                    className="px-4 py-2.5 rounded-xl bg-[#007A4D] hover:bg-[#006640] text-white font-bold text-xs shadow-md flex items-center gap-2 cursor-pointer transition-colors"
+                    className="px-4 py-2 rounded-xl bg-[#FFD700] hover:bg-yellow-400 text-black font-extrabold text-xs flex items-center gap-2 shadow-sm cursor-pointer"
                   >
-                    <Languages className="w-4 h-4 text-[#FFD700]" />
-                    <span>Explain in: {demoLang}</span>
-                    <ChevronDown className={`w-3.5 h-3.5 transition-transform ${isDemoDropdownOpen ? 'rotate-180' : ''}`} />
+                    <Languages className="w-4 h-4" />
+                    <span>Explain in {demoLang}</span>
+                    <ChevronDown className="w-3.5 h-3.5" />
                   </button>
 
                   {isDemoDropdownOpen && (
-                    <div className="absolute right-0 mt-2 w-56 max-h-60 overflow-y-auto bg-[#1A1A1A] border border-white/20 rounded-2xl shadow-2xl z-30 p-1.5 divide-y divide-white/10">
-                      {SA_LANGUAGES_BADGES.map((l) => (
+                    <div className="absolute right-0 mt-2 w-48 rounded-2xl bg-[#1A1A1A] border border-white/20 shadow-2xl py-2 z-20 max-h-60 overflow-y-auto">
+                      {ALL_11_LANGUAGES.map((lang) => (
                         <button
-                          key={l}
+                          key={lang.name}
                           onClick={() => {
-                            setDemoLang(l);
+                            setDemoLang(lang.name);
                             setIsDemoDropdownOpen(false);
                           }}
-                          className={`w-full text-left px-3 py-2 rounded-xl text-xs flex items-center justify-between transition-colors ${
-                            demoLang === l ? 'bg-[#FFD700] text-black font-bold' : 'text-white hover:bg-white/10'
+                          className={`w-full text-left px-4 py-2 text-xs hover:bg-[#FFD700] hover:text-black transition-colors ${
+                            demoLang === lang.name ? 'text-[#FFD700] font-bold' : 'text-white/90'
                           }`}
                         >
-                          <span>{l}</span>
-                          {demoLang === l && <Check className="w-4 h-4" />}
+                          {lang.name} ({lang.native})
                         </button>
                       ))}
                     </div>
@@ -372,18 +607,14 @@ export const PublicLandingView: React.FC = () => {
                 </div>
               </div>
 
-              {/* Yellow Explanation Box */}
-              <div className="mt-4 p-5 rounded-2xl bg-[#FFF9D2] text-slate-950 border-2 border-[#F59E0B] shadow-lg">
-                <div className="flex items-center justify-between mb-1 pb-1 border-b border-amber-300">
-                  <span className="text-[11px] font-mono font-black uppercase text-amber-950">
-                    NEXOVIAN Multilingual Memo Explainer
-                  </span>
-                  <span className="text-[11px] font-bold bg-amber-200 px-2 py-0.5 rounded text-amber-900">
-                    {demoLang}
-                  </span>
+              {/* Translation Output Box */}
+              <div className="p-5 rounded-2xl bg-[#FFD700]/10 border border-[#FFD700]/30 text-white">
+                <div className="flex items-center gap-2 text-xs font-mono font-bold text-[#FFD700] uppercase tracking-wider mb-2">
+                  <CheckCircle2 className="w-4 h-4 text-[#FFD700]" />
+                  <span>Step-by-Step Memo Explanation ({demoLang})</span>
                 </div>
-                <p className="text-xs sm:text-[14px] leading-relaxed font-semibold text-slate-900 mt-1">
-                  {MEMO_DEMO_EXPLANATIONS[demoLang] || MEMO_DEMO_EXPLANATIONS.English}
+                <p className="text-xs sm:text-sm text-white/90 leading-relaxed font-medium">
+                  {MEMO_DEMO_EXPLANATIONS[demoLang] || MEMO_DEMO_EXPLANATIONS.isiZulu}
                 </p>
               </div>
             </div>
@@ -391,12 +622,12 @@ export const PublicLandingView: React.FC = () => {
         </section>
 
         {/* ========================================================
-            PRICING SECTION (FREE 2 DAYS, THEN R60/MONTH)
+            PRICING SECTION: FREE FOR 2 DAYS, THEN R60/MONTH
            ======================================================== */}
-        <section id="pricing" className="py-16 sm:py-24 max-w-4xl mx-auto px-4 sm:px-6">
+        <section className="py-16 sm:py-24 max-w-4xl mx-auto px-4 sm:px-6">
           <div className="text-center mb-10">
             <span className="text-xs uppercase font-mono font-bold text-[#FFD700] tracking-widest block mb-1">
-              SIMPLE &amp; EQUAL PRICING
+              AFFORDABLE FOR EVERY SOUTH AFRICAN FAMILY
             </span>
             <h2 className="font-display font-black text-3xl sm:text-4xl text-white">
               One Price. Everyone Equal.
@@ -405,7 +636,7 @@ export const PublicLandingView: React.FC = () => {
 
           <div className="max-w-md mx-auto bg-[#0D0D0D] border-2 border-[#FFD700] rounded-3xl p-8 sm:p-10 text-center shadow-2xl relative overflow-hidden">
             <div className="inline-block px-3 py-1 rounded-full bg-[#FFD700] text-black text-xs font-mono font-bold uppercase mb-4">
-              FREE FOR 2 DAYS, THEN R60/MONTH
+              R60 / MONTH &bull; CANCEL ANYTIME
             </div>
 
             <div className="flex items-baseline justify-center gap-1.5 mb-2">
@@ -414,7 +645,7 @@ export const PublicLandingView: React.FC = () => {
             </div>
 
             <p className="text-xs text-white/70 mb-6">
-              Pay R0 today &bull; Full unlimited access for 48 hours
+              Instant Auto Unlock via SnapScan &bull; No admin wait time
             </p>
 
             <ul className="text-left text-xs sm:text-sm space-y-3 mb-8 text-white/90">
@@ -428,20 +659,39 @@ export const PublicLandingView: React.FC = () => {
               </li>
               <li className="flex items-center gap-2.5">
                 <Check className="w-4 h-4 text-[#FFD700] shrink-0" />
-                <span>Cancel anytime &bull; No hidden fees</span>
+                <span>4000+ DBE Past Papers with step-by-step memos</span>
+              </li>
+              <li className="flex items-center gap-2.5">
+                <Check className="w-4 h-4 text-[#FFD700] shrink-0" />
+                <span>Cancel anytime &bull; No hidden contracts</span>
               </li>
             </ul>
 
-            <button
-              onClick={handleStartTrial}
-              className="w-full py-4 rounded-xl bg-[#FFD700] hover:bg-yellow-400 text-black font-black text-base shadow-xl shadow-yellow-500/20 transition-all transform hover:-translate-y-0.5 active:translate-y-0 cursor-pointer flex items-center justify-center gap-2"
-            >
-              <span>Start Learning Now</span>
-              <ArrowRight className="w-4 h-4" />
-            </button>
+            {/* Side-by-Side Payment Buttons on Pricing Card */}
+            <div className="space-y-3">
+              <a
+                href={SNAPSCAN_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={handleSnapScanPayClick}
+                className="w-full py-4 rounded-xl bg-[#0077b6] hover:bg-[#023e8a] text-white font-black text-base shadow-xl shadow-blue-600/30 transition-all transform hover:-translate-y-0.5 active:translate-y-0 cursor-pointer flex items-center justify-center gap-2"
+              >
+                <QrCode className="w-5 h-5 shrink-0" />
+                <span>Pay R60 with SnapScan</span>
+              </a>
 
-            <p className="mt-3 text-[11px] text-white/40">
-              Secured by Paystack &bull; Level 1 B-BBEE
+              <button
+                type="button"
+                onClick={handleUnlockApp}
+                className="w-full py-4 rounded-xl bg-[#FFD700] hover:bg-yellow-400 text-black font-black text-base shadow-xl shadow-yellow-500/20 transition-all transform hover:-translate-y-0.5 active:translate-y-0 cursor-pointer flex items-center justify-center gap-2"
+              >
+                <CheckCircle2 className="w-5 h-5 text-black shrink-0" />
+                <span>I Have Paid - Unlock App</span>
+              </button>
+            </div>
+
+            <p className="mt-4 text-[11px] text-white/50 font-mono">
+              Payment verified by SnapScan to NEXOVIAN PTY LTD - Instant Auto Unlock
             </p>
           </div>
         </section>
@@ -481,6 +731,91 @@ export const PublicLandingView: React.FC = () => {
         </div>
       </footer>
 
+      {/* ========================================================
+          TIMER POPUP: 10 SECONDS AFTER CLICKING PAY
+          "Payment done? Click Unlock"
+         ======================================================== */}
+      {showPaymentDonePopup && (
+        <div className="fixed bottom-6 right-4 sm:right-6 z-50 max-w-sm w-full bg-[#141414] border-2 border-[#FFD700] rounded-2xl p-5 shadow-2xl text-left animate-in slide-in-from-bottom duration-300">
+          <div className="flex items-start justify-between gap-2">
+            <div className="flex items-center gap-2 text-xs font-mono font-bold text-[#FFD700] uppercase">
+              <Clock className="w-4 h-4 text-[#FFD700]" />
+              <span>SnapScan Payment Auto-Unlock</span>
+            </div>
+            <button
+              onClick={() => setShowPaymentDonePopup(false)}
+              className="text-white/50 hover:text-white p-1"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+
+          <h4 className="font-display font-bold text-base text-white mt-1.5">
+            Payment done? Click Unlock
+          </h4>
+          <p className="text-xs text-white/70 mt-1 leading-relaxed">
+            Completed your R60 payment on the SnapScan tab? Click below to instantly activate full access to all subjects, papers, and memos!
+          </p>
+
+          <button
+            onClick={handleUnlockApp}
+            className="mt-3.5 w-full py-3 px-4 rounded-xl bg-[#FFD700] hover:bg-yellow-400 text-black font-black text-xs sm:text-sm shadow-lg flex items-center justify-center gap-2 cursor-pointer transition-transform active:scale-95"
+          >
+            <CheckCircle2 className="w-4 h-4 text-black" />
+            <span>I Have Paid - Unlock App</span>
+          </button>
+        </div>
+      )}
+
+      {/* ========================================================
+          SUCCESS MODAL: WELCOME TO NEXOVIAN PREMIUM
+         ======================================================== */}
+      {showSuccessModal && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
+          <div className="bg-[#121212] border-2 border-[#FFD700] rounded-3xl max-w-md w-full p-6 sm:p-8 text-center shadow-2xl relative animate-in zoom-in-95 duration-200">
+            <div className="w-16 h-16 rounded-full bg-[#FFD700] text-black flex items-center justify-center mx-auto mb-4 font-black text-2xl shadow-lg">
+              ✓
+            </div>
+
+            <div className="inline-block px-3 py-1 rounded-full bg-emerald-500/20 border border-emerald-400 text-emerald-300 text-xs font-mono font-bold uppercase mb-3">
+              Access Granted &bull; Instant Auto-Unlock
+            </div>
+
+            <h3 className="font-display font-black text-2xl text-white mb-2">
+              Welcome to NEXOVIAN Premium!
+            </h3>
+
+            <p className="text-xs sm:text-sm text-white/80 mb-5 leading-relaxed">
+              Your R60 payment has been registered. Full curriculum content from Grade 4 to University is now unlocked.
+            </p>
+
+            {/* Selected Config Display */}
+            <div className="p-4 rounded-2xl bg-white/5 border border-white/10 text-left space-y-2 mb-6 text-xs">
+              <div className="flex items-center justify-between text-white/70">
+                <span>Selected Grade:</span>
+                <strong className="text-[#FFD700] font-bold">{selectedGradeObj.name} ({selectedGradeObj.level})</strong>
+              </div>
+              <div className="flex items-center justify-between text-white/70">
+                <span>Home Language:</span>
+                <strong className="text-[#FFD700] font-bold">{selectedLangObj.name} ({selectedLangObj.native})</strong>
+              </div>
+              <div className="flex items-center justify-between text-emerald-400 font-bold pt-2 border-t border-white/10">
+                <span>All 11 Languages &amp; Past Papers:</span>
+                <span>UNLOCKED</span>
+              </div>
+            </div>
+
+            <button
+              onClick={handleStartLearning}
+              className="w-full py-4 rounded-xl bg-[#FFD700] hover:bg-yellow-400 text-black font-black text-base shadow-xl shadow-yellow-500/30 flex items-center justify-center gap-2 cursor-pointer transition-transform hover:scale-[1.02] active:scale-95"
+            >
+              <span>Access Granted - Start Learning</span>
+              <ArrowRight className="w-5 h-5 text-black" />
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* 20-Second Demo Modal */}
       {isDemoModalOpen && (
         <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
@@ -498,23 +833,24 @@ export const PublicLandingView: React.FC = () => {
               20-Second Platform Walkthrough
             </h3>
             <p className="text-xs text-white/70 mb-5 leading-relaxed">
-              Nexovian allows any learner to browse DBE past papers, click &ldquo;Explain in My Language&rdquo;, and understand the math and science step-by-step.
+              Nexovian allows any learner to browse DBE past papers, click &ldquo;Explain in My Language&rdquo;, and understand math and science step-by-step.
             </p>
             <div className="aspect-video bg-black rounded-2xl border border-white/10 flex flex-col items-center justify-center p-6 text-xs text-white/60">
               <div className="p-3 bg-white/5 rounded-xl border border-white/10 text-left w-full space-y-1 mb-3">
                 <span className="text-[#FFD700] font-bold block">1. Choose any subject &amp; past paper</span>
                 <span>2. Tap [🌐 Explain in My Language]</span>
-                <span className="text-emerald-400 block">3. Immediate mother-tongue explanation in isiZulu, Sesotho, etc.</span>
+                <span className="text-emerald-400 block">3. Immediate mother-tongue explanation in isiZulu, Sepedi, etc.</span>
               </div>
-              <button
-                onClick={() => {
-                  setIsDemoModalOpen(false);
-                  setCurrentTab('signup');
-                }}
-                className="w-full py-3 bg-[#FFD700] text-black font-bold rounded-xl text-xs hover:bg-yellow-400"
+              <a
+                href={SNAPSCAN_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={handleSnapScanPayClick}
+                className="w-full py-3 bg-[#0077b6] text-white font-bold rounded-xl text-xs hover:bg-[#023e8a] flex items-center justify-center gap-2"
               >
-                Start Your 2-Day Free Trial
-              </button>
+                <QrCode className="w-4 h-4" />
+                <span>Pay R60 with SnapScan &bull; Instant Access</span>
+              </a>
             </div>
           </div>
         </div>

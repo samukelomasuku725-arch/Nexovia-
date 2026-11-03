@@ -258,6 +258,9 @@ export interface TrialStateResult {
 export function isUserPaidLocally(userId?: string, email?: string): boolean {
   if (typeof window === 'undefined') return false;
   try {
+    if (localStorage.getItem('nexovian_paid') === 'true') {
+      return true;
+    }
     if (userId && localStorage.getItem(`nexovian_sub_${userId}`) === 'active') {
       return true;
     }
@@ -275,6 +278,22 @@ export function isUserPaidLocally(userId?: string, email?: string): boolean {
  */
 export function checkFastTrialState(user: { id: string; email?: string; createdAt?: string } | null): TrialStateResult {
   const timeline = getTrialTimelineInfo();
+
+  // Instant SnapScan paid check (bypasses all paywalls and restrictions)
+  if (typeof window !== 'undefined' && localStorage.getItem('nexovian_paid') === 'true') {
+    return {
+      isAllowed: true,
+      isSubscribed: true,
+      isTrialActive: false,
+      isTrialExpired: false,
+      hoursRemainingInTrial: 999999,
+      showYellowBox: false,
+      actualTrialEndDate: 'UNLOCKED',
+      smartMessage: 'NEXOVIAN Premium Active',
+      timelineInfo: timeline,
+      isPaidUser: true
+    };
+  }
 
   // STATE 1: Anonymous visitor (No account / New link click)
   if (!user || !user.email) {
