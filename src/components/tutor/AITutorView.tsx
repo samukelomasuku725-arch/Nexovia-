@@ -3,7 +3,7 @@ import { Send } from 'lucide-react';
 
 type Lang = 'en' | 'zu' | 'xh' | 'af';
 
-export default function AITutorView() {
+export function AITutorView() {
   const [input, setInput] = useState('');
   const [messages, setMessages] = useState<{role:'user'|'ai', text:string}[]>([
     {role:'ai', text:'Sawubona! I am NEXOVIAN — your AI tutor. Ask me any school question!'}
@@ -33,3 +33,4 @@ export default function AITutorView() {
     </div>
   );
 }
+export default AITutorView;

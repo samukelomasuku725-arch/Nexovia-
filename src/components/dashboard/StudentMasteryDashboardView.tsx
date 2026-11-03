@@ -78,6 +78,7 @@ import { getSubjectsForLevel } from '../../data/educationData';
 import { AnswerFeedbackWidget } from '../feedback/AnswerFeedbackWidget';
 import { OhmsLawInteractiveWidget } from '../interactive/OhmsLawInteractiveWidget';
 import { HeroSection } from '../home/HeroSection';
+import { MissionVisionSection } from '../home/MissionVisionSection';
 import { MissionHeroBanner } from '../home/MissionHeroBanner';
 
 export const StudentMasteryDashboardView: React.FC = () => {
@@ -508,7 +509,10 @@ export const StudentMasteryDashboardView: React.FC = () => {
             {/* 1. HERO SECTION FOR NEXOVIAN (PTY) LTD */}
             <HeroSection />
 
-            {/* 2. GUIDED LEARNING FINDER - KEPT DIRECTLY BELOW HERO */}
+            {/* 2. MISSION & VISION SECTION - NEXOVIAN.GROUP */}
+            <MissionVisionSection />
+
+            {/* 3. GUIDED LEARNING FINDER */}
             <section
               id="guided-learning-finder"
               aria-label="Guided Learning Finder"

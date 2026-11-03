@@ -1,0 +1,8 @@
+User-agent: *
+Allow: /
+Allow: /calculator
+Allow: /learn
+Allow: /about
+Allow: /trial
+
+Sitemap: https://nexovian.group/sitemap.xml

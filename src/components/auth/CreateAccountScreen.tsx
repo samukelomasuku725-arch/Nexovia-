@@ -34,7 +34,7 @@
  *    - Very bottom: "∞ NEXOVIAN (PTY) LTD • Built in Mpumalanga • Level 1 B-BBEE"
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Info,
   Eye,
@@ -47,6 +47,7 @@ import {
   Check
 } from 'lucide-react';
 import { useAuth, checkIsApp } from '../../context/AuthContext';
+import { useLearning } from '../../context/LearningContext';
 
 type AuthViewMode = 'login' | 'signup' | 'forgot_password';
 
@@ -147,10 +148,15 @@ function formatAuthError(err: any): string {
   return raw;
 }
 
-export const CreateAccountScreen: React.FC = () => {
+export const CreateAccountScreen: React.FC<{ initialMode?: 'login' | 'signup' }> = ({ initialMode = 'login' }) => {
   const { signUpWithEmail, signInWithEmail, resetPassword } = useAuth();
+  const { setCurrentTab } = useLearning();
 
-  const [mode, setMode] = useState<AuthViewMode>('login');
+  const [mode, setMode] = useState<AuthViewMode>(initialMode);
+
+  useEffect(() => {
+    setMode(initialMode);
+  }, [initialMode]);
   const [selectedLang, setSelectedLang] = useState<LanguageOption>(SA_LANGUAGES[0]);
   const [isLangModalOpen, setIsLangModalOpen] = useState(false);
 
@@ -202,6 +208,7 @@ export const CreateAccountScreen: React.FC = () => {
 
       const emailToUse = normalizeEmail(identifier);
       await signInWithEmail(emailToUse, password, rememberMe);
+      setCurrentTab('home');
     } catch (err: any) {
       console.error('Login error:', err);
       setError(formatAuthError(err));
@@ -231,8 +238,7 @@ export const CreateAccountScreen: React.FC = () => {
 
       const emailToUse = normalizeEmail(identifier);
 
-      // STATE 2: New account created -> 1 day free trial!
-      // Rule 2: Save email to used_trial_emails DB AFTER trial ends, NOT before!
+      // 1. First save account in database
       const res = await signUpWithEmail(
         emailToUse,
         password,
@@ -240,9 +246,65 @@ export const CreateAccountScreen: React.FC = () => {
         selectedLang.code
       );
 
-      if (res?.user && !res.session) {
-        setSignUpSuccess(true);
+      // Register trial in backend database with trial_start_date & trial_end_date
+      try {
+        await fetch('/api/subscription/register-trial', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            userId: res?.user?.id || res?.id || `usr_${Date.now()}`,
+            email: emailToUse,
+            fullName: fullName.trim()
+          })
+        });
+      } catch (subErr) {
+        console.warn('Subscription trial registration notice:', subErr);
       }
+
+      // 2. Immediately redirect to PayFast with subscription form
+      const d = new Date();
+      d.setDate(d.getDate() + 2);
+      const billingDate = d.toISOString().split('T')[0];
+
+      const nameParts = fullName.trim().split(' ');
+      const firstName = nameParts[0] || fullName.trim();
+      const lastName = nameParts.slice(1).join(' ') || 'Learner';
+
+      const form = document.createElement('form');
+      form.action = 'https://www.payfast.co.za/eng/process';
+      form.method = 'POST';
+      form.style.display = 'none';
+
+      const payfastFields: Record<string, string> = {
+        merchant_id: '37812581',
+        merchant_key: 'obu7uzftfncig',
+        return_url: 'https://nexovian.group/success',
+        cancel_url: 'https://nexovian.group/cancel',
+        notify_url: 'https://nexovian.group/notify',
+        name_first: firstName,
+        name_last: lastName,
+        email_address: emailToUse,
+        m_payment_id: 'NEXOVIAN-TRIAL',
+        amount: '0',
+        item_name: 'Nexovian 2-Day Free Trial',
+        item_description: 'Nexovian 2-Day Free Trial - R60/month after',
+        subscription_type: '1',
+        recurring_amount: '60',
+        frequency: '3',
+        cycles: '0',
+        billing_date: billingDate
+      };
+
+      for (const [key, value] of Object.entries(payfastFields)) {
+        const input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = key;
+        input.value = value;
+        form.appendChild(input);
+      }
+
+      document.body.appendChild(form);
+      form.submit();
     } catch (err: any) {
       console.error('Sign up error:', err);
       setError(formatAuthError(err));
@@ -291,8 +353,13 @@ export const CreateAccountScreen: React.FC = () => {
       <main className="w-full max-w-[420px] flex-1 flex flex-col justify-center my-auto">
         
         {/* CENTER: NEXOVIAN Logo Circle (80px, #0F172A black circle, yellow 'N', border gray) + Logo below = "NEXOVIAN" */}
-        <div className="flex flex-col items-center justify-center mb-6 sm:mb-8">
-          <div className="w-20 h-20 rounded-full bg-[#0F172A] border border-gray-300 shadow-md flex items-center justify-center transform transition-transform hover:scale-105">
+        <button
+          type="button"
+          onClick={() => setCurrentTab('landing')}
+          className="flex flex-col items-center justify-center mb-6 sm:mb-8 cursor-pointer group"
+          title="Return to Nexovian Home"
+        >
+          <div className="w-20 h-20 rounded-full bg-[#0F172A] border border-gray-300 shadow-md flex items-center justify-center transform transition-transform group-hover:scale-105">
             <span className="text-[#facc15] font-display font-black text-4xl select-none leading-none tracking-tight">
               N
             </span>
@@ -303,7 +370,7 @@ export const CreateAccountScreen: React.FC = () => {
           <span className="text-xs font-bold text-amber-700 mt-0.5">
             R60 / learner / month
           </span>
-        </div>
+        </button>
 
         {/* Global Error Banner */}
         {error && (
@@ -328,7 +395,7 @@ export const CreateAccountScreen: React.FC = () => {
                   value={identifier}
                   onChange={(e) => setIdentifier(e.target.value)}
                   placeholder="Mobile number or email address"
-                  className="w-full h-[52px] bg-white border border-[#ddd] focus:border-slate-800 rounded-[12px] px-4 pr-11 text-[15px] text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-slate-800 transition-all shadow-xs"
+                  className="w-full h-[54px] bg-white text-[#0f172a] placeholder:text-[#94a3b8] border border-[#e2e8f0] rounded-2xl px-5 pr-11 text-[15px] font-medium focus:border-[#facc15] focus:ring-2 focus:ring-[#facc15]/20 outline-none shadow-xs"
                 />
                 <button
                   type="button"
@@ -354,7 +421,7 @@ export const CreateAccountScreen: React.FC = () => {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="Password"
-                  className="w-full h-[52px] bg-white border border-[#ddd] focus:border-slate-800 rounded-[12px] px-4 pr-11 text-[15px] text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-slate-800 transition-all shadow-xs"
+                  className="w-full h-[54px] bg-white text-[#0f172a] placeholder:text-[#94a3b8] border border-[#e2e8f0] rounded-2xl px-5 pr-11 text-[15px] font-medium focus:border-[#facc15] focus:ring-2 focus:ring-[#facc15]/20 outline-none shadow-xs"
                 />
                 <button
                   type="button"
@@ -411,18 +478,35 @@ export const CreateAccountScreen: React.FC = () => {
               </div>
             </form>
 
-            {/* Bottom gap 80px (mt-20) then outline button: "Create Account - Get 1 Day Free" */}
-            <div className="mt-20">
+            {/* Bottom gap 80px (mt-20) then outline button: "Create Account - Get 2-Day Free Trial" */}
+            <div className="mt-14 sm:mt-20">
               <button
                 type="button"
                 onClick={() => {
                   setError(null);
                   setMode('signup');
+                  if (typeof window !== 'undefined') {
+                    window.history.pushState({}, '', '/signup');
+                  }
                 }}
                 className="w-full h-[48px] rounded-[25px] bg-white border border-[#0F172A] text-[#0F172A] font-bold text-[15px] hover:bg-slate-100 transition-all flex items-center justify-center cursor-pointer shadow-xs active:scale-[0.99]"
               >
-                Create Account - Get 1 Day Free
+                Create Account - Get 2-Day Free Trial
               </button>
+
+              <div className="mt-3 text-center">
+                <a
+                  href="/trial"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    window.history.pushState({}, '', '/trial');
+                    window.dispatchEvent(new PopStateEvent('popstate'));
+                  }}
+                  className="text-xs text-slate-700 hover:text-slate-950 font-semibold underline cursor-pointer"
+                >
+                  Start 2-Day Free Trial via PayFast →
+                </a>
+              </div>
             </div>
           </div>
         )}
@@ -436,10 +520,10 @@ export const CreateAccountScreen: React.FC = () => {
             {/* Title & Mission Header */}
             <div className="text-center mb-5">
               <h1 className="text-2xl font-black text-slate-950 font-display tracking-tight">
-                Create Account - Get 1 Day Free
+                Create Account - Get 2-Day Free Trial
               </h1>
               <p className="text-sm font-black text-amber-700 mt-1">
-                R60 per learner / month - Learn in your language
+                2 day free trial for new learners • R60 / learner / month
               </p>
               <p className="text-[12px] text-slate-600 mt-1 leading-relaxed">
                 We built NEXOVIAN to help every student understand every subject in their own language. No one is rich and no one is poor.
@@ -487,7 +571,7 @@ export const CreateAccountScreen: React.FC = () => {
                   value={fullName}
                   onChange={(e) => setFullName(e.target.value)}
                   placeholder="Full name"
-                  className="w-full h-[52px] bg-white border border-[#ddd] focus:border-slate-800 rounded-[12px] px-4 text-[15px] text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-slate-800 transition-all shadow-xs"
+                  className="w-full h-[54px] bg-white text-[#0f172a] placeholder:text-[#94a3b8] border border-[#e2e8f0] rounded-2xl px-5 text-[15px] font-medium focus:border-[#facc15] focus:ring-2 focus:ring-[#facc15]/20 outline-none shadow-xs"
                 />
               </div>
 
@@ -499,7 +583,7 @@ export const CreateAccountScreen: React.FC = () => {
                   value={identifier}
                   onChange={(e) => setIdentifier(e.target.value)}
                   placeholder="Mobile number or email address"
-                  className="w-full h-[52px] bg-white border border-[#ddd] focus:border-slate-800 rounded-[12px] px-4 pr-11 text-[15px] text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-slate-800 transition-all shadow-xs"
+                  className="w-full h-[54px] bg-white text-[#0f172a] placeholder:text-[#94a3b8] border border-[#e2e8f0] rounded-2xl px-5 pr-11 text-[15px] font-medium focus:border-[#facc15] focus:ring-2 focus:ring-[#facc15]/20 outline-none shadow-xs"
                 />
                 <button
                   type="button"
@@ -519,7 +603,7 @@ export const CreateAccountScreen: React.FC = () => {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="Create password - min 6 characters"
-                  className="w-full h-[52px] bg-white border border-[#ddd] focus:border-slate-800 rounded-[12px] px-4 pr-11 text-[15px] text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-slate-800 transition-all shadow-xs"
+                  className="w-full h-[54px] bg-white text-[#0f172a] placeholder:text-[#94a3b8] border border-[#e2e8f0] rounded-2xl px-5 pr-11 text-[15px] font-medium focus:border-[#facc15] focus:ring-2 focus:ring-[#facc15]/20 outline-none shadow-xs"
                 />
                 <button
                   type="button"
@@ -531,22 +615,33 @@ export const CreateAccountScreen: React.FC = () => {
                 </button>
               </div>
 
-              {/* Button: "Create Account - Get 1 Day Free" yellow #facc15 black text #0F172A, 48px, rounded 25px */}
+              {/* Button: "Create Account - Get 2-Day Free Trial" yellow #facc15 black text #0F172A, 48px, rounded 25px */}
               <div className="pt-2">
                 <button
                   type="submit"
                   disabled={loading}
                   className="w-full h-[48px] rounded-[25px] bg-[#facc15] hover:bg-[#eab308] text-[#0F172A] font-bold text-[16px] shadow-sm hover:shadow transition-all transform active:scale-[0.99] flex items-center justify-center cursor-pointer disabled:opacity-60"
                 >
-                  {loading ? 'Creating account...' : 'Create Account - Get 1 Day Free'}
+                  {loading ? 'Creating account & redirecting...' : 'Create Account - Get 2-Day Free Trial'}
                 </button>
               </div>
 
               {/* Small pricing & trial note below button */}
-              <div className="pt-1 text-center">
+              <div className="pt-1 text-center space-y-1">
                 <p className="text-xs text-slate-500 font-medium">
-                  Cancel anytime • 1 day free trial for new learners
+                  Cancel anytime • 2-Day Free Trial • R60/month
                 </p>
+                <a
+                  href="/trial"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    window.history.pushState({}, '', '/trial');
+                    window.dispatchEvent(new PopStateEvent('popstate'));
+                  }}
+                  className="inline-block text-xs text-slate-700 hover:text-slate-950 font-semibold underline cursor-pointer"
+                >
+                  Or start instant 2-Day Free Trial via PayFast →
+                </a>
               </div>
 
               {/* Link: Already have account? Log in */}

@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Search, Download, Sun, Moon, Sparkles, Camera, Compass, BookOpen, User, Globe, Check, ChevronDown, Award, ArrowRight, Mic, MoreHorizontal, Layers, TrendingUp } from 'lucide-react';
+import { Search, Download, Sun, Moon, Sparkles, Camera, Compass, BookOpen, User, Globe, Check, ChevronDown, Award, ArrowRight, Mic, MoreHorizontal, Layers, TrendingUp, Folder, AlertTriangle, Calculator } from 'lucide-react';
 import { useLearning } from '../../context/LearningContext';
 import { useAuth } from '../../context/AuthContext';
 import { useTranslation } from '../../i18n/I18nContext';
@@ -59,8 +59,8 @@ export const Navbar: React.FC = () => {
         {/* Zone 1: Futuristic N Logo Mark & Wordmark */}
         <div className="flex items-center gap-3">
           <button
-            onClick={() => setCurrentTab('home')}
-            className="flex items-center gap-2.5 text-left group focus:outline-none"
+            onClick={() => setCurrentTab(isAuthenticated ? 'home' : 'landing')}
+            className="flex items-center gap-2.5 text-left group focus:outline-none cursor-pointer"
             aria-label={`${APP_CONFIG.appName} Home`}
           >
             {/* New SVG LogoIcon: 40x40, rounded 10px, dark #1e293b, neon cyan N with glow & circuit lines/brain */}
@@ -105,6 +105,18 @@ export const Navbar: React.FC = () => {
           </button>
 
           <button
+            onClick={() => setCurrentTab('calculator')}
+            className={`flex items-center gap-1.5 transition-colors hover:text-slate-900 dark:hover:text-white py-1 whitespace-nowrap ${
+              currentTab === 'calculator'
+                ? 'text-amber-500 dark:text-amber-300 font-semibold border-b-2 border-amber-400'
+                : ''
+            }`}
+          >
+            <Calculator className="w-4 h-4 text-amber-400" />
+            <span>Math Solver</span>
+          </button>
+
+          <button
             onClick={() => setCurrentTab('tutor')}
             className={`flex items-center gap-1.5 transition-colors hover:text-slate-900 dark:hover:text-white py-1 whitespace-nowrap ${
               currentTab === 'tutor'
@@ -138,6 +150,30 @@ export const Navbar: React.FC = () => {
           >
             <TrendingUp className="w-4 h-4 text-cyan-400" />
             <span>My Progress</span>
+          </button>
+
+          <button
+            onClick={() => setCurrentTab('smartNotes')}
+            className={`flex items-center gap-1.5 transition-colors hover:text-slate-900 dark:hover:text-white py-1 whitespace-nowrap ${
+              currentTab === 'smartNotes'
+                ? 'text-cyan-600 dark:text-cyan-300 font-semibold border-b-2 border-cyan-400 shadow-[0_4px_12px_-4px_rgba(6,182,212,0.4)]'
+                : ''
+            }`}
+          >
+            <Folder className="w-4 h-4 text-cyan-400" />
+            <span>Smart Notes</span>
+          </button>
+
+          <button
+            onClick={() => setCurrentTab('myStruggles')}
+            className={`flex items-center gap-1.5 transition-colors hover:text-slate-900 dark:hover:text-white py-1 whitespace-nowrap ${
+              currentTab === 'myStruggles'
+                ? 'text-amber-500 dark:text-amber-300 font-semibold border-b-2 border-amber-400 shadow-[0_4px_12px_-4px_rgba(251,191,36,0.4)]'
+                : ''
+            }`}
+          >
+            <AlertTriangle className="w-4 h-4 text-amber-400" />
+            <span>My Struggles</span>
           </button>
 
           <button
@@ -296,16 +332,21 @@ export const Navbar: React.FC = () => {
               </button>
             </div>
           ) : (
-            <button
-              onClick={() => {
-                setAuthModalMode('login');
-                setIsAuthModalOpen(true);
-              }}
-              className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-900 rounded-lg transition-colors border border-slate-200 dark:border-slate-800"
-            >
-              <User className="w-3.5 h-3.5" />
-              <span>{t('navLogin')}</span>
-            </button>
+            <div className="flex items-center gap-1.5 sm:gap-2">
+              <button
+                onClick={() => setCurrentTab('login')}
+                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-900 rounded-lg transition-colors border border-slate-200 dark:border-slate-800"
+              >
+                <User className="w-3.5 h-3.5" />
+                <span>Login</span>
+              </button>
+              <button
+                onClick={() => setCurrentTab('signup')}
+                className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-black bg-[#ffd700] hover:bg-[#ffea75] rounded-lg transition-all shadow-sm"
+              >
+                <span>2-Day Free</span>
+              </button>
+            </div>
           )}
 
           {/* Primary Action CTA: Launch AI Tutor */}

@@ -45,13 +45,22 @@ export interface TrialRecord {
 }
 
 const USED_TRIALS_FILE_PATH = path.resolve(process.cwd(), 'used_trials.json');
-const ONE_DAY_MS = 24 * 60 * 60 * 1000;
+
+// 3-Day Free Trial Timeline Constants (Sunday 02 Nov to Tuesday 04 Nov 23:59 SAST)
+export const PREMIUM_TRIAL_LABEL = '3 Days FREE (Sun-Tue)';
+export const TRIAL_START_SAST = '2026-11-02T00:00:00+02:00';
+export const TRIAL_MONDAY_SAST = '2026-11-03T00:00:00+02:00';
+export const TRIAL_TUESDAY_SAST = '2026-11-04T00:00:00+02:00';
+export const TRIAL_TUESDAY_9AM_SAST = '2026-11-04T09:00:00+02:00';
+export const PREMIUM_TRIAL_ENDS_AT = 'Tuesday 04 Nov 23:59 SAST';
+export const PREMIUM_TRIAL_ENDS_AT_ISO = '2026-11-04T23:59:59+02:00';
+export const WHATSAPP_REMIND_URL = 'https://wa.me/27636508381?text=REMIND%20ME%20R60';
 
 export function formatSouthAfricanDate(dateInput: Date | string | number = new Date()): string {
   try {
     const d = new Date(dateInput);
     if (isNaN(d.getTime())) {
-      return new Date().toLocaleDateString('en-ZA', { day: 'numeric', month: 'long', year: 'numeric' });
+      return 'Tuesday 04 Nov';
     }
     return d.toLocaleDateString('en-ZA', {
       day: 'numeric',
@@ -59,7 +68,7 @@ export function formatSouthAfricanDate(dateInput: Date | string | number = new D
       year: 'numeric'
     });
   } catch {
-    return new Date().toLocaleDateString();
+    return 'Tuesday 04 Nov';
   }
 }
 
@@ -179,60 +188,65 @@ export async function checkAntiAbuseStatus({
 
   if (hadExistingRecord) {
     // STATE 3A: Email already recorded in DB from previous trial -> Show yellow box!
-    const trialEnd = (localMatch?.trialEndedAt || remoteRecord?.trial_ended_at)
-      ? new Date(localMatch?.trialEndedAt || remoteRecord?.trial_ended_at)
-      : new Date(localMatch?.trialStartedAt || remoteRecord?.trial_started_at || now);
-    const actualTrialEndDate = formatSouthAfricanDate(trialEnd);
+    const actualTrialEndDate = PREMIUM_TRIAL_ENDS_AT;
 
     return {
       blocked: true,
       status: 'TRIAL_EXPIRED',
       showYellowBox: true,
       actualTrialEndDate,
-      smartMessage: `Hey! You already used your 1 free day on ${actualTrialEndDate}. NEXOVIAN is R60/month to support all 11 languages. Pay to continue learning! 🔥`
+      smartMessage: `Hey! You already used your 3 Days FREE on Tuesday 04 Nov. NEXOVIAN is R60/month to support all 11 languages. Pay to continue learning! 🔥`
     };
   }
 
-  // Email NOT in used_trial_emails DB yet: Check user's creation time (State 2 vs State 3B)
-  if (userCreatedAt) {
-    const createdDate = new Date(userCreatedAt);
-    const trialEnd = new Date(createdDate.getTime() + ONE_DAY_MS);
+  // 3-Day Free Trial Timeline Check
+  const nowMs = now.getTime();
+  const trialEndMs = new Date(PREMIUM_TRIAL_ENDS_AT_ISO).getTime();
+  const tuesday9amMs = new Date(TRIAL_TUESDAY_9AM_SAST).getTime();
 
-    if (now.getTime() >= trialEnd.getTime()) {
-      // STATE 3B: Brand new trial just ended today!
-      // Rule 2: Save to used_trial_emails DB AFTER trial ends, not before
-      const newRecord: TrialRecord = {
-        id: `trial_${Date.now()}`,
-        email: normEmail,
-        status: 'TRIAL_USED',
-        trialStartedAt: createdDate.toISOString(),
-        trialEndedAt: trialEnd.toISOString(),
-        updatedAt: now.toISOString()
-      };
-      records.push(newRecord);
-      writeTrialRecords(records);
-      await syncToSupabaseTable(newRecord);
+  if (nowMs > trialEndMs) {
+    // STATE 3B: 3-Day trial ended after Tuesday 11:59 PM SAST
+    const newRecord: TrialRecord = {
+      id: `trial_${Date.now()}`,
+      email: normEmail,
+      status: 'TRIAL_USED',
+      trialStartedAt: TRIAL_START_SAST,
+      trialEndedAt: PREMIUM_TRIAL_ENDS_AT_ISO,
+      updatedAt: now.toISOString()
+    };
+    records.push(newRecord);
+    writeTrialRecords(records);
+    await syncToSupabaseTable(newRecord);
 
-      // Rule 3: If brand new trial just ended today -> Show normal title, NO yellow box
-      return {
-        blocked: true,
-        status: 'TRIAL_EXPIRED',
-        showYellowBox: false,
-        actualTrialEndDate: formatSouthAfricanDate(trialEnd),
-        smartMessage: ''
-      };
-    } else {
-      // STATE 2: New account created (trial active)
-      const hoursRemaining = Math.max(1, Math.ceil((trialEnd.getTime() - now.getTime()) / (60 * 60 * 1000)));
-      return {
-        blocked: false,
-        status: 'TRIAL_ACTIVE',
-        hoursRemaining,
-        showYellowBox: false,
-        canUseFreeTrial: true
-      };
-    }
+    return {
+      blocked: true,
+      status: 'TRIAL_EXPIRED',
+      showYellowBox: false,
+      actualTrialEndDate: PREMIUM_TRIAL_ENDS_AT,
+      smartMessage: ''
+    };
   }
+
+  if (nowMs >= tuesday9amMs) {
+    // On Tuesday 9am, show HARD PAYWALL
+    return {
+      blocked: true,
+      status: 'TUESDAY_9AM_PAYWALL',
+      showYellowBox: false,
+      actualTrialEndDate: PREMIUM_TRIAL_ENDS_AT,
+      smartMessage: ''
+    };
+  }
+
+  // STATE 2: 3-Day Free trial active (Sunday, Monday, Tuesday before 9am)
+  const hoursRemaining = Math.max(1, Math.ceil((trialEndMs - nowMs) / (60 * 60 * 1000)));
+  return {
+    blocked: false,
+    status: 'TRIAL_ACTIVE',
+    hoursRemaining,
+    showYellowBox: false,
+    canUseFreeTrial: true
+  };
 
   // Default: Eligible fresh email
   return {

@@ -13,7 +13,9 @@ import {
   synthesizeVoiceSpeech,
   isGeminiConfigured,
   evaluateWrittenResponse,
-  explainAssessmentMistakes
+  explainAssessmentMistakes,
+  generateSmartNoteFromContent,
+  diagnoseLearnerStruggle
 } from './ai';
 import { registerUser, loginUser, getUserByToken, updateUserProfile } from './auth';
 import {
@@ -76,6 +78,13 @@ import {
   recordPaystackPayment,
   readTrialRecords
 } from './antiAbuse';
+import { solveStepByStepCalculation } from './mathSolverService';
+import {
+  getOrCreateUserSubscription,
+  checkSubscriptionAccess,
+  verifyAndActivatePaystackPayment,
+  readAllUserSubscriptions
+} from './userSubscriptionService';
 
 dotenv.config();
 
@@ -546,6 +555,32 @@ app.put('/api/auth/profile', (req: Request, res: Response) => {
 });
 
 // ==========================================
+// STEP-BY-STEP CALCULATION SOLVER (PART D)
+// ==========================================
+app.post('/api/calculator/solve', async (req: Request, res: Response) => {
+  try {
+    const { expression, language, imageBase64, mimeType } = req.body;
+    const result = await solveStepByStepCalculation({
+      expression: typeof expression === 'string' ? expression : '',
+      language: typeof language === 'string' ? language : 'en',
+      imageBase64: typeof imageBase64 === 'string' ? imageBase64 : undefined,
+      mimeType: typeof mimeType === 'string' ? mimeType : undefined
+    });
+
+    return res.json({
+      success: true,
+      result
+    });
+  } catch (err: any) {
+    console.error('Error in /api/calculator/solve:', err);
+    return res.status(500).json({
+      success: false,
+      message: err?.message || 'Error processing calculation'
+    });
+  }
+});
+
+// ==========================================
 // SIMPLE ASK ROUTE WITH FILE CACHING
 // ==========================================
 
@@ -938,6 +973,79 @@ app.post('/api/anti-abuse/record-payment', async (req: Request, res: Response) =
   } catch (err: any) {
     console.error('[Anti-Abuse API] Record payment error:', err);
     return res.status(500).json({ success: false, message: err?.message || 'Payment record failed' });
+  }
+});
+
+// ==========================================
+// AUTH & TRIAL AUTO-LOCK SYSTEM (CRITICAL)
+// ==========================================
+app.get('/api/subscription/check', async (req: Request, res: Response) => {
+  try {
+    const email = (req.query.email as string) || (req.headers['x-user-email'] as string);
+    const userId = (req.query.userId as string) || (req.headers['x-user-id'] as string);
+    const result = await checkSubscriptionAccess({ email, userId });
+    return res.json({ success: true, ...result });
+  } catch (err: any) {
+    console.error('[Subscription Check Error]:', err);
+    return res.status(500).json({ success: false, message: err?.message || 'Check failed' });
+  }
+});
+
+app.post('/api/subscription/register-trial', async (req: Request, res: Response) => {
+  try {
+    const { email, userId, fullName } = req.body || {};
+    if (!email) {
+      return res.status(400).json({ success: false, message: 'Email is required' });
+    }
+    const record = await getOrCreateUserSubscription({ email, userId, fullName });
+    return res.json({ success: true, record });
+  } catch (err: any) {
+    console.error('[Subscription Register Error]:', err);
+    return res.status(500).json({ success: false, message: err?.message || 'Register failed' });
+  }
+});
+
+// Paystack Payment Verification & Activation (Requirement 3 & 4)
+app.post(['/api/verify-payment', '/api/paystack/verify'], async (req: Request, res: Response) => {
+  try {
+    const { reference, email, userId } = req.body || {};
+    if (!email) {
+      return res.status(400).json({ success: false, message: 'Email is required for verification' });
+    }
+    const refToUse = reference || `PAYSTACK_${Date.now()}`;
+    const record = await verifyAndActivatePaystackPayment({
+      reference: refToUse,
+      email,
+      userId
+    });
+    return res.json({
+      success: true,
+      redirect: '/dashboard',
+      subscription_status: 'active',
+      subscription_end_date: record.subscription_end_date,
+      record
+    });
+  } catch (err: any) {
+    console.error('[Verify Payment Error]:', err);
+    return res.status(500).json({ success: false, message: err?.message || 'Verification failed' });
+  }
+});
+
+// PayFast Instant Transaction Notification (ITN) Webhook Endpoint
+app.post(['/notify', '/api/payfast/notify'], async (req: Request, res: Response) => {
+  try {
+    console.log('[PayFast ITN] Received notification:', req.body);
+    const { m_payment_id, pf_payment_id, email_address } = req.body || {};
+    if (email_address) {
+      await recordPaystackPayment({
+        email: email_address,
+        reference: pf_payment_id || m_payment_id || `PAYFAST_${Date.now()}`
+      });
+    }
+    return res.status(200).send('OK');
+  } catch (err: any) {
+    console.warn('[PayFast ITN] Webhook notice:', err);
+    return res.status(200).send('OK');
   }
 });
 
@@ -1547,6 +1655,78 @@ app.post('/api/ai/study-plan', async (req: Request, res: Response) => {
     return res.status(500).json({
       success: false,
       message: msg
+    });
+  }
+});
+
+// ==========================================
+// SMART NOTES V2 & STRUGGLE DETECTION AI API
+// ==========================================
+
+/**
+ * Auto-generates structured smart note with title, summary, key_points, definitions, examples, subject, and topic
+ */
+app.post('/api/ai/smart-notes/generate', async (req: Request, res: Response) => {
+  try {
+    const { content, lessonTitle, subjectHint, topicHint, language } = req.body || {};
+    if (!content || typeof content !== 'string' || content.trim().length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Content is required to generate smart notes.'
+      });
+    }
+
+    const note = await generateSmartNoteFromContent({
+      content: content.trim(),
+      lessonTitle,
+      subjectHint,
+      topicHint,
+      language
+    });
+
+    return res.json({
+      success: true,
+      note
+    });
+  } catch (err: any) {
+    console.error('Error generating smart note:', err);
+    return res.status(500).json({
+      success: false,
+      message: err?.message || 'Failed to generate smart note.'
+    });
+  }
+});
+
+/**
+ * Diagnoses repeated student struggles with topic and generates targeted advice and resources
+ */
+app.post('/api/ai/struggles/diagnose', async (req: Request, res: Response) => {
+  try {
+    const { subject, topic, struggleCount, grade, failedQuestions } = req.body || {};
+    if (!subject || !topic) {
+      return res.status(400).json({
+        success: false,
+        message: 'Subject and topic are required.'
+      });
+    }
+
+    const diagnosis = await diagnoseLearnerStruggle({
+      subject,
+      topic,
+      struggleCount: Number(struggleCount) || 2,
+      grade,
+      failedQuestions
+    });
+
+    return res.json({
+      success: true,
+      diagnosis
+    });
+  } catch (err: any) {
+    console.error('Error diagnosing learner struggle:', err);
+    return res.status(500).json({
+      success: false,
+      message: err?.message || 'Failed to diagnose learner struggle.'
     });
   }
 });

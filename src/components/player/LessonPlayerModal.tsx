@@ -21,6 +21,9 @@ import { multilingualEducationalService } from '../../services/language/multilin
 import { AnswerFeedbackWidget } from '../feedback/AnswerFeedbackWidget';
 import { CleanFormulaRenderer } from '../common/CleanFormulaRenderer';
 import { cleanFormulaString } from '../../utils/formulaCleaner';
+import { smartNotesService } from '../../services/notes/smartNotesService';
+import { learnerStrugglesService } from '../../services/struggles/learnerStrugglesService';
+import { useAuth } from '../../context/AuthContext';
 
 export const LessonPlayerModal: React.FC = () => {
   const {
@@ -44,9 +47,12 @@ export const LessonPlayerModal: React.FC = () => {
   const [noteContent, setNoteContent] = useState('');
   const [selectedAnswers, setSelectedAnswers] = useState<Record<string, number>>({});
   const [quizSubmitted, setQuizSubmitted] = useState(false);
+  const { user } = useAuth();
   const [quizScore, setQuizScore] = useState<number | null>(null);
   const [exercisePassed, setExercisePassed] = useState(false);
   const [showCelebration, setShowCelebration] = useState(false);
+  const [isGeneratingSmartNote, setIsGeneratingSmartNote] = useState(false);
+  const [smartNoteSuccess, setSmartNoteSuccess] = useState<string | null>(null);
 
   const localizedQuiz = useMemo(() => {
     return activeLesson?.quiz
@@ -68,6 +74,7 @@ export const LessonPlayerModal: React.FC = () => {
       setQuizScore(null);
       setExercisePassed(false);
       setShowCelebration(false);
+      setSmartNoteSuccess(null);
     }
   }, [activeLesson?.id]);
 
@@ -100,6 +107,30 @@ export const LessonPlayerModal: React.FC = () => {
     saveNote(activeLesson.id, activeLesson.title, activeTrack.title, text);
   };
 
+  // Auto-generate Smart Note v2 with AI
+  const handleGenerateSmartNote = async () => {
+    setIsGeneratingSmartNote(true);
+    setSmartNoteSuccess(null);
+    try {
+      const sectionsText = activeLesson.content.sections.map((s) => `${s.heading}: ${s.body}`).join('\n\n');
+      const fullText = `Title: ${activeLesson.title}\nSubtitle: ${activeLesson.subtitle}\nOverview: ${activeLesson.content.overview}\n\n${sectionsText}`;
+      await smartNotesService.generateSmartNote({
+        content: fullText,
+        title: activeLesson.title,
+        subject: activeTrack.title || 'General',
+        topic: activeLesson.subtitle || activeLesson.title,
+        userId: user?.id
+      });
+      setSmartNoteSuccess('Smart Note v2 saved to Subject Folders!');
+      setTimeout(() => setSmartNoteSuccess(null), 4000);
+    } catch (err: any) {
+      console.error('Failed generating smart note:', err);
+      setSmartNoteSuccess('Failed to generate smart note. Try again.');
+    } finally {
+      setIsGeneratingSmartNote(false);
+    }
+  };
+
   // Quiz submission
   const handleOptionSelect = (questionId: string, optionIdx: number) => {
     if (quizSubmitted) return;
@@ -119,6 +150,16 @@ export const LessonPlayerModal: React.FC = () => {
     setQuizScore(scorePct);
     setQuizSubmitted(true);
     recordQuizScore(activeLesson.id, scorePct);
+
+    // Learner Struggles AI: If quiz score < 60, record topic failure
+    if (scorePct < 60) {
+      learnerStrugglesService.recordTopicFailure({
+        userId: user?.id,
+        subject: activeTrack.title || 'General',
+        topic: activeLesson.title,
+        grade: 'Curriculum'
+      }).catch((err) => console.warn('[LearnerStruggles] Failed recording quiz struggle:', err));
+    }
 
     if (scorePct >= 70) {
       markLessonComplete(activeLesson.id, 50);
@@ -524,9 +565,23 @@ export const LessonPlayerModal: React.FC = () => {
                 value={noteContent}
                 onChange={(e) => handleNoteChange(e.target.value)}
                 placeholder="Jot key takeaways, architectural decisions, or questions..."
-                rows={7}
+                rows={6}
                 className="w-full p-3 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-xs sm:text-sm text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-1 focus:ring-amber-500 resize-none leading-relaxed"
               />
+
+              <button
+                onClick={handleGenerateSmartNote}
+                disabled={isGeneratingSmartNote}
+                className="mt-2.5 w-full flex items-center justify-center gap-1.5 px-3 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold rounded-xl text-xs shadow-sm transition-all disabled:opacity-50 cursor-pointer active:scale-98"
+              >
+                <Sparkles className="w-3.5 h-3.5 text-yellow-300" />
+                <span>{isGeneratingSmartNote ? 'Generating Smart Note...' : '⚡ Generate Smart Note v2 (AI)'}</span>
+              </button>
+              {smartNoteSuccess && (
+                <p className="mt-1.5 text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 text-center animate-fade-in">
+                  ✓ {smartNoteSuccess}
+                </p>
+              )}
 
               {/* Track Syllabus Progress */}
               <div className="mt-6 pt-5 border-t border-slate-200 dark:border-slate-800">

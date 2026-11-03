@@ -12,7 +12,7 @@
  * 
  * Implements 5 User States:
  * - State 1: Anonymous visitor (no account) -> No paywall, no blocking
- * - State 2: New account (first time email) -> 1 day free trial (24h), full access
+ * - State 2: New account (first time email) -> 2-Day Free Trial (48h), full access
  * - State 3: Expired trial -> Fire paywall card. Yellow box ONLY if email in used_trial_emails DB.
  * - State 4: Paid user -> Full access, no paywall
  * - State 5: Admin bypass -> Email in admin list or localStorage NEXOVIAN_ADMIN = MPUMALANGA2026 -> Full access always
@@ -25,7 +25,10 @@ import {
   recordPaymentSuccess,
   isAdminUser,
   formatSouthAfricanDate,
-  TrialStateResult
+  TrialStateResult,
+  TrialTimelineInfo,
+  PREMIUM_TRIAL_ENDS_AT_ISO,
+  PREMIUM_TRIAL_ENDS_AT
 } from './antiAbuseService';
 
 declare global {
@@ -38,15 +41,7 @@ declare global {
         currency: string;
         ref: string;
         plan?: string;
-        metadata?: {
-          company: string;
-          user_id?: string;
-          custom_fields?: Array<{
-            display_name: string;
-            variable_name: string;
-            value: string;
-          }>;
-        };
+        metadata?: any;
         callback: (response: { reference: string; status: string; trans?: string }) => void;
         onClose: () => void;
       }) => {
@@ -74,17 +69,16 @@ export interface SubscriptionStatus {
   showYellowBox: boolean;
   actualTrialEndDate: string;
   smartBlockMessage?: string;
+  timelineInfo: TrialTimelineInfo;
   isAdmin?: boolean;
 }
 
 /**
- * Checks if the user has an active subscription or if their 1-day free trial is active/expired.
+ * Checks if the user has an active subscription or if their 2-day free trial is active/expired.
  */
 export function checkUserSubscription(user: { id: string; email?: string; createdAt?: string } | null): SubscriptionStatus {
   const trialState: TrialStateResult = checkFastTrialState(user);
-
-  const createdDate = user?.createdAt ? new Date(user.createdAt) : new Date();
-  const trialExpiresAt = new Date(createdDate.getTime() + 24 * 60 * 60 * 1000);
+  const trialExpiresAt = new Date(PREMIUM_TRIAL_ENDS_AT_ISO);
 
   return {
     isSubscribed: trialState.isSubscribed,
@@ -94,8 +88,9 @@ export function checkUserSubscription(user: { id: string; email?: string; create
     trialExpiresAt,
     subscriptionPlan: SUBSCRIPTION_PLAN_NAME,
     showYellowBox: trialState.showYellowBox,
-    actualTrialEndDate: trialState.actualTrialEndDate,
+    actualTrialEndDate: trialState.actualTrialEndDate || PREMIUM_TRIAL_ENDS_AT,
     smartBlockMessage: trialState.smartMessage,
+    timelineInfo: trialState.timelineInfo,
     isAdmin: trialState.isAdmin
   };
 }

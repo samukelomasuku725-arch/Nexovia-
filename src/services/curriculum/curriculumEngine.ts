@@ -33,12 +33,25 @@ import {
   GRADE_LEVELS,
   SOUTH_AFRICAN_PHASES
 } from '../../config/curriculumConfig';
-import { CAPS_SUBJECTS_CATALOG } from '../../data/capsCurriculumDemoData';
+import { FULL_CURRICULUM_CATALOG } from './fullCurriculumCatalog';
 import { SALanguageCode } from '../../types';
 import { SA_LANGUAGES } from '../../data/learningContextData';
 
+const EXTENDED_LEVELS: GradeLevelConfig[] = [
+  ...GRADE_LEVELS,
+  { id: 'nated-n1', name: 'N1 (TVET)', number: 13, phaseId: 'fet', phaseName: 'TVET NATED Colleges', availableSubjectIds: ['sub-tvet-nated-n1-elec', 'sub-tvet-nated-n1-bus'], description: 'TVET N1 National Certificate' },
+  { id: 'nated-n2', name: 'N2 (TVET)', number: 14, phaseId: 'fet', phaseName: 'TVET NATED Colleges', availableSubjectIds: ['sub-tvet-nated-n2-elec', 'sub-tvet-nated-n2-bus'], description: 'TVET N2 National Certificate' },
+  { id: 'nated-n3', name: 'N3 (TVET)', number: 15, phaseId: 'fet', phaseName: 'TVET NATED Colleges', availableSubjectIds: ['sub-tvet-nated-n3-elec', 'sub-tvet-nated-n3-bus'], description: 'TVET N3 National Certificate' },
+  { id: 'nated-n4', name: 'N4 (TVET)', number: 16, phaseId: 'fet', phaseName: 'TVET NATED Colleges', availableSubjectIds: ['sub-tvet-nated-n4-elec', 'sub-tvet-nated-n4-bus'], description: 'TVET N4 National Diploma' },
+  { id: 'nated-n5', name: 'N5 (TVET)', number: 17, phaseId: 'fet', phaseName: 'TVET NATED Colleges', availableSubjectIds: ['sub-tvet-nated-n5-elec', 'sub-tvet-nated-n5-bus'], description: 'TVET N5 National Diploma' },
+  { id: 'nated-n6', name: 'N6 (TVET)', number: 18, phaseId: 'fet', phaseName: 'TVET NATED Colleges', availableSubjectIds: ['sub-tvet-nated-n6-elec', 'sub-tvet-nated-n6-bus'], description: 'TVET N6 National Diploma' },
+  { id: 'uni-year-1', name: 'Year 1 (Degree)', number: 19, phaseId: 'fet', phaseName: 'University / Higher Ed', availableSubjectIds: ['sub-uni-bcom-acc-yr1', 'sub-uni-bsc-cs-yr1', 'sub-uni-bsc-phys-yr1', 'sub-uni-llb-law-yr1', 'sub-uni-beng-elec-yr1'], description: 'University Year 1 Degree Modules' },
+  { id: 'uni-year-2', name: 'Year 2 (Degree)', number: 20, phaseId: 'fet', phaseName: 'University / Higher Ed', availableSubjectIds: ['sub-uni-bcom-acc-yr2', 'sub-uni-bsc-cs-yr2', 'sub-uni-bsc-phys-yr2', 'sub-uni-llb-law-yr2', 'sub-uni-beng-elec-yr2'], description: 'University Year 2 Degree Modules' },
+  { id: 'uni-year-3', name: 'Year 3 (Degree)', number: 21, phaseId: 'fet', phaseName: 'University / Higher Ed', availableSubjectIds: ['sub-uni-bcom-acc-yr3', 'sub-uni-bsc-cs-yr3', 'sub-uni-bsc-phys-yr3', 'sub-uni-llb-law-yr3', 'sub-uni-beng-elec-yr3'], description: 'University Year 3 Degree Modules' },
+];
+
 export class CurriculumEngine {
-  private subjects: SubjectModel[] = CAPS_SUBJECTS_CATALOG;
+  private subjects: SubjectModel[] = FULL_CURRICULUM_CATALOG;
   private currentVersion = DEFAULT_CURRICULUM_VERSION;
 
   /**
@@ -63,17 +76,17 @@ export class CurriculumEngine {
   }
 
   /**
-   * Get all 13 Grade Levels (Grade R to Grade 12)
+   * Get all Grade Levels including TVET and University
    */
   getGradeLevels(): GradeLevelConfig[] {
-    return GRADE_LEVELS;
+    return EXTENDED_LEVELS;
   }
 
   /**
    * Get Grade by Grade ID
    */
   getGradeById(gradeId: string): GradeLevelConfig | undefined {
-    return GRADE_LEVELS.find((g) => g.id === gradeId);
+    return EXTENDED_LEVELS.find((g) => g.id === gradeId);
   }
 
   /**

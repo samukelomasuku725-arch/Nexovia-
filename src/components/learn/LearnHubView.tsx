@@ -28,7 +28,8 @@ import {
   HelpCircle,
   Play,
   Award,
-  Mic
+  Mic,
+  Calculator
 } from 'lucide-react';
 import { useLearning } from '../../context/LearningContext';
 import { useTranslation } from '../../i18n/I18nContext';
@@ -487,6 +488,34 @@ export const LearnHubView: React.FC = () => {
               </div>
             </div>
           </div>
+        </section>
+
+        {/* Step-by-Step Math & Science Solver Feature Banner */}
+        <section className="bg-gradient-to-r from-amber-500/15 via-yellow-500/10 to-transparent border border-amber-500/30 rounded-3xl p-5 sm:p-6 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-sm">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 rounded-2xl bg-amber-400 text-slate-950 flex items-center justify-center font-bold shrink-0 shadow-md">
+              <Calculator className="w-6 h-6" />
+            </div>
+            <div>
+              <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-amber-400/20 text-amber-700 dark:text-amber-300 text-[10px] font-mono font-bold uppercase mb-1">
+                <span>Handwritten Working Sheet</span>
+              </div>
+              <h3 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white">
+                Step-by-Step Math, Science &amp; Accounting Solver
+              </h3>
+              <p className="text-xs text-slate-600 dark:text-slate-300 mt-0.5">
+                Type or upload a photo of any problem. Get authentic examination working with exponent laws &amp; 11-language explanations.
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => setCurrentTab('calculator')}
+            className="w-full sm:w-auto px-5 py-3 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 font-bold text-xs shadow-md transition-all whitespace-nowrap flex items-center justify-center gap-2 cursor-pointer"
+          >
+            <span>Launch Math Solver</span>
+            <ArrowRight className="w-4 h-4" />
+          </button>
         </section>
 
         {/* 4. Quick Featured Lessons */}

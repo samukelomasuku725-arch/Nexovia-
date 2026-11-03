@@ -39,6 +39,7 @@ import { useLearning } from '../../context/LearningContext';
 import { useTranslation } from '../../i18n/I18nContext';
 import { SALanguageCode } from '../../i18n/types';
 import { APP_CONFIG } from '../../config/brand';
+import { PayFastSubscriptionForm } from '../payment/PayFastSubscriptionForm';
 
 interface HeroSectionProps {
   onScrollToFinder?: () => void;
@@ -182,6 +183,11 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onScrollToFinder }) =>
                   <span>Start in English</span>
                   <ArrowRight className="w-3.5 h-3.5 text-slate-400" />
                 </a>
+              </div>
+
+              {/* PayFast 2-Day Free Trial Subscription Form */}
+              <div className="mt-6 p-4 sm:p-5 rounded-2xl bg-slate-950/70 border border-slate-800/90 shadow-xl max-w-xl">
+                <PayFastSubscriptionForm />
               </div>
 
               {/* 4. LANGUAGE BADGES ROW UNDER BUTTONS */}

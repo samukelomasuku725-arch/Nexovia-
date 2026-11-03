@@ -36,7 +36,9 @@ import { getSubjectsForLevel } from '../data/educationData';
 import { ttsManager } from '../services/voice/tts/TextToSpeechManager';
 import { isTtsSupportedForLanguage } from '../services/voice/languageCapabilities';
 
-export type AppTab = 'home' | 'dashboard' | 'explore' | 'learn' | 'school' | 'tvet' | 'higherEd' | 'tracks' | 'tutor' | 'scan' | 'practice' | 'saved' | 'profile' | 'adaptive' | 'assessments' | 'academicVoice' | 'progress' | 'adminBank' | 'about';
+import { learnerStrugglesService } from '../services/struggles/learnerStrugglesService';
+
+export type AppTab = 'landing' | 'login' | 'signup' | 'calculator' | 'home' | 'dashboard' | 'explore' | 'learn' | 'school' | 'tvet' | 'higherEd' | 'tracks' | 'tutor' | 'scan' | 'practice' | 'saved' | 'profile' | 'adaptive' | 'assessments' | 'academicVoice' | 'progress' | 'adminBank' | 'about' | 'smartNotes' | 'myStruggles' | 'success' | 'cancel' | 'trial' | 'paywall';
 
 export interface GeminiStatusInfo {
   checked: boolean;
@@ -249,20 +251,117 @@ const LearningContext = createContext<LearningContextType | undefined>(undefined
 
 export const LearningProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [tracks] = useState<Track[]>(TRACKS);
-  const [currentTab, setCurrentTab] = useState<AppTab>(() => {
+  const [currentTab, setCurrentTabState] = useState<AppTab>(() => {
     if (typeof window !== 'undefined') {
-      if (window.location.pathname === '/admin' || window.location.pathname === '/admin/bank') {
+      const path = window.location.pathname;
+      if (path === '/paywall') {
+        return 'paywall';
+      }
+      if (path === '/login') {
+        return 'login';
+      }
+      if (path === '/signup' || path === '/register') {
+        return 'signup';
+      }
+      if (path === '/calculator') {
+        return 'calculator';
+      }
+      if (path === '/success') {
+        return 'success';
+      }
+      if (path === '/cancel') {
+        return 'cancel';
+      }
+      if (path === '/trial' || path === '/pricing') {
+        return 'trial';
+      }
+      if (path === '/admin' || path === '/admin/bank') {
         return 'adminBank';
       }
-      if (window.location.pathname === '/about') {
+      if (path === '/about') {
         return 'about';
       }
-      if (window.location.pathname === '/learn' || window.location.search.includes('lang=')) {
+      if (path === '/smart-notes' || path === '/notes') {
+        return 'smartNotes';
+      }
+      if (path === '/my-struggles' || path === '/struggles') {
+        return 'myStruggles';
+      }
+      if (path === '/learn' || window.location.search.includes('lang=')) {
         return 'learn';
       }
+      if (path === '/app' || path === '/dashboard' || path === '/subjects' || path === '/papers' || path === '/quiz') {
+        return 'home';
+      }
+      if (path === '/') {
+        return 'landing';
+      }
     }
-    return 'home';
+    return 'landing';
   });
+
+  const setCurrentTab = (tab: AppTab) => {
+    setCurrentTabState(tab);
+    if (typeof window !== 'undefined') {
+      let targetPath = '';
+      if (tab === 'landing') targetPath = '/';
+      else if (tab === 'login') targetPath = '/login';
+      else if (tab === 'signup') targetPath = '/signup';
+      else if (tab === 'paywall') targetPath = '/paywall';
+      else if (tab === 'calculator') targetPath = '/calculator';
+      else if (tab === 'home') targetPath = '/app';
+      else if (tab === 'about') targetPath = '/about';
+      else if (tab === 'success') targetPath = '/success';
+      else if (tab === 'cancel') targetPath = '/cancel';
+      else if (tab === 'trial') targetPath = '/trial';
+      else if (tab === 'adminBank') targetPath = '/admin';
+      else if (tab === 'smartNotes') targetPath = '/smart-notes';
+      else if (tab === 'myStruggles') targetPath = '/my-struggles';
+      else if (tab === 'learn') targetPath = '/learn';
+
+      if (targetPath && window.location.pathname !== targetPath) {
+        window.history.pushState({}, '', targetPath);
+      }
+    }
+  };
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const handlePopState = () => {
+      const path = window.location.pathname;
+      if (path === '/') {
+        setCurrentTabState('landing');
+      } else if (path === '/paywall') {
+        setCurrentTabState('paywall');
+      } else if (path === '/app' || path === '/dashboard' || path === '/subjects' || path === '/papers' || path === '/quiz') {
+        setCurrentTabState('home');
+      } else if (path === '/login') {
+        setCurrentTabState('login');
+      } else if (path === '/signup' || path === '/register') {
+        setCurrentTabState('signup');
+      } else if (path === '/calculator') {
+        setCurrentTabState('calculator');
+      } else if (path === '/success') {
+        setCurrentTabState('success');
+      } else if (path === '/cancel') {
+        setCurrentTabState('cancel');
+      } else if (path === '/trial' || path === '/pricing') {
+        setCurrentTabState('trial');
+      } else if (path === '/smart-notes' || path === '/notes') {
+        setCurrentTabState('smartNotes');
+      } else if (path === '/my-struggles' || path === '/struggles') {
+        setCurrentTabState('myStruggles');
+      } else if (path === '/admin' || path === '/admin/bank') {
+        setCurrentTabState('adminBank');
+      } else if (path === '/about') {
+        setCurrentTabState('about');
+      } else if (path === '/learn') {
+        setCurrentTabState('learn');
+      }
+    };
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
   const [activeLessonId, setActiveLessonId] = useState<string | null>(null);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isPwaPromptOpen, setIsPwaPromptOpen] = useState(false);
@@ -1497,6 +1596,15 @@ export const LearningProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       source: 'quiz',
       completed: true
     });
+
+    // Learner Struggles AI: Detect topic struggle if percentage < 60 (2+ failures triggers AI diagnostics)
+    if (attempt.percentage < 60) {
+      learnerStrugglesService.recordTopicFailure({
+        subject: attempt.subject || 'General',
+        topic: attempt.topic || 'General Practice',
+        grade: learningContext.gradeOrProgramme || 'Grade 10'
+      }).catch((err) => console.warn('[LearnerStruggles] Failed to record topic struggle:', err));
+    }
 
     return fullAttempt;
   };

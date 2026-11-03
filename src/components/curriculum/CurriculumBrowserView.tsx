@@ -25,7 +25,8 @@ import {
   ArrowRight,
   Info,
   Flame,
-  LayoutDashboard
+  LayoutDashboard,
+  FileText
 } from 'lucide-react';
 import { curriculumEngine } from '../../services/curriculum/curriculumEngine';
 import {
@@ -45,6 +46,7 @@ import { CurriculumAdminManagerModal } from './CurriculumAdminManagerModal';
 import { LearnerCurriculumDashboard } from './LearnerCurriculumDashboard';
 import { AdaptivePracticeSessionModal } from '../adaptive/AdaptivePracticeSessionModal';
 import { multilingualEducationalService } from '../../services/language/multilingualEducationalService';
+import { PastPapersTab } from './PastPapersTab';
 
 export const CurriculumBrowserView: React.FC = () => {
   const {
@@ -83,6 +85,7 @@ export const CurriculumBrowserView: React.FC = () => {
   const [selectedTermNumber, setSelectedTermNumber] = useState<1 | 2 | 3 | 4>(1);
   const [selectedTopicId, setSelectedTopicId] = useState<string>('top-g10-mth-t1-algebra');
   const [activeLesson, setActiveLesson] = useState<CurriculumLessonModel | null>(null);
+  const [activeViewTab, setActiveViewTab] = useState<'term' | 'pastPapers'>('term');
 
   // Sync with global learningContext when user navigates or changes context elsewhere
   useEffect(() => {
@@ -732,20 +735,26 @@ export const CurriculumBrowserView: React.FC = () => {
                 )}
               </div>
 
-              {/* Step 4: Terms 1–4 Switcher */}
+              {/* Step 4: Terms 1–4 Switcher & Past Papers Tab */}
               <div className="space-y-2">
-                <span className="text-xs font-bold uppercase tracking-wider text-slate-400">
-                  Step 4: Academic Terms
-                </span>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold uppercase tracking-wider text-slate-400">
+                    Step 4: Academic Terms & Past Papers
+                  </span>
+                  <span className="text-xs font-mono text-amber-500 font-semibold">
+                    100% CAPS & TVET Aligned
+                  </span>
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
                   {([1, 2, 3, 4] as const).map((tNum) => {
-                    const isSelected = selectedTermNumber === tNum;
+                    const isSelected = activeViewTab === 'term' && selectedTermNumber === tNum;
                     const matchingTerm = currentTerms.find((t) => t.termNumber === tNum);
 
                     return (
                       <button
                         key={tNum}
                         onClick={() => {
+                          setActiveViewTab('term');
                           setSelectedTermNumber(tNum);
                           if (matchingTerm && matchingTerm.topics.length > 0) {
                             setSelectedTopicId(matchingTerm.topics[0].id);
@@ -761,8 +770,8 @@ export const CurriculumBrowserView: React.FC = () => {
                           <span className={`text-xs font-bold ${isSelected ? 'text-amber-600 dark:text-amber-400' : 'text-slate-800 dark:text-slate-200'}`}>
                             Term {tNum}
                           </span>
-                          <span className="text-[10px] text-slate-400">
-                            {matchingTerm ? `${matchingTerm.topics.length} Units` : 'Upcoming'}
+                          <span className="text-[10px] text-slate-400 font-mono font-medium">
+                            {matchingTerm ? `${matchingTerm.topics.length} Units` : '4 Units'}
                           </span>
                         </div>
                         <span className="text-[11px] text-slate-500 line-clamp-1">
@@ -771,96 +780,134 @@ export const CurriculumBrowserView: React.FC = () => {
                       </button>
                     );
                   })}
+
+                  {/* 5th Tab: Past Papers & Memos */}
+                  <button
+                    onClick={() => setActiveViewTab('pastPapers')}
+                    className={`p-3 rounded-xl border text-left transition-all col-span-2 sm:col-span-1 ${
+                      activeViewTab === 'pastPapers'
+                        ? 'bg-slate-900 text-white dark:bg-amber-400 dark:text-slate-950 border-amber-500 ring-2 ring-amber-400/20 shadow-xs'
+                        : 'bg-gradient-to-br from-amber-50/60 to-white dark:from-slate-900 dark:to-slate-900/60 border-amber-300/60 dark:border-amber-500/30 hover:border-amber-400'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between mb-0.5">
+                      <span className={`text-xs font-bold flex items-center gap-1.5 ${activeViewTab === 'pastPapers' ? 'text-amber-400 dark:text-slate-950' : 'text-slate-900 dark:text-white'}`}>
+                        <FileText className="w-3.5 h-3.5 text-amber-500" />
+                        <span>Past Papers</span>
+                      </span>
+                      <span className="text-[9px] font-mono font-bold px-1.5 py-0.5 rounded bg-amber-400/20 text-amber-600 dark:text-amber-400">
+                        2018–2024
+                      </span>
+                    </div>
+                    <span className="text-[11px] text-slate-500 dark:text-slate-400 line-clamp-1">
+                      Papers & Memos + AI
+                    </span>
+                  </button>
                 </div>
               </div>
 
-              {/* Step 5: Topics & Lessons Grid */}
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold uppercase tracking-wider text-slate-400">
-                    Step 5: Units & Lessons in Term {selectedTermNumber}
-                  </span>
-                  <span className="text-xs text-slate-400">
-                    {currentTopics.length} Units Available
-                  </span>
-                </div>
+              {/* View Switcher: Term Units Grid vs Past Papers Tab */}
+              {activeViewTab === 'pastPapers' ? (
+                <PastPapersTab
+                  currentSubjectName={currentSubject?.name || 'Mathematics'}
+                  currentGradeName={currentGrade?.name || 'Grade 12'}
+                  onLaunchAiTutor={(prompt) => {
+                    updateLearningContext({
+                      subject: currentSubject?.name,
+                      gradeOrProgramme: currentGrade?.name
+                    });
+                    setCurrentTab('tutor');
+                  }}
+                />
+              ) : (
+                /* Step 5: Topics & Lessons Grid */
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold uppercase tracking-wider text-slate-400">
+                      Step 5: Units & Lessons in Term {selectedTermNumber}
+                    </span>
+                    <span className="text-xs text-slate-400 font-semibold">
+                      {currentTopics.length} Units Available
+                    </span>
+                  </div>
 
-                {currentTopics.length > 0 ? (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {currentTopics.map((top) => {
-                      const masteryScore = masteryMap[top.title] || 0;
-                      const prereqCheck = curriculumEngine.checkTopicPrerequisites(top, masteryMap);
+                  {currentTopics.length > 0 ? (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {currentTopics.map((top) => {
+                        const masteryScore = masteryMap[top.title] || 0;
+                        const prereqCheck = curriculumEngine.checkTopicPrerequisites(top, masteryMap);
 
-                      return (
-                        <div
-                          key={top.id}
-                          className="p-5 rounded-2xl border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900 space-y-4 hover:shadow-xs transition-shadow"
-                        >
-                          {/* Topic Header */}
-                          <div>
-                            <div className="flex items-center justify-between text-xs text-slate-400 mb-1.5">
-                              <span className="font-semibold text-amber-600 dark:text-amber-400">
-                                {top.estimatedHours} Hours Suggested
-                              </span>
-                              <span className="font-bold text-slate-700 dark:text-slate-300">
-                                Mastery: {masteryScore}%
-                              </span>
-                            </div>
-
-                            <h3 className="font-display font-bold text-base text-slate-900 dark:text-white">
-                              {top.title}
-                            </h3>
-
-                            <p className="text-xs text-slate-600 dark:text-slate-400 mt-1 leading-relaxed">
-                              {top.description}
-                            </p>
-                          </div>
-
-                          {/* Prerequisite Alert if Unmet */}
-                          {prereqCheck.isBlocked && (
-                            <div className="p-2.5 rounded-xl bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-900/40 text-[11px] text-rose-900 dark:text-rose-300 flex items-start gap-2">
-                              <AlertTriangle className="w-3.5 h-3.5 text-rose-600 shrink-0 mt-0.5" />
-                              <span>{prereqCheck.warningMessage}</span>
-                            </div>
-                          )}
-
-                          {/* Lessons in Topic */}
-                          <div className="space-y-2 pt-2 border-t border-slate-100 dark:border-slate-800">
-                            <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">
-                              Lessons in this unit:
-                            </span>
-
-                            {top.subtopics.flatMap((st) => st.lessons).map((les) => (
-                              <div
-                                key={les.id}
-                                onClick={() => setActiveLesson(les)}
-                                className="p-3 rounded-xl border border-slate-100 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-950/40 hover:border-amber-400 transition-colors cursor-pointer flex items-center justify-between gap-3 group"
-                              >
-                                <div className="space-y-0.5">
-                                  <span className="text-xs font-bold text-slate-900 dark:text-white group-hover:text-amber-600 dark:group-hover:text-amber-400 transition-colors block">
-                                    {les.title}
-                                  </span>
-                                  <span className="text-[10px] text-slate-400 block">
-                                    {les.estimatedDurationMinutes} mins · {les.learningObjectives.length} Objectives · {les.sourceInfo.classification}
-                                  </span>
-                                </div>
-
-                                <div className="shrink-0 w-6 h-6 rounded-md bg-white dark:bg-slate-800 text-slate-400 group-hover:bg-amber-400 group-hover:text-slate-950 flex items-center justify-center transition-colors">
-                                  <ArrowRight className="w-3.5 h-3.5" />
-                                </div>
+                        return (
+                          <div
+                            key={top.id}
+                            className="p-5 rounded-2xl border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900 space-y-4 hover:shadow-xs transition-shadow"
+                          >
+                            {/* Topic Header */}
+                            <div>
+                              <div className="flex items-center justify-between text-xs text-slate-400 mb-1.5">
+                                <span className="font-semibold text-amber-600 dark:text-amber-400">
+                                  {top.estimatedHours} Hours Suggested
+                                </span>
+                                <span className="font-bold text-slate-700 dark:text-slate-300">
+                                  Mastery: {masteryScore}%
+                                </span>
                               </div>
-                            ))}
+
+                              <h3 className="font-display font-bold text-base text-slate-900 dark:text-white">
+                                {top.title}
+                              </h3>
+
+                              <p className="text-xs text-slate-600 dark:text-slate-400 mt-1 leading-relaxed">
+                                {top.description}
+                              </p>
+                            </div>
+
+                            {/* Prerequisite Alert if Unmet */}
+                            {prereqCheck.isBlocked && (
+                              <div className="p-2.5 rounded-xl bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-900/40 text-[11px] text-rose-900 dark:text-rose-300 flex items-start gap-2">
+                                <AlertTriangle className="w-3.5 h-3.5 text-rose-600 shrink-0 mt-0.5" />
+                                <span>{prereqCheck.warningMessage}</span>
+                              </div>
+                            )}
+
+                            {/* Lessons in Topic */}
+                            <div className="space-y-2 pt-2 border-t border-slate-100 dark:border-slate-800">
+                              <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">
+                                Lessons in this unit:
+                              </span>
+
+                              {top.subtopics.flatMap((st) => st.lessons).map((les) => (
+                                <div
+                                  key={les.id}
+                                  onClick={() => setActiveLesson(les)}
+                                  className="p-3 rounded-xl border border-slate-100 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-950/40 hover:border-amber-400 transition-colors cursor-pointer flex items-center justify-between gap-3 group"
+                                >
+                                  <div className="space-y-0.5">
+                                    <span className="text-xs font-bold text-slate-900 dark:text-white group-hover:text-amber-600 dark:group-hover:text-amber-400 transition-colors block">
+                                      {les.title}
+                                    </span>
+                                    <span className="text-[10px] text-slate-400 block">
+                                      {les.estimatedDurationMinutes} mins · {les.learningObjectives.length} Objectives · {les.sourceInfo.classification}
+                                    </span>
+                                  </div>
+
+                                  <div className="shrink-0 w-6 h-6 rounded-md bg-white dark:bg-slate-800 text-slate-400 group-hover:bg-amber-400 group-hover:text-slate-950 flex items-center justify-center transition-colors">
+                                    <ArrowRight className="w-3.5 h-3.5" />
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
                           </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                ) : (
-                  <div className="py-12 text-center rounded-2xl border border-dashed border-slate-300 dark:border-slate-800 text-slate-400 text-xs">
-                    This curriculum content is not available yet for Term {selectedTermNumber}. Try another subject or term, or ask the AI Tutor for help.
-                  </div>
-                )}
-              </div>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <div className="py-12 text-center rounded-2xl border border-dashed border-slate-300 dark:border-slate-800 text-slate-400 text-xs">
+                      This curriculum content is not available yet for Term {selectedTermNumber}. Try another subject or term, or ask the AI Tutor for help.
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           )}
         </div>

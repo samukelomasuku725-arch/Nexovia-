@@ -1,0 +1,22 @@
+{
+  "name": "NEXOVIAN - Grade 4 to University",
+  "short_name": "NEXOVIAN",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#000000",
+  "theme_color": "#000000",
+  "description": "South African learning platform in 11 languages from Grade 4 to University. Past papers with memos, CAPS & TVET aligned, offline mode.",
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

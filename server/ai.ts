@@ -2175,5 +2175,201 @@ Keep the explanation clear, encouraging, and easy to read on mobile.`;
   return 'Review the questions you missed above, note where your steps diverged from the correct answer, and practice similar problems in the Adaptive Engine.';
 }
 
+export interface SmartNoteOutput {
+  title: string;
+  summary: string;
+  key_points: string[];
+  definitions: Record<string, string>;
+  examples: Record<string, string>;
+  subject: string;
+  topic: string;
+  language: string;
+}
+
+export interface StruggleDiagnosisOutput {
+  ai_suggestion: string;
+  suggested_resource: string;
+}
+
+/**
+ * Auto-generates structured Smart Notes v2 from lesson content, quiz, or transcript
+ */
+export async function generateSmartNoteFromContent(params: {
+  content: string;
+  lessonTitle?: string;
+  subjectHint?: string;
+  topicHint?: string;
+  language?: string;
+}): Promise<SmartNoteOutput> {
+  const targetLanguage = params.language || 'English';
+
+  if (!isGeminiConfigured()) {
+    // Intelligent fallback generator
+    const cleanLines = (params.content || '')
+      .split('\n')
+      .map((l) => l.trim())
+      .filter((l) => l.length > 10);
+    const title = params.lessonTitle || (cleanLines[0] ? cleanLines[0].slice(0, 60) : 'Core Curriculum Notes');
+    return {
+      title,
+      summary: cleanLines.slice(0, 3).join(' ') || 'Comprehensive South African curriculum summary covering foundational principles and worked examples.',
+      key_points: cleanLines.length >= 3 ? cleanLines.slice(0, 5) : [
+        'Master the fundamental definitions and core concepts.',
+        'Apply the standard step-by-step CAPS methodology.',
+        'Verify calculations and identify units of measurement.',
+        'Review worked examples to reinforce exam heuristics.'
+      ],
+      definitions: {
+        'Core Principle': 'The foundational law or theorem governing this topic.',
+        'Standard Metric': 'The standard SI unit or measurement convention used in South African examinations.'
+      },
+      examples: {
+        'Worked Example 1': 'Given problem scenario with step-by-step application of the core formula.',
+        'Exam Technique Tip': 'Always state what is given, write the formula first, substitute values, and include the correct units.'
+      },
+      subject: params.subjectHint || 'Mathematics',
+      topic: params.topicHint || params.lessonTitle || 'Curriculum Foundations',
+      language: targetLanguage
+    };
+  }
+
+  const { client } = getGeminiClient();
+
+  const prompt = `You are NEXOVIAN Smart Notes AI for South African learners (Grade 4 to University).
+Given the following lesson, transcript, or study material:
+"""
+${params.content}
+"""
+
+Context Hints:
+- Lesson Title Hint: ${params.lessonTitle || 'Auto-detect'}
+- Subject Hint: ${params.subjectHint || 'Auto-detect'}
+- Topic Hint: ${params.topicHint || 'Auto-detect'}
+- Target Language: ${targetLanguage}
+
+GENERATE A COMPREHENSIVE SMART NOTE MATCHING THIS EXACT JSON SCHEMA:
+{
+  "title": "Clear, informative note title",
+  "summary": "2-3 concise sentences summarizing the core idea in simple, student-friendly language",
+  "key_points": [
+    "Key takeaway point 1",
+    "Key takeaway point 2",
+    "Key takeaway point 3",
+    "Key takeaway point 4",
+    "Key takeaway point 5"
+  ],
+  "definitions": {
+    "Term 1": "Clear simple definition",
+    "Term 2": "Clear simple definition"
+  },
+  "examples": {
+    "Example 1": "A practical worked example with numbers or realistic scenario",
+    "Example 2": "Another practical application or exam rule"
+  },
+  "subject": "Detected SA subject: Mathematics, Physical Sciences, Life Sciences, English, History, Geography, Accounting, Economics, Business Studies, Technology, or Computer Applications Technology",
+  "topic": "Detected specific topic name, e.g. Newton's Second Law, Algebraic Fractions, Mitosis",
+  "language": "${targetLanguage}"
+}
+
+RULES:
+- Clean unicode math only (e.g. Fₙₑₜ = m × a), NEVER use raw '$' symbols.
+- Student-friendly, Grade 8-12 CAPS aligned.
+- Return ONLY valid raw JSON. No markdown backticks.`;
+
+  for (const model of CANDIDATE_MODELS) {
+    try {
+      const response = await client.models.generateContent({
+        model,
+        contents: prompt,
+        config: {
+          responseMimeType: 'application/json'
+        }
+      });
+
+      const text = (response.text || '').replace(/^```json\s*/i, '').replace(/\s*```$/i, '').trim();
+      const parsed = JSON.parse(text);
+
+      return {
+        title: parsed.title || params.lessonTitle || 'Smart Note',
+        summary: parsed.summary || 'Summary of key concepts and learning outcomes.',
+        key_points: Array.isArray(parsed.key_points) && parsed.key_points.length > 0 ? parsed.key_points : ['Review core concepts and formulas.'],
+        definitions: parsed.definitions && typeof parsed.definitions === 'object' ? parsed.definitions : {},
+        examples: parsed.examples && typeof parsed.examples === 'object' ? parsed.examples : {},
+        subject: parsed.subject || params.subjectHint || 'Mathematics',
+        topic: parsed.topic || params.topicHint || 'General Study',
+        language: parsed.language || targetLanguage
+      };
+    } catch (err: any) {
+      console.warn(`Model ${model} error in generateSmartNoteFromContent:`, err?.message || err);
+      continue;
+    }
+  }
+
+  throw new Error('Failed to generate smart note via AI models.');
+}
+
+/**
+ * Diagnoses a learner struggle when a topic is failed 2+ times
+ */
+export async function diagnoseLearnerStruggle(params: {
+  subject: string;
+  topic: string;
+  struggleCount: number;
+  grade?: string;
+  failedQuestions?: string[];
+}): Promise<StruggleDiagnosisOutput> {
+  const fallbackSuggestion = `Learners commonly struggle with "${params.topic}" because of rushed arithmetic or confusing sign conventions. Step 1: Break down what is given vs what is needed. Step 2: Write out the fundamental formula. Step 3: Check units before calculating.`;
+  const fallbackResource = `NEXOVIAN ${params.subject} Foundation Guide · Lesson on ${params.topic} with 5 step-by-step worked solutions.`;
+
+  if (!isGeminiConfigured()) {
+    return {
+      ai_suggestion: fallbackSuggestion,
+      suggested_resource: fallbackResource
+    };
+  }
+
+  const { client } = getGeminiClient();
+
+  const prompt = `You are NEXOVIAN Struggle Detection Engine for South African education (CAPS & TVET).
+A student has struggled with the topic "${params.topic}" in "${params.subject}" (Grade/Level: ${params.grade || 'Grade 10'}), failing assessments ${params.struggleCount} times.
+${params.failedQuestions && params.failedQuestions.length > 0 ? `Questions they missed:\n- ${params.failedQuestions.join('\n- ')}` : ''}
+
+Generate targeted diagnostic intervention matching this JSON:
+{
+  "ai_suggestion": "Empathetic, actionable 2-3 sentence advice. Explain the exact conceptual mistake students make here (e.g. forgetting friction, unit mismatch, or sign errors) and provide a concrete mental model or 3-step checklist to solve it correctly every time.",
+  "suggested_resource": "Name of the exact recommended review lesson, practice drill, or video focus (e.g. 'CAPS Physical Sciences Paper 1: Newton's Laws Worked Past Paper Drill (2024-2025)')"
+}
+
+No raw '$' math symbols. Return ONLY valid raw JSON.`;
+
+  for (const model of CANDIDATE_MODELS) {
+    try {
+      const response = await client.models.generateContent({
+        model,
+        contents: prompt,
+        config: {
+          responseMimeType: 'application/json'
+        }
+      });
+
+      const text = (response.text || '').replace(/^```json\s*/i, '').replace(/\s*```$/i, '').trim();
+      const parsed = JSON.parse(text);
+
+      return {
+        ai_suggestion: parsed.ai_suggestion || fallbackSuggestion,
+        suggested_resource: parsed.suggested_resource || fallbackResource
+      };
+    } catch (err: any) {
+      console.warn(`Model ${model} error in diagnoseLearnerStruggle:`, err?.message || err);
+      continue;
+    }
+  }
+
+  return {
+    ai_suggestion: fallbackSuggestion,
+    suggested_resource: fallbackResource
+  };
+}
+
 
 

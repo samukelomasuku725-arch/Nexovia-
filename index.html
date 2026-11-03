@@ -3,27 +3,91 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, viewport-fit=cover" />
-    <title>NEXOVIAN - Learn in your language</title>
-    <meta name="description" content="We built NEXOVIAN to help every student understand every subject in their own language. No one is rich and no one is poor." />
-    <meta property="og:title" content="NEXOVIAN - Learn in your language" />
-    <meta property="og:description" content="We built NEXOVIAN to help every student understand every subject in their own language. No one is rich and no one is poor." />
+    
+    <!-- PART C: SEO FOR GOOGLE LIKE GOLEARN -->
+    <title>Nexovian — Past Papers, Bursaries &amp; Homework Help for SA Learners | 11 Languages</title>
+    <meta name="description" content="Nexovian is a South African learning platform in 11 languages from Grade 4 to University. Past papers with memos, CAPS &amp; TVET aligned, offline mode. R60/month with 2-day trial. Built in Mpumalanga." />
+    
+    <!-- OpenGraph Social Cards -->
     <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://nexovian.group/" />
+    <meta property="og:title" content="Nexovian — Past Papers, Bursaries &amp; Homework Help for SA Learners | 11 Languages" />
+    <meta property="og:description" content="Nexovian is a South African learning platform in 11 languages from Grade 4 to University. Past papers with memos, CAPS &amp; TVET aligned, offline mode. R60/month with 2-day trial. Built in Mpumalanga." />
+    <meta property="og:site_name" content="NEXOVIAN" />
+    <meta property="og:image" content="https://nexovian.group/logo.png" />
+    
+    <!-- Twitter Cards -->
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="theme-color" content="#0A0F1F" />
+    <meta name="twitter:title" content="Nexovian — Past Papers, Bursaries &amp; Homework Help for SA Learners | 11 Languages" />
+    <meta name="twitter:description" content="Nexovian is a South African learning platform in 11 languages from Grade 4 to University. Past papers with memos, CAPS &amp; TVET aligned, offline mode. R60/month with 2-day trial. Built in Mpumalanga." />
+    <meta name="twitter:image" content="https://nexovian.group/logo.png" />
+
+    <!-- PART B: PWA THEME AND MANIFEST -->
+    <meta name="theme-color" content="#000000" />
+    <link rel="manifest" href="/manifest.json" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="NEXOVIAN" />
-    <link rel="manifest" href="/manifest.webmanifest" />
+    
     <link rel="icon" type="image/x-icon" href="/favicon.ico" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="apple-touch-icon" href="/logo.png" />
     <link rel="apple-touch-startup-image" href="/splash.png" />
+    
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,600;0,9..144,700;1,9..144,400&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
-    <!-- Paystack Inline Checkout Script -->
+    <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@600;700&family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,600;0,9..144,700;1,9..144,400&family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+    
+    <!-- PART D: MathJax for Beautiful Mathematical Notation -->
+    <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js" async></script>
+    
+    <!-- Paystack Checkout Script -->
     <script src="https://js.paystack.co/v1/inline.js"></script>
+
+    <!-- Schema.org Structured Data (JSON-LD Organization + SoftwareApplication) -->
+    <script type="application/ld+json">
+    [
+      {
+        "@context": "https://schema.org",
+        "@type": "Organization",
+        "name": "NEXOVIAN (PTY) LTD",
+        "url": "https://nexovian.group",
+        "logo": "https://nexovian.group/logo.png",
+        "description": "South African multilingual learning platform teaching Grade 4 to University across all 11 official languages.",
+        "email": "hello@nexovian.group",
+        "foundingLocation": {
+          "@type": "Place",
+          "name": "Mpumalanga, South Africa"
+        }
+      },
+      {
+        "@context": "https://schema.org",
+        "@type": "SoftwareApplication",
+        "name": "NEXOVIAN",
+        "operatingSystem": "All",
+        "applicationCategory": "EducationalApplication",
+        "offers": {
+          "@type": "Offer",
+          "price": "60",
+          "priceCurrency": "ZAR"
+        },
+        "aggregateRating": {
+          "@type": "AggregateRating",
+          "ratingValue": "4.9",
+          "ratingCount": "127"
+        },
+        "featureList": [
+          "Past Papers with Memos",
+          "11 South African Official Languages",
+          "Socratic AI Tutor",
+          "Step-by-Step Calculator with Handwritten Working",
+          "CAPS and TVET Curriculum",
+          "Offline PWA Mode"
+        ]
+      }
+    ]
+    </script>
   </head>
   <body class="bg-[#0A0F1F] text-slate-100 antialiased selection:bg-cyan-500/25 selection:text-cyan-200 min-h-screen max-w-[100vw] overflow-x-hidden w-full">
     <div id="root">
@@ -40,7 +104,63 @@
         </div>
       </div>
     </div>
+    
+    <!-- PART B: PWA INSTALL POPUP EVERY VISIT -->
+    <div id="installPopup" style="display:none; position:fixed; bottom:20px; left:5%; right:5%; background:#000; color:#fff; padding:20px; border-radius:16px; z-index:9999; text-align:center; box-shadow:0 10px 30px rgba(0,0,0,0.5); border:1px solid #333;">
+      <p style="margin:0 0 8px; font-weight:bold;">📲 Install NEXOVIAN App</p>
+      <p style="margin:0 0 15px; font-size:13px; color:#ccc;">Learn offline in 11 Languages - Grade 4 to University</p>
+      <button id="installBtn" style="background:#FFD700; color:#000; padding:12px 25px; border-radius:10px; font-weight:bold; border:none; margin-right:10px; cursor:pointer;">Install Now</button>
+      <button onclick="document.getElementById('installPopup').style.display='none'" style="background:transparent; color:#fff; border:1px solid #555; padding:12px 20px; border-radius:10px; cursor:pointer;">Later</button>
+    </div>
+    
+    <script>
+      let deferredPrompt;
+      window.addEventListener('beforeinstallprompt', (e) => {
+        e.preventDefault();
+        deferredPrompt = e;
+        setTimeout(() => {
+          const el = document.getElementById('installPopup');
+          if (el) el.style.display = 'block';
+        }, 2500);
+      });
+      
+      document.addEventListener('DOMContentLoaded', () => {
+        const btn = document.getElementById('installBtn');
+        if (btn) {
+          btn.addEventListener('click', async () => {
+            if (deferredPrompt) {
+              deferredPrompt.prompt();
+              await deferredPrompt.userChoice;
+              deferredPrompt = null;
+              const el = document.getElementById('installPopup');
+              if (el) el.style.display = 'none';
+            } else {
+              const el = document.getElementById('installPopup');
+              if (el) {
+                el.innerHTML = '<p style="margin:0 0 10px; font-weight:bold;">📲 How to Install</p><p style="font-size:13px; color:#ddd; margin:0 0 15px;">Android: Tap ⋮ > Install App<br>iPhone: Share > Add to Home Screen</p><button onclick="document.getElementById(\'installPopup\').style.display=\'none\'" style="background:#FFD700; color:#000; padding:8px 20px; border-radius:8px; font-weight:bold; border:none; cursor:pointer;">Got it</button>';
+              }
+            }
+          });
+        }
+      });
+      
+      if (!('BeforeInstallPromptEvent' in window)) {
+        setTimeout(() => {
+          const el = document.getElementById('installPopup');
+          if (el) el.style.display = 'block';
+        }, 3000);
+      }
+
+      // Service Worker registration for offline mode
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('/sw.js').catch((err) => {
+            console.log('SW registration note:', err);
+          });
+        });
+      }
+    </script>
+
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
-

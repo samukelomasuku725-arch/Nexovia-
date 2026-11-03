@@ -2,23 +2,26 @@
  * @license
  * SPDX-License-Identifier: Apache-2.0
  * 
- * NEXOVIAN - USER TRIAL STATES & PAYWALL ENGINE (CLIENT)
+ * NEXOVIAN - 2-DAY FREE TRIAL TIMELINE & PAYWALL ENGINE
  * 
- * Implements the 5 User States:
- * 1. STATE 1 - Anonymous visitor:
- *    - No account / New link click: DO NOT show subscription required card, DO NOT show "already used" message.
- * 2. STATE 2 - New Account Created (First time email):
- *    - 1 day free trial (24h from user creation), full access to tutor.
- *    - Email saved to used_trial_emails DB AFTER trial ends, NOT before.
- * 3. STATE 3 - Expired Trial (Trial ended, never paid):
- *    - If email exists in used_trial_emails AND never paid: Show yellow box
- *      "Hey! You already used your 1 free day on {actualTrialEndDate}. NEXOVIAN is R60/month to support all 11 languages. Pay to continue learning! 🔥"
- *    - If brand new trial just ended today: Show normal title "Your 1 day free trial ended - Pay R60 to continue" (NO yellow box).
- * 4. STATE 4 - Paid User:
- *    - Full access, no paywall.
- * 5. STATE 5 - Admin Bypass:
- *    - Email in admin list OR localStorage NEXOVIAN_ADMIN = MPUMALANGA2026 = Full access always.
- * 6. NO GLOBAL LOCALSTORAGE CHECK: Check is strictly per-email in DB, not global device.
+ * EXACT TIMELINE (SAST UTC+2):
+ * - Trial Start: Sunday 02 Nov
+ * - Trial End: Tuesday 04 Nov 11:59 PM SAST
+ * 
+ * 3-DAY TIMELINE PROGRESSION:
+ * - Day 1 - Sunday: "🎉 Day 1/3 FREE - Welcome to NEXOVIAN! Full access unlocked"
+ * - Day 2 - Monday: "🔥 Day 2/3 FREE - Keep going! Payment system goes live today"
+ * - Day 3 - Tuesday (morning before 9am): "⏰ LAST DAY FREE - Upgrade today for R60/month to keep everything"
+ * - Tuesday 9:00 AM SAST onward: HARD PAYWALL
+ *     Title: "Your 3-Day Trial Ends Tonight"
+ *     Message: "Your progress will be saved. Pay R60/month to continue learning & get your certificates."
+ *     Button 1: "Pay R60 & Keep Learning (Live Tuesday 9am)"
+ *     Button 2: "Remind me Tuesday 9am on WhatsApp" -> https://wa.me/27636508381?text=REMIND%20ME%20R60
+ * 
+ * - After Tuesday 04 Nov 23:59 SAST:
+ *     Title: "Your 3-Day Trial Ends Tonight" / "Your 3-Day Trial Ended - Pay R60 to continue"
+ *     If email in used_trial_emails:
+ *     "Hey! You already used your 3 Days FREE on Tuesday 04 Nov. NEXOVIAN is R60/month to support all 11 languages. Pay to continue learning! 🔥"
  */
 
 import { supabase } from '../supabase';
@@ -30,7 +33,7 @@ export const ADMIN_EMAILS = [
   'nexovian@gmail.com'
 ];
 
-// Clean legacy global device block localStorage keys to ensure no visitor is blocked globally
+// Clean legacy device block keys to ensure no visitor is blocked globally
 if (typeof window !== 'undefined') {
   try {
     localStorage.removeItem('nexovian_used_trial_records_v2');
@@ -42,8 +45,37 @@ if (typeof window !== 'undefined') {
   }
 }
 
+// ==========================================
+// 2-DAY FREE TRIAL TIMELINE CONSTANTS (SAST UTC+2)
+// ==========================================
+export const PREMIUM_TRIAL_LABEL = '2-Day Free Trial';
+export const TRIAL_START_SAST = '2026-11-02T00:00:00+02:00'; // Sunday 02 Nov
+export const TRIAL_MONDAY_SAST = '2026-11-03T00:00:00+02:00'; // Monday 03 Nov
+export const TRIAL_TUESDAY_SAST = '2026-11-04T00:00:00+02:00'; // Tuesday 04 Nov
+export const TRIAL_TUESDAY_9AM_SAST = '2026-11-04T09:00:00+02:00'; // Tuesday 04 Nov 9:00 AM SAST (Hard paywall trigger)
+export const PREMIUM_TRIAL_ENDS_AT = 'Tuesday 04 Nov 23:59 SAST';
+export const PREMIUM_TRIAL_ENDS_AT_ISO = '2026-11-04T23:59:59+02:00';
+export const WHATSAPP_REMIND_URL = 'https://wa.me/27636508381?text=REMIND%20ME%20R60';
+
+export type TrialTimelineStage = 'DAY_1_SUNDAY' | 'DAY_2_MONDAY' | 'DAY_3_TUESDAY' | 'TUESDAY_9AM_PAYWALL' | 'TRIAL_EXPIRED';
+
+export interface TrialTimelineInfo {
+  stage: TrialTimelineStage;
+  dayNumber: number; // 1, 2, or 3
+  dayLabel: string; // 'Sunday', 'Monday', 'Tuesday'
+  bannerMessage: string;
+  isHardPaywall: boolean;
+  hardPaywallTitle: string;
+  hardPaywallMessage: string;
+  button1Text: string;
+  button2Text: string;
+  button2Url: string;
+  hoursRemaining: number;
+  trialEndsAtFormatted: string;
+}
+
 /**
- * Checks if the user is an admin (Rule 5: Admin bypass)
+ * Checks if the user is an admin
  */
 export function isAdminUser(user?: { email?: string } | null): boolean {
   if (typeof window !== 'undefined') {
@@ -57,13 +89,13 @@ export function isAdminUser(user?: { email?: string } | null): boolean {
 }
 
 /**
- * Format a Date into South African standard text: e.g. "28 October 2026"
+ * Format a Date into South African standard text: e.g. "04 November 2026"
  */
 export function formatSouthAfricanDate(dateInput: Date | string | number = new Date()): string {
   try {
     const d = new Date(dateInput);
     if (isNaN(d.getTime())) {
-      return new Date().toLocaleDateString('en-ZA', { day: 'numeric', month: 'long', year: 'numeric' });
+      return 'Tuesday 04 Nov';
     }
     return d.toLocaleDateString('en-ZA', {
       day: 'numeric',
@@ -71,7 +103,137 @@ export function formatSouthAfricanDate(dateInput: Date | string | number = new D
       year: 'numeric'
     });
   } catch {
-    return new Date().toLocaleDateString();
+    return 'Tuesday 04 Nov';
+  }
+}
+
+/**
+ * Calculates current trial timeline info based on SAST clock and stage
+ */
+export function getTrialTimelineInfo(overrideNow?: Date): TrialTimelineInfo {
+  // Support testing override via query param ?trial_stage=1|2|3|9am|expired or localStorage
+  if (typeof window !== 'undefined') {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const qOverride = params.get('trial_stage') || localStorage.getItem('nexovian_trial_stage_override');
+      if (qOverride === '1' || qOverride === 'sunday') return buildStageInfo('DAY_1_SUNDAY');
+      if (qOverride === '2' || qOverride === 'monday') return buildStageInfo('DAY_2_MONDAY');
+      if (qOverride === '3' || qOverride === 'tuesday_morning') return buildStageInfo('DAY_3_TUESDAY');
+      if (qOverride === '9am' || qOverride === 'tuesday_9am' || qOverride === 'hard_paywall') return buildStageInfo('TUESDAY_9AM_PAYWALL');
+      if (qOverride === 'expired') return buildStageInfo('TRIAL_EXPIRED');
+    } catch {
+      // Ignore
+    }
+  }
+
+  const now = overrideNow || new Date();
+  const nowMs = now.getTime();
+  const trialEndMs = new Date(PREMIUM_TRIAL_ENDS_AT_ISO).getTime();
+  const tuesday9amMs = new Date(TRIAL_TUESDAY_9AM_SAST).getTime();
+  const tuesday0amMs = new Date(TRIAL_TUESDAY_SAST).getTime();
+  const monday0amMs = new Date(TRIAL_MONDAY_SAST).getTime();
+
+  if (nowMs > trialEndMs) {
+    return buildStageInfo('TRIAL_EXPIRED');
+  }
+  if (nowMs >= tuesday9amMs) {
+    return buildStageInfo('TUESDAY_9AM_PAYWALL');
+  }
+  if (nowMs >= tuesday0amMs) {
+    return buildStageInfo('DAY_3_TUESDAY');
+  }
+  if (nowMs >= monday0amMs) {
+    return buildStageInfo('DAY_2_MONDAY');
+  }
+
+  // Before Monday -> Day 1 (Sunday 02 Nov / Welcome)
+  return buildStageInfo('DAY_1_SUNDAY');
+}
+
+export function buildStageInfo(stage: TrialTimelineStage): TrialTimelineInfo {
+  const trialEndsAtFormatted = PREMIUM_TRIAL_ENDS_AT;
+  const hardPaywallMessage = 'Your progress will be saved. Pay R60/month to continue learning & get your certificates.';
+  const button1Text = 'Pay R60 & Keep Learning (Live Tuesday 9am)';
+  const button2Text = 'Remind me Tuesday 9am on WhatsApp';
+  const button2Url = WHATSAPP_REMIND_URL;
+
+  switch (stage) {
+    case 'DAY_1_SUNDAY':
+      return {
+        stage,
+        dayNumber: 1,
+        dayLabel: 'Day 1',
+        bannerMessage: '🎉 Day 1/2 FREE - Welcome to NEXOVIAN! Full access unlocked',
+        isHardPaywall: false,
+        hardPaywallTitle: 'Your 2-Day Free Trial Ends Soon',
+        hardPaywallMessage,
+        button1Text,
+        button2Text,
+        button2Url,
+        hoursRemaining: 48,
+        trialEndsAtFormatted
+      };
+    case 'DAY_2_MONDAY':
+      return {
+        stage,
+        dayNumber: 2,
+        dayLabel: 'Day 2',
+        bannerMessage: '🔥 Day 2/2 FREE - Keep going! R60/month after trial',
+        isHardPaywall: false,
+        hardPaywallTitle: 'Your 2-Day Free Trial Ends Soon',
+        hardPaywallMessage,
+        button1Text,
+        button2Text,
+        button2Url,
+        hoursRemaining: 24,
+        trialEndsAtFormatted
+      };
+    case 'DAY_3_TUESDAY':
+      return {
+        stage,
+        dayNumber: 2,
+        dayLabel: 'Final Day',
+        bannerMessage: '⏰ LAST DAY FREE - Upgrade today for R60/month to keep everything',
+        isHardPaywall: false,
+        hardPaywallTitle: 'Your 2-Day Free Trial Ends Tonight',
+        hardPaywallMessage,
+        button1Text,
+        button2Text,
+        button2Url,
+        hoursRemaining: 12,
+        trialEndsAtFormatted
+      };
+    case 'TUESDAY_9AM_PAYWALL':
+      return {
+        stage,
+        dayNumber: 2,
+        dayLabel: 'Trial Ending',
+        bannerMessage: '⏰ LAST DAY FREE - Upgrade today for R60/month to keep everything',
+        isHardPaywall: true,
+        hardPaywallTitle: 'Your 2-Day Free Trial Ends Tonight',
+        hardPaywallMessage,
+        button1Text,
+        button2Text,
+        button2Url,
+        hoursRemaining: 6,
+        trialEndsAtFormatted
+      };
+    case 'TRIAL_EXPIRED':
+    default:
+      return {
+        stage: 'TRIAL_EXPIRED',
+        dayNumber: 2,
+        dayLabel: 'Expired',
+        bannerMessage: 'Your 2-Day Free Trial Ended - Pay R60 to continue',
+        isHardPaywall: true,
+        hardPaywallTitle: 'Your 2-Day Free Trial Ended',
+        hardPaywallMessage,
+        button1Text,
+        button2Text,
+        button2Url,
+        hoursRemaining: 0,
+        trialEndsAtFormatted
+      };
   }
 }
 
@@ -84,6 +246,7 @@ export interface TrialStateResult {
   showYellowBox: boolean;
   actualTrialEndDate: string;
   smartMessage: string;
+  timelineInfo: TrialTimelineInfo;
   isAdmin?: boolean;
   isPaidUser?: boolean;
   isAnonymous?: boolean;
@@ -108,9 +271,11 @@ export function isUserPaidLocally(userId?: string, email?: string): boolean {
 }
 
 /**
- * Fast synchronous check for immediate UI rendering without global device block
+ * Fast synchronous check for immediate UI rendering with 3-Day trial timeline
  */
 export function checkFastTrialState(user: { id: string; email?: string; createdAt?: string } | null): TrialStateResult {
+  const timeline = getTrialTimelineInfo();
+
   // STATE 1: Anonymous visitor (No account / New link click)
   if (!user || !user.email) {
     return {
@@ -118,10 +283,11 @@ export function checkFastTrialState(user: { id: string; email?: string; createdA
       isSubscribed: false,
       isTrialActive: true,
       isTrialExpired: false,
-      hoursRemainingInTrial: 24,
+      hoursRemainingInTrial: timeline.hoursRemaining,
       showYellowBox: false,
-      actualTrialEndDate: '',
+      actualTrialEndDate: PREMIUM_TRIAL_ENDS_AT,
       smartMessage: '',
+      timelineInfo: timeline,
       isAnonymous: true
     };
   }
@@ -137,6 +303,7 @@ export function checkFastTrialState(user: { id: string; email?: string; createdA
       showYellowBox: false,
       actualTrialEndDate: '',
       smartMessage: '',
+      timelineInfo: timeline,
       isAdmin: true
     };
   }
@@ -154,15 +321,15 @@ export function checkFastTrialState(user: { id: string; email?: string; createdA
       showYellowBox: false,
       actualTrialEndDate: '',
       smartMessage: '',
+      timelineInfo: timeline,
       isPaidUser: true
     };
   }
 
-  // Check if this specific email was previously stored as expired
+  // Check if this specific email was previously marked as trial expired
   const expiredKey = `nexovian_trial_expired_${normEmail}`;
   const storedExpiredDate = localStorage.getItem(expiredKey);
   if (storedExpiredDate) {
-    const formatted = formatSouthAfricanDate(storedExpiredDate);
     return {
       isAllowed: false,
       isSubscribed: false,
@@ -170,42 +337,39 @@ export function checkFastTrialState(user: { id: string; email?: string; createdA
       isTrialExpired: true,
       hoursRemainingInTrial: 0,
       showYellowBox: true,
-      actualTrialEndDate: formatted,
-      smartMessage: `Hey! You already used your 1 free day on ${formatted}. NEXOVIAN is R60/month to support all 11 languages. Pay to continue learning! 🔥`
+      actualTrialEndDate: PREMIUM_TRIAL_ENDS_AT,
+      smartMessage: `Hey! You already used your 2-Day Free Trial. NEXOVIAN is R60/month to support all 11 languages. Pay to continue learning! 🔥`,
+      timelineInfo: timeline
     };
   }
 
-  // Check user creation time (24h free trial)
-  const createdDate = user.createdAt ? new Date(user.createdAt) : new Date();
-  const trialEnd = new Date(createdDate.getTime() + 24 * 60 * 60 * 1000);
-  const now = new Date();
-
-  if (now.getTime() < trialEnd.getTime()) {
-    // STATE 2: New Account Created (1 day free trial active)
-    const hoursRemaining = Math.max(1, Math.ceil((trialEnd.getTime() - now.getTime()) / (60 * 60 * 1000)));
+  // 3-Day Timeline logic:
+  // If Tuesday 9am or later, or expired, enforce HARD PAYWALL!
+  if (timeline.isHardPaywall) {
     return {
-      isAllowed: true,
+      isAllowed: false,
       isSubscribed: false,
-      isTrialActive: true,
-      isTrialExpired: false,
-      hoursRemainingInTrial: hoursRemaining,
+      isTrialActive: false,
+      isTrialExpired: true,
+      hoursRemainingInTrial: timeline.hoursRemaining,
       showYellowBox: false,
-      actualTrialEndDate: formatSouthAfricanDate(trialEnd),
-      smartMessage: ''
+      actualTrialEndDate: PREMIUM_TRIAL_ENDS_AT,
+      smartMessage: '',
+      timelineInfo: timeline
     };
   }
 
-  // STATE 3: Trial ended
-  const actualTrialEndDate = formatSouthAfricanDate(trialEnd);
+  // Active 3-Day Trial (Sunday, Monday, Tuesday before 9am)
   return {
-    isAllowed: false,
+    isAllowed: true,
     isSubscribed: false,
-    isTrialActive: false,
-    isTrialExpired: true,
-    hoursRemainingInTrial: 0,
-    showYellowBox: false, // Brand new trial just ended today -> NO yellow box
-    actualTrialEndDate,
-    smartMessage: ''
+    isTrialActive: true,
+    isTrialExpired: false,
+    hoursRemainingInTrial: timeline.hoursRemaining,
+    showYellowBox: false,
+    actualTrialEndDate: PREMIUM_TRIAL_ENDS_AT,
+    smartMessage: '',
+    timelineInfo: timeline
   };
 }
 
@@ -221,6 +385,7 @@ export async function checkDeepTrialState(
   }
 
   const normEmail = user.email.toLowerCase().trim();
+  const timeline = fast.timelineInfo;
 
   try {
     const res = await fetch('/api/anti-abuse/check', {
@@ -245,9 +410,8 @@ export async function checkDeepTrialState(
         };
       }
 
-      if (data.status === 'TRIAL_EXPIRED' || data.blocked) {
-        // Save locally per-email
-        const dateStr = data.actualTrialEndDate || fast.actualTrialEndDate;
+      if (data.status === 'TRIAL_EXPIRED' || data.blocked || data.status === 'TUESDAY_9AM_PAYWALL') {
+        const dateStr = data.actualTrialEndDate || PREMIUM_TRIAL_ENDS_AT;
         if (data.showYellowBox) {
           localStorage.setItem(`nexovian_trial_expired_${normEmail}`, dateStr);
         }
@@ -261,8 +425,9 @@ export async function checkDeepTrialState(
           showYellowBox: Boolean(data.showYellowBox),
           actualTrialEndDate: dateStr,
           smartMessage: data.smartMessage || (data.showYellowBox
-            ? `Hey! You already used your 1 free day on ${dateStr}. NEXOVIAN is R60/month to support all 11 languages. Pay to continue learning! 🔥`
-            : '')
+            ? `Hey! You already used your 2-Day Free Trial. NEXOVIAN is R60/month to support all 11 languages. Pay to continue learning! 🔥`
+            : ''),
+          timelineInfo: { ...timeline, isHardPaywall: true }
         };
       }
 
@@ -282,7 +447,7 @@ export async function checkDeepTrialState(
     // Non-blocking fallback
   }
 
-  // Also query Supabase directly for used_trial_emails
+  // Query Supabase directly for used_trial_emails
   try {
     const { data } = await supabase
       .from('used_trial_emails')
@@ -303,7 +468,7 @@ export async function checkDeepTrialState(
           isPaidUser: true
         };
       } else {
-        const endDate = formatSouthAfricanDate(data.trial_ended_at || data.trial_started_at || new Date());
+        const endDate = PREMIUM_TRIAL_ENDS_AT;
         localStorage.setItem(`nexovian_trial_expired_${normEmail}`, endDate);
         return {
           isAllowed: false,
@@ -313,7 +478,8 @@ export async function checkDeepTrialState(
           hoursRemainingInTrial: 0,
           showYellowBox: true,
           actualTrialEndDate: endDate,
-          smartMessage: `Hey! You already used your 1 free day on ${endDate}. NEXOVIAN is R60/month to support all 11 languages. Pay to continue learning! 🔥`
+          smartMessage: `Hey! You already used your 2-Day Free Trial. NEXOVIAN is R60/month to support all 11 languages. Pay to continue learning! 🔥`,
+          timelineInfo: { ...timeline, isHardPaywall: true }
         };
       }
     }

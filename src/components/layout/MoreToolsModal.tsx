@@ -25,7 +25,9 @@ import {
   Sparkles,
   ArrowRight,
   ShieldCheck,
-  Database
+  Database,
+  Folder,
+  AlertTriangle
 } from 'lucide-react';
 import { useLearning } from '../../context/LearningContext';
 import { useTranslation } from '../../i18n/I18nContext';
@@ -90,12 +92,28 @@ export const MoreToolsModal: React.FC<Props> = ({
           icon: Compass,
           color: 'bg-purple-500 text-white',
           onClick: () => navigateTo('adaptive')
+        },
+        {
+          id: 'myStruggles',
+          title: 'Learner Struggles AI',
+          subtitle: 'Hotspot diagnosis, repeated mistakes & recovery',
+          icon: AlertTriangle,
+          color: 'bg-amber-500 text-slate-950',
+          onClick: () => navigateTo('myStruggles')
         }
       ]
     },
     {
       title: 'Curriculum & Resources',
       items: [
+        {
+          id: 'smartNotes',
+          title: 'Smart Notes v2 (Subject Folders)',
+          subtitle: 'Drive-style subject folders & auto-summaries',
+          icon: Folder,
+          color: 'bg-blue-600 text-white',
+          onClick: () => navigateTo('smartNotes')
+        },
         {
           id: 'tracks',
           title: 'Featured STEM & Coding Tracks',
