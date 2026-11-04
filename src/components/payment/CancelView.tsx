@@ -2,13 +2,12 @@
  * @license
  * SPDX-License-Identifier: Apache-2.0
  * 
- * NEXOVIAN PAYFAST CANCELLATION PAGE (/cancel)
+ * NEXOVIAN PAYMENT CANCELLATION PAGE (/cancel)
  */
 
 import React from 'react';
-import { ArrowLeft, RefreshCw, Home, ShieldAlert } from 'lucide-react';
+import { ArrowLeft, RefreshCw, Home, ShieldAlert, QrCode } from 'lucide-react';
 import { useLearning } from '../../context/LearningContext';
-import { PayFastSubscriptionForm } from './PayFastSubscriptionForm';
 
 export const CancelView: React.FC = () => {
   const { setCurrentTab } = useLearning();
@@ -26,13 +25,21 @@ export const CancelView: React.FC = () => {
             Payment Cancelled
           </h1>
           <p className="mt-3 text-sm text-slate-600 dark:text-slate-300 leading-relaxed max-w-md mx-auto">
-            Your transaction was not completed and you haven&apos;t been charged. You can retry starting your 2-Day Free Trial below or continue exploring free materials.
+            Your transaction was not completed and you haven&apos;t been charged. You can unlock full access for R60 with SnapScan below or continue exploring free materials.
           </p>
         </div>
 
-        {/* Retry Form */}
+        {/* Retry Button */}
         <div className="py-2">
-          <PayFastSubscriptionForm buttonText="Retry 2-Day Free Trial - Then R60/Month" />
+          <a
+            href="https://pos.snapscan.io/qr/NKJJYpV6"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="w-full py-4 px-6 rounded-2xl bg-[#0077b6] hover:bg-[#023e8a] text-white font-black text-base flex items-center justify-center gap-2 shadow-lg"
+          >
+            <QrCode className="w-5 h-5" />
+            <span>Pay R60 with SnapScan &bull; Instant Access</span>
+          </a>
         </div>
 
         <div className="pt-2 border-t border-slate-100 dark:border-slate-800 flex justify-center">

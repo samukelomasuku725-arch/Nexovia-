@@ -1,0 +1,27 @@
+[
+  {
+    "id": "code_1793786311297_seed",
+    "code": "NEX-482910",
+    "phone": "0821234567",
+    "email": "learner@nexovian.group",
+    "reference": "SNAP-DEMO-R60",
+    "status": "unused",
+    "created_at": "2026-11-04T09:58:31.297Z",
+    "used_at": null,
+    "subscription_start": null,
+    "subscription_end": null
+  },
+  {
+    "id": "code_1793786311297_6nvqs",
+    "code": "NEX-460315",
+    "phone": "0829876543",
+    "email": "learner@example.com",
+    "reference": "SNAP-AUTO-01",
+    "status": "used",
+    "created_at": "2026-11-04T09:58:31.297Z",
+    "used_at": "2026-11-04T09:58:37.267Z",
+    "subscription_start": 1793786317267,
+    "subscription_end": 1796378317267,
+    "used_by_phone": "0829876543"
+  }
+]

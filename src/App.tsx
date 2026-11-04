@@ -37,6 +37,11 @@ import { TrialLandingView } from './components/payment/TrialLandingView';
 import { PaywallView } from './components/payment/PaywallView';
 import { PublicLandingView } from './components/home/PublicLandingView';
 import { MathCalculatorView } from './components/calculator/MathCalculatorView';
+import { PastPapersView } from './components/papers/PastPapersView';
+import { AdminPaymentsView } from './components/admin/AdminPaymentsView';
+import { UnlockCodeView } from './components/payment/UnlockCodeView';
+import { AdminCodesView } from './components/admin/AdminCodesView';
+import { checkAccess } from './services/snapscanSubscriptionService';
 import { LessonPlayerModal } from './components/player/LessonPlayerModal';
 import { CertificateModal } from './components/certificate/CertificateModal';
 import { SearchModal } from './components/search/SearchModal';
@@ -75,64 +80,32 @@ const MainLayout: React.FC = () => {
   const { isAuthenticated, isLoading, user, logout } = useAuth();
   const { t } = useTranslation();
 
-  // Protected Route Subscription / Trial Auto-Lock Guard (unconditional hook execution)
+  // Protected Route Subscription / 30-Day Auto-Lock Guard (unconditional hook execution)
   useEffect(() => {
     if (isLoading) return;
 
-    // Fully unlocked if user paid with SnapScan instant auto-unlock!
-    try {
-      if (localStorage.getItem('nexovian_paid') === 'true') {
-        if (currentTab === 'paywall') {
-          setCurrentTab('home');
-        }
-        return;
-      }
-    } catch (_) {}
-
-    const isPublicTab = ['landing', 'login', 'signup', 'calculator', 'about', 'success', 'cancel', 'trial', 'paywall'].includes(currentTab);
+    // Free routes (no lock): / (homepage), /papers (first 2 preview questions only), /login, /register, /paywall, /unlock, /admin/codes, /admin/payments
+    const isPublicTab = ['landing', 'login', 'signup', 'calculator', 'about', 'success', 'cancel', 'trial', 'paywall', 'papers', 'adminPayments', 'unlock', 'adminCodes'].includes(currentTab);
     if (isPublicTab) return;
 
     if (isAdminUser(user)) return;
 
-    // Check localStorage override first (e.g. freshly verified Paystack payment)
-    try {
-      const override = localStorage.getItem('nexovian_subscription_override');
-      if (override) {
-        const parsed = JSON.parse(override);
-        if (parsed.status === 'active' && (!parsed.until || parsed.until > Date.now())) {
-          return;
-        }
+    // Route guard: checkAccess(user):
+    // IF subscription_status == 'active' AND now <= subscription_end -> allow access
+    // IF now > subscription_end -> set subscription_status = 'expired', DENY access, redirect to /paywall with message "Your 30-day access has expired. Renew for R60 to continue."
+    const access = checkAccess(user);
+    if (!access.allow) {
+      if (typeof window !== 'undefined') {
+        window.history.pushState({}, '', '/paywall?reason=subscription_expired');
       }
-    } catch (_) {}
-
-    const emailToCheck = user?.email;
-    if (!emailToCheck) {
-      // If user isn't logged in on protected route, redirect to login
-      setCurrentTab('login');
+      setCurrentTab('paywall');
       return;
     }
 
-    let isMounted = true;
-    fetch(`/api/subscription/check?email=${encodeURIComponent(emailToCheck)}&userId=${encodeURIComponent(user?.id || '')}`)
-      .then((res) => res.json())
-      .then((data) => {
-        if (!isMounted) return;
-        if (data.success && data.allow === false) {
-          const reason = data.reason || 'trial_expired';
-          if (typeof window !== 'undefined') {
-            window.history.pushState({}, '', `/paywall?reason=${reason}`);
-          }
-          setCurrentTab('paywall');
-        }
-      })
-      .catch((err) => {
-        console.warn('Subscription check error:', err);
-      });
-
-    return () => {
-      isMounted = false;
-    };
-  }, [currentTab, user, isLoading]);
+    if (currentTab === 'paywall' && access.allow) {
+      setCurrentTab('home');
+    }
+  }, [currentTab, user, isLoading, setCurrentTab]);
 
   // If initial auth session is being checked, show quick splash
   if (isLoading) {
@@ -151,26 +124,68 @@ const MainLayout: React.FC = () => {
     return <PublicLandingView />;
   }
 
-  // 2. Route /login: Render login screen
+  // 1b. Route /papers: Past Papers & Memos (First 2 questions free, rest blurred + SnapScan unlock)
+  if (currentTab === 'papers') {
+    return <PastPapersView />;
+  }
+
+  // 1c. Route /admin/payments: Admin Payments Management (Password protected)
+  if (currentTab === 'adminPayments') {
+    return <AdminCodesView />;
+  }
+
+  // 1d. Route /admin/codes: Admin Unlock Codes Registry (Password protected)
+  if (currentTab === 'adminCodes') {
+    return <AdminCodesView />;
+  }
+
+  // 1e. Route /unlock: Enter One-Time Unlock Code
+  if (currentTab === 'unlock') {
+    return <UnlockCodeView />;
+  }
+
+  // 2. Route /login: Render login screen (or skip to dashboard ONLY IF fully paid & unlocked)
   if (currentTab === 'login') {
+    if (
+      typeof window !== 'undefined' &&
+      localStorage.getItem('nexovian_logged_in') === 'true' &&
+      localStorage.getItem('nexovian_unlocked') === 'true' &&
+      localStorage.getItem('nexovian_paid') === 'true'
+    ) {
+      setCurrentTab('home');
+      return null;
+    }
     return <CreateAccountScreen initialMode="login" />;
   }
 
-  // 3. Route /signup: Render signup screen
+  // 3. Route /signup: Render signup screen (or skip to dashboard ONLY IF fully paid & unlocked)
   if (currentTab === 'signup') {
+    if (
+      typeof window !== 'undefined' &&
+      localStorage.getItem('nexovian_logged_in') === 'true' &&
+      localStorage.getItem('nexovian_unlocked') === 'true' &&
+      localStorage.getItem('nexovian_paid') === 'true'
+    ) {
+      setCurrentTab('home');
+      return null;
+    }
     return <CreateAccountScreen initialMode="signup" />;
   }
 
-  // 4. Route /paywall: Render Paywall screen (R60/month, SnapScan, Paystack inline, reasons)
+  // 4. Route /paywall: Render Paywall screen (R60/month, SnapScan, reasons)
   if (currentTab === 'paywall') {
-    if (typeof window !== 'undefined' && localStorage.getItem('nexovian_paid') === 'true') {
+    if (
+      typeof window !== 'undefined' &&
+      localStorage.getItem('nexovian_unlocked') === 'true' &&
+      localStorage.getItem('nexovian_paid') === 'true'
+    ) {
       setCurrentTab('home');
       return null;
     }
     return <PaywallView />;
   }
 
-  // 5. Route /trial: Render 2-Day Free Trial PayFast page
+  // 5. Route /trial: Render 2-Day Free Trial SnapScan unlock page
   if (currentTab === 'trial') {
     return <TrialLandingView />;
   }
@@ -190,7 +205,7 @@ const MainLayout: React.FC = () => {
 
   return (
     <div className="min-h-screen flex flex-col bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 transition-colors pb-16 md:pb-0 w-full max-w-[100vw] overflow-x-hidden">
-      {/* 2-Day Free Trial / PayFast Subscription Notification */}
+      {/* 2-Day Free Trial / Subscription Notification */}
       <SubscriptionBanner />
 
       {/* 3-Zone Top Navigation Bar */}

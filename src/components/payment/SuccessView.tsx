@@ -2,7 +2,7 @@
  * @license
  * SPDX-License-Identifier: Apache-2.0
  * 
- * NEXOVIAN PAYFAST SUBSCRIPTION SUCCESS PAGE (/success)
+ * NEXOVIAN PREMIUM ACCESS SUCCESS PAGE (/success)
  */
 
 import React, { useEffect } from 'react';
@@ -17,10 +17,11 @@ export const SuccessView: React.FC = () => {
 
   useEffect(() => {
     // Mark user as subscribed locally
+    try {
+      localStorage.setItem('nexovian_paid', 'true');
+    } catch (_) {}
     if (user?.email) {
-      recordPaymentSuccess(user.email, 'PAYFAST-TRIAL', user.id);
-    } else {
-      localStorage.setItem('nexovian_payfast_trial_active', 'true');
+      recordPaymentSuccess(user.email, 'SNAPSCAN-R60', user.id);
     }
   }, [user]);
 
@@ -36,7 +37,7 @@ export const SuccessView: React.FC = () => {
         {/* Heading & Mission */}
         <div>
           <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 font-mono mb-3">
-            Payment Confirmed • PayFast Active
+            Payment Confirmed • Full Access Granted
           </span>
           <h1 className="text-3xl sm:text-4xl font-black text-slate-900 dark:text-white font-display tracking-tight">
             Welcome to Nexovian! 🎉

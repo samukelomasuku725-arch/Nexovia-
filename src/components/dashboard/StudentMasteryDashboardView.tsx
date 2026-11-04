@@ -80,6 +80,7 @@ import { OhmsLawInteractiveWidget } from '../interactive/OhmsLawInteractiveWidge
 import { HeroSection } from '../home/HeroSection';
 import { MissionVisionSection } from '../home/MissionVisionSection';
 import { MissionHeroBanner } from '../home/MissionHeroBanner';
+import { checkAccess } from '../../services/snapscanSubscriptionService';
 
 export const StudentMasteryDashboardView: React.FC = () => {
   const {
@@ -196,8 +197,74 @@ export const StudentMasteryDashboardView: React.FC = () => {
     setCurrentTab('tutor');
   };
 
+  const subInfo = checkAccess(user);
+
+  React.useEffect(() => {
+    if (!subInfo.allow) {
+      if (typeof window !== 'undefined') {
+        window.history.pushState({}, '', '/paywall?reason=subscription_expired');
+      }
+      setCurrentTab('paywall');
+    }
+  }, [subInfo.allow, setCurrentTab]);
+
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 pb-24 md:pb-12 text-slate-900 dark:text-slate-100 transition-colors w-full max-w-[100vw] overflow-x-hidden">
+      {/* 30-Day Subscription Countdown Banner */}
+      {subInfo.status === 'active' && subInfo.daysRemaining > 7 && (
+        <div className="bg-[#007A4D]/15 dark:bg-[#007A4D]/25 border-b border-[#007A4D]/40 text-emerald-800 dark:text-emerald-300 px-4 py-2 text-xs font-bold">
+          <div className="max-w-7xl mx-auto w-full flex items-center justify-between gap-2">
+            <span className="flex items-center gap-2">
+              <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+              <span>Subscription Active &mdash; {subInfo.daysRemaining} days remaining (Expires: {subInfo.expiresAtFormatted})</span>
+            </span>
+            <span className="text-[11px] font-mono text-emerald-600 dark:text-emerald-400">
+              Access Code: {subInfo.accessCode}
+            </span>
+          </div>
+        </div>
+      )}
+
+      {subInfo.status === 'active' && subInfo.daysRemaining <= 7 && (
+        <div className="bg-amber-500/15 dark:bg-amber-500/25 border-b border-amber-400 text-amber-900 dark:text-amber-200 px-4 py-2 text-xs font-bold">
+          <div className="max-w-7xl mx-auto w-full flex items-center justify-between gap-2">
+            <span className="flex items-center gap-2">
+              <Clock className="w-4 h-4 text-amber-500" />
+              <span>Subscription Active &mdash; {subInfo.daysRemaining} days remaining (Expires: {subInfo.expiresAtFormatted})</span>
+            </span>
+            <button
+              onClick={() => {
+                setCurrentTab('paywall');
+                if (typeof window !== 'undefined') window.history.pushState({}, '', '/paywall');
+              }}
+              className="px-3 py-1 rounded-lg bg-[#FFB612] text-black font-black text-xs hover:bg-yellow-400 transition-colors cursor-pointer"
+            >
+              Renew for R60 &mdash; 30 Days
+            </button>
+          </div>
+        </div>
+      )}
+
+      {subInfo.status !== 'active' && (
+        <div className="bg-red-500/20 border-b border-red-500/50 text-red-900 dark:text-red-200 px-4 py-2 text-xs font-bold">
+          <div className="max-w-7xl mx-auto w-full flex items-center justify-between gap-2">
+            <span className="flex items-center gap-2">
+              <AlertCircle className="w-4 h-4 text-red-500" />
+              <span>Subscription Expired &mdash; Renew for R60</span>
+            </span>
+            <button
+              onClick={() => {
+                setCurrentTab('paywall');
+                if (typeof window !== 'undefined') window.history.pushState({}, '', '/paywall');
+              }}
+              className="px-3 py-1 rounded-lg bg-red-600 hover:bg-red-500 text-white font-black text-xs transition-colors cursor-pointer"
+            >
+              Renew for R60 &mdash; 30 Days
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* 1. TOP HEADER & LEARNER COCKPIT BAR */}
       <header className="bg-white dark:bg-slate-900 border-b border-slate-200/80 dark:border-slate-800 sticky top-0 z-30 shadow-xs backdrop-blur-md bg-white/95 dark:bg-slate-900/95 w-full max-w-full overflow-hidden">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between gap-2 sm:gap-4 w-full max-w-full">

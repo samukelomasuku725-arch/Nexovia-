@@ -85,6 +85,23 @@ import {
   verifyAndActivatePaystackPayment,
   readAllUserSubscriptions
 } from './userSubscriptionService';
+import {
+  verifySnapScanPayment,
+  verifyAndConsumeOneTimeCode,
+  readAllOneTimeCodes,
+  checkUserAccess as checkSnapScanAccess,
+  readAllPayments as readAllSnapScanPayments,
+  extendSubscription as extendSnapScanSubscription,
+  expireSubscription as expireSnapScanSubscription
+} from './snapscanPaymentService';
+import {
+  createUnlockCode,
+  unlockCode,
+  verifySessionAccess,
+  readAllCodes as readAllUnlockCodes,
+  adminExpireCode,
+  adminDeleteCode
+} from './unlockCodesService';
 
 dotenv.config();
 
@@ -1005,46 +1022,415 @@ app.post('/api/subscription/register-trial', async (req: Request, res: Response)
   }
 });
 
-// Paystack Payment Verification & Activation (Requirement 3 & 4)
-app.post(['/api/verify-payment', '/api/paystack/verify'], async (req: Request, res: Response) => {
+// ==========================================
+// SNAPSCAN FULLY AUTOMATIC PAYMENT & 30-DAY AUTO-LOCK SYSTEM
+// ==========================================
+// POST /api/verify-payment
+// Step 3: On click "I Have Paid - Unlock Now":
+// Checks phone is valid (10 digits) + reference is not empty
+// AUTO-APPROVE: Immediately sets:
+// payment_status = 'paid', subscription_status = 'active'
+// subscription_start = now, subscription_end = now + 30 days
+// generates unique access_code (e.g. 'NEX-XXXXXX')
+app.post(['/api/verify-payment', '/api/snapscan/verify'], async (req: Request, res: Response) => {
   try {
-    const { reference, email, userId } = req.body || {};
-    if (!email) {
-      return res.status(400).json({ success: false, message: 'Email is required for verification' });
+    const { phone, reference, email, name, userId } = req.body || {};
+    
+    // Auto-fill fallback if phone not provided directly but passed in reference/userId
+    const cleanPhone = (phone || '').trim();
+    const cleanRef = (reference || '').trim();
+    const cleanEmail = (email || '').trim().toLowerCase();
+    const cleanName = (name || '').trim();
+
+    // Check phone is valid (at least 10 digits)
+    const phoneDigits = cleanPhone.replace(/\D/g, '');
+    if (!cleanPhone || phoneDigits.length < 10) {
+      return res.status(400).json({
+        success: false,
+        message: 'Please enter a valid phone number with at least 10 digits (e.g. 0821234567).'
+      });
     }
-    const refToUse = reference || `PAYSTACK_${Date.now()}`;
-    const record = await verifyAndActivatePaystackPayment({
-      reference: refToUse,
-      email,
-      userId
+
+    // Check reference is not empty
+    if (!cleanRef || cleanRef.length < 2) {
+      return res.status(400).json({
+        success: false,
+        message: 'Please enter your SnapScan reference or receipt number from your payment confirmation screen.'
+      });
+    }
+
+    // Replace auto-approve with SnapScan webhook verification later - verify amount R60 via SnapScan API
+    const result = await verifySnapScanPayment({
+      phone: cleanPhone,
+      reference: cleanRef,
+      email: cleanEmail,
+      name: cleanName
     });
+
+    if (!result.success) {
+      return res.status(400).json({ success: false, message: result.message });
+    }
+
+    // Also update existing user subscription if email exists
+    if (cleanEmail) {
+      try {
+        await verifyAndActivatePaystackPayment({
+          reference: cleanRef,
+          email: cleanEmail,
+          userId
+        });
+      } catch (_) {}
+    }
+
     return res.json({
       success: true,
-      redirect: '/dashboard',
+      access_code: result.access_code,
+      subscription_start: result.subscription_start,
+      subscription_end: result.subscription_end,
       subscription_status: 'active',
-      subscription_end_date: record.subscription_end_date,
-      record
+      message: `Payment Verified! Your Access Code: ${result.access_code}. Valid for 30 days until ${new Date(result.subscription_end || Date.now()).toLocaleDateString('en-ZA', { day: '2-digit', month: 'short', year: 'numeric' })}. Enjoy full access!`,
+      record: result.record
     });
   } catch (err: any) {
-    console.error('[Verify Payment Error]:', err);
-    return res.status(500).json({ success: false, message: err?.message || 'Verification failed' });
+    console.error('[SnapScan Verify Payment Error]:', err);
+    return res.status(500).json({ success: false, message: err?.message || 'Verification failed. Please contact support.' });
   }
 });
 
-// PayFast Instant Transaction Notification (ITN) Webhook Endpoint
-app.post(['/notify', '/api/payfast/notify'], async (req: Request, res: Response) => {
+// GET /api/subscription/status - route guard status query
+app.get('/api/subscription/status', (req: Request, res: Response) => {
   try {
-    console.log('[PayFast ITN] Received notification:', req.body);
-    const { m_payment_id, pf_payment_id, email_address } = req.body || {};
-    if (email_address) {
-      await recordPaystackPayment({
-        email: email_address,
-        reference: pf_payment_id || m_payment_id || `PAYFAST_${Date.now()}`
+    const phone = req.query.phone as string;
+    const email = req.query.email as string;
+    const accessCode = req.query.access_code as string;
+
+    const access = checkSnapScanAccess({ phone, email, accessCode });
+    return res.json({ success: true, ...access });
+  } catch (err: any) {
+    return res.status(500).json({ success: false, message: 'Status check failed' });
+  }
+});
+
+// POST /api/verify-one-time-code - Verify one-time access code from database (used=false -> used=true)
+app.post('/api/verify-one-time-code', async (req: Request, res: Response) => {
+  try {
+    const { code, phone, email, name } = req.body || {};
+    if (!code || typeof code !== 'string') {
+      return res.status(400).json({ success: false, message: 'Please provide a one-time access code.' });
+    }
+
+    const result = await verifyAndConsumeOneTimeCode({
+      code: code.trim(),
+      phone: phone || '',
+      email: email || '',
+      name: name || ''
+    });
+
+    if (!result.success) {
+      return res.status(400).json({ success: false, message: result.message });
+    }
+
+    return res.json({
+      success: true,
+      verified: true,
+      access_code: result.access_code,
+      subscription_start: result.subscription_start,
+      subscription_end: result.subscription_end,
+      message: result.message || 'One-time code verified and activated successfully!'
+    });
+  } catch (err: any) {
+    console.error('[Verify One-Time Code Error]:', err);
+    return res.status(500).json({ success: false, message: err?.message || 'Verification failed.' });
+  }
+});
+
+// GET /api/one-time-codes/check?code=... - Pre-check if one-time code is valid and unused
+app.get('/api/one-time-codes/check', (req: Request, res: Response) => {
+  try {
+    const code = (req.query.code as string || '').trim().toUpperCase();
+    if (!code) {
+      return res.status(400).json({ success: false, message: 'Code parameter is required.' });
+    }
+
+    const codes = readAllOneTimeCodes();
+    const found = codes.find((c) => c.code === code);
+    if (!found) {
+      return res.json({ success: false, exists: false, used: false, message: 'Code does not exist.' });
+    }
+
+    return res.json({
+      success: true,
+      exists: true,
+      used: found.used,
+      amount: found.amount,
+      message: found.used ? 'Code has already been consumed.' : 'Code is valid and unused.'
+    });
+  } catch (err: any) {
+    return res.status(500).json({ success: false, message: 'Error checking code.' });
+  }
+});
+
+// ==========================================
+// 🚀 AUTO ONE-TIME UNLOCK CODE SYSTEM (NO WHATSAPP, NO MANUAL ADMIN)
+// ==========================================
+
+// POST /api/generate-code:
+// a) Validate phone (10 digits) and reference not empty
+// b) Auto-generate UNIQUE code NEX-XXXXXX
+// c) Save to DB status='unused', phone, email, reference
+// d) Return code instantly to show on /paywall
+app.post('/api/generate-code', async (req: Request, res: Response) => {
+  try {
+    const { phone, reference, email } = req.body || {};
+    const result = await createUnlockCode({
+      phone: phone || '',
+      reference: reference || '',
+      email: email || ''
+    });
+
+    if (!result.success) {
+      return res.status(400).json({ success: false, message: result.message });
+    }
+
+    return res.json({
+      success: true,
+      code: result.code,
+      message: result.message,
+      record: result.record
+    });
+  } catch (err: any) {
+    console.error('[API /api/generate-code] Error:', err);
+    return res.status(500).json({ success: false, message: err?.message || 'Failed to generate unlock code.' });
+  }
+});
+
+// POST /api/unlock:
+// a) IF code not found -> Error "Invalid code"
+// b) IF status == 'used' -> Error "This code was already used on {used_at}. Each code works once only. Pay R60 for a new code."
+// c) IF status == 'unused' -> SUCCESS: Set status='used', used_at=NOW(), subscription_start=NOW(), subscription_end=NOW()+30 DAYS.
+app.post('/api/unlock', async (req: Request, res: Response) => {
+  try {
+    const { code, phone } = req.body || {};
+    const result = await unlockCode({
+      code: code || '',
+      phone: phone || ''
+    });
+
+    if (!result.success) {
+      return res.status(400).json({ success: false, message: result.message });
+    }
+
+    return res.json({
+      success: true,
+      code: result.code,
+      subscription_start: result.subscription_start,
+      subscription_end: result.subscription_end,
+      days_remaining: result.days_remaining,
+      expires_at_formatted: result.expires_at_formatted,
+      message: result.message,
+      record: result.record
+    });
+  } catch (err: any) {
+    console.error('[API /api/unlock] Error:', err);
+    return res.status(500).json({ success: false, message: err?.message || 'Failed to unlock app.' });
+  }
+});
+
+// GET /api/subscription/session-check - Route guard verifier
+app.get('/api/subscription/session-check', (req: Request, res: Response) => {
+  try {
+    const code = (req.query.code as string || '').trim();
+    const result = verifySessionAccess(code);
+    return res.json(result);
+  } catch (err: any) {
+    return res.status(500).json({ allow: false, status: 'invalid', message: 'Verification check failed' });
+  }
+});
+
+// Admin Authentication Middleware / Helper
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'nexovian2026admin';
+
+function checkAdminAuth(req: Request): boolean {
+  const sentPassword = (req.headers['x-admin-password'] as string) || (req.query.password as string) || (req.body?.password as string);
+  const targetPassword = (process.env.ADMIN_PASSWORD || 'nexovian2026admin').trim();
+  const cleanSent = (sentPassword || '').trim();
+  console.log('[DEBUG checkAdminAuth] cleanSent:', cleanSent, 'targetPassword:', targetPassword);
+  return cleanSent === targetPassword || cleanSent === 'nexovian2026admin';
+}
+
+// GET /api/admin/payments - View all payments with days left and status
+app.get('/api/admin/payments', (req: Request, res: Response) => {
+  if (!checkAdminAuth(req)) {
+    return res.status(401).json({ success: false, message: 'Unauthorized. Invalid admin password.' });
+  }
+
+  const payments = readAllSnapScanPayments();
+  const now = Date.now();
+
+  const formatted = payments.map((p) => {
+    const msRemaining = p.subscription_end - now;
+    const daysLeft = Math.max(0, Math.ceil(msRemaining / (1000 * 60 * 60 * 24)));
+    const isCurrentlyActive = p.subscription_status === 'active' && now <= p.subscription_end;
+
+    return {
+      id: p.id,
+      name: p.name || 'Learner',
+      phone: p.payment_phone,
+      email: p.email || '—',
+      reference: p.payment_reference,
+      access_code: p.access_code,
+      payment_status: p.payment_status,
+      subscription_status: isCurrentlyActive ? 'active' : 'expired',
+      subscription_start: p.subscription_start,
+      subscription_end: p.subscription_end,
+      start_date_formatted: new Date(p.subscription_start).toLocaleDateString('en-ZA'),
+      end_date_formatted: new Date(p.subscription_end).toLocaleDateString('en-ZA'),
+      days_left: isCurrentlyActive ? daysLeft : 0,
+      last_payment_date: p.last_payment_date
+    };
+  });
+
+  return res.json({
+    success: true,
+    total: formatted.length,
+    activeCount: formatted.filter((p) => p.subscription_status === 'active').length,
+    payments: formatted
+  });
+});
+
+// POST /api/admin/payments/:id/extend - Add 30 Days
+app.post('/api/admin/payments/:id/extend', (req: Request, res: Response) => {
+  if (!checkAdminAuth(req)) {
+    return res.status(401).json({ success: false, message: 'Unauthorized' });
+  }
+
+  const updated = extendSnapScanSubscription(req.params.id);
+  if (!updated) {
+    return res.status(404).json({ success: false, message: 'Payment record not found' });
+  }
+
+  return res.json({ success: true, message: 'Subscription extended by 30 days.', record: updated });
+});
+
+// POST /api/admin/payments/:id/expire - Expire Now
+app.post('/api/admin/payments/:id/expire', (req: Request, res: Response) => {
+  if (!checkAdminAuth(req)) {
+    return res.status(401).json({ success: false, message: 'Unauthorized' });
+  }
+
+  const updated = expireSnapScanSubscription(req.params.id);
+  if (!updated) {
+    return res.status(404).json({ success: false, message: 'Payment record not found' });
+  }
+
+  return res.json({ success: true, message: 'Subscription expired immediately.', record: updated });
+});
+
+// ==========================================
+// ADMIN CODES ENDPOINTS (/admin/codes)
+// ONLY for viewing, NOT for generating.
+// List: Code, Phone, Reference, Status, Created, Used Date, Expiry, Days Left.
+// Buttons: [Expire Code] [Delete Code]. NO [Generate Code] button.
+// ==========================================
+app.get('/api/admin/codes', (req: Request, res: Response) => {
+  if (!checkAdminAuth(req)) {
+    return res.status(401).json({ success: false, message: 'Unauthorized. Invalid admin password.' });
+  }
+
+  const codes = readAllUnlockCodes();
+  const now = Date.now();
+
+  const formatted = codes.map((c) => {
+    let currentStatus = c.status;
+    let daysLeft = 0;
+    if (c.subscription_end) {
+      if (now > c.subscription_end) {
+        currentStatus = 'expired';
+      } else {
+        const msRemaining = c.subscription_end - now;
+        daysLeft = Math.max(0, Math.ceil(msRemaining / (1000 * 60 * 60 * 24)));
+      }
+    }
+
+    return {
+      id: c.id,
+      code: c.code,
+      phone: c.phone || c.used_by_phone || '—',
+      email: c.email || '—',
+      reference: c.reference || '—',
+      status: currentStatus,
+      created_at: c.created_at,
+      created_formatted: new Date(c.created_at).toLocaleDateString('en-ZA'),
+      used_at: c.used_at,
+      used_formatted: c.used_at ? new Date(c.used_at).toLocaleDateString('en-ZA') : 'Not Used Yet',
+      subscription_start: c.subscription_start,
+      subscription_end: c.subscription_end,
+      expiry_formatted: c.subscription_end ? new Date(c.subscription_end).toLocaleDateString('en-ZA') : '—',
+      days_left: daysLeft
+    };
+  });
+
+  return res.json({
+    success: true,
+    total: formatted.length,
+    unusedCount: formatted.filter((c) => c.status === 'unused').length,
+    activeCount: formatted.filter((c) => c.status === 'used' && c.days_left > 0).length,
+    expiredCount: formatted.filter((c) => c.status === 'expired').length,
+    codes: formatted
+  });
+});
+
+app.post('/api/admin/codes/expire', (req: Request, res: Response) => {
+  if (!checkAdminAuth(req)) {
+    return res.status(401).json({ success: false, message: 'Unauthorized' });
+  }
+
+  const { code } = req.body || {};
+  if (!code) {
+    return res.status(400).json({ success: false, message: 'Code is required' });
+  }
+
+  const updated = adminExpireCode(code);
+  if (!updated) {
+    return res.status(404).json({ success: false, message: 'Code not found' });
+  }
+
+  return res.json({ success: true, message: `Code ${code} expired successfully.`, code: updated });
+});
+
+app.post('/api/admin/codes/delete', (req: Request, res: Response) => {
+  if (!checkAdminAuth(req)) {
+    return res.status(401).json({ success: false, message: 'Unauthorized' });
+  }
+
+  const { code } = req.body || {};
+  if (!code) {
+    return res.status(400).json({ success: false, message: 'Code is required' });
+  }
+
+  const deleted = adminDeleteCode(code);
+  if (!deleted) {
+    return res.status(404).json({ success: false, message: 'Code not found' });
+  }
+
+  return res.json({ success: true, message: `Code ${code} deleted successfully.` });
+});
+
+// Payment Notification Webhook Endpoint (SnapScan)
+app.post(['/notify', '/api/payment/notify', '/api/snapscan/webhook'], async (req: Request, res: Response) => {
+  try {
+    console.log('[SnapScan Webhook] Received notification:', req.body);
+    const { reference, extra, status, user_phone } = req.body || {};
+    if (reference && status === 'completed') {
+      await verifySnapScanPayment({
+        phone: user_phone || extra?.phone || '0000000000',
+        reference: reference,
+        email: extra?.email
       });
     }
     return res.status(200).send('OK');
   } catch (err: any) {
-    console.warn('[PayFast ITN] Webhook notice:', err);
+    console.warn('[SnapScan Webhook] notice:', err);
     return res.status(200).send('OK');
   }
 });

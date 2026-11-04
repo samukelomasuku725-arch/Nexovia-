@@ -46,7 +46,7 @@ import {
   WHATSAPP_REMIND_URL,
   PREMIUM_TRIAL_ENDS_AT
 } from '../../services/antiAbuseService';
-import { PayFastSubscriptionForm } from '../payment/PayFastSubscriptionForm';
+import { QrCode, Unlock } from 'lucide-react';
 
 export const SubscriptionBanner: React.FC = () => {
   const { user } = useAuth();
@@ -181,10 +181,29 @@ export const SubscriptionBanner: React.FC = () => {
               </div>
             </div>
 
-            {/* Action Buttons: PayFast Form & WhatsApp Reminder */}
+            {/* Action Buttons: SnapScan & WhatsApp Reminder */}
             <div className="space-y-2.5 pt-1">
-              {/* PayFast 2-Day Free Trial Subscription Form */}
-              <PayFastSubscriptionForm buttonText="Start 2-Day Free Trial - Then R60/Month" />
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => window.open('https://pos.snapscan.io/qr/NKJJYpV6', '_blank')}
+                  className="w-full h-[48px] rounded-[25px] bg-[#0077b6] hover:bg-[#023e8a] text-white font-bold text-sm sm:text-[15px] flex items-center justify-center gap-2 shadow-sm transition-all active:scale-98 cursor-pointer"
+                >
+                  <QrCode className="w-4 h-4" />
+                  <span>Pay R60 with SnapScan</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    localStorage.setItem('nexovian_paid', 'true');
+                    window.location.reload();
+                  }}
+                  className="w-full h-[48px] rounded-[25px] bg-[#ffd700] hover:bg-[#facc15] text-black font-extrabold text-sm sm:text-[15px] flex items-center justify-center gap-2 shadow-sm transition-all active:scale-98 cursor-pointer"
+                >
+                  <Unlock className="w-4 h-4 text-black" />
+                  <span>I Have Paid - Unlock</span>
+                </button>
+              </div>
 
               {/* Button 2: "Remind me Tuesday 9am on WhatsApp" */}
               <a
@@ -234,28 +253,14 @@ export const SubscriptionBanner: React.FC = () => {
               <span>WhatsApp Reminder</span>
             </a>
 
-            <form action="https://www.payfast.co.za/eng/process" method="post" className="inline-flex">
-              <input type="hidden" name="merchant_id" value="37812581" />
-              <input type="hidden" name="merchant_key" value="obu7uzftfncig" />
-              <input type="hidden" name="return_url" value="https://nexovian.group/success" />
-              <input type="hidden" name="cancel_url" value="https://nexovian.group/cancel" />
-              <input type="hidden" name="notify_url" value="https://nexovian.group/notify" />
-              <input type="hidden" name="m_payment_id" value="NEXOVIAN-TRIAL" />
-              <input type="hidden" name="amount" value="0" />
-              <input type="hidden" name="item_name" value="Nexovian Trial" />
-              <input type="hidden" name="subscription_type" value="1" />
-              <input type="hidden" name="recurring_amount" value="60" />
-              <input type="hidden" name="frequency" value="3" />
-              <input type="hidden" name="cycles" value="0" />
-              <input type="hidden" name="billing_date" value={new Date(Date.now() + 2*24*3600*1000).toISOString().split('T')[0]} />
-              <button
-                type="submit"
-                className="px-3.5 py-1.5 rounded-full bg-[#000000] hover:bg-slate-900 text-white font-bold text-xs flex items-center gap-1.5 transition-transform active:scale-95 cursor-pointer shadow-sm border border-slate-700"
-              >
-                <span>💳 PayFast Free Trial</span>
-                <ArrowRight className="w-3.5 h-3.5" />
-              </button>
-            </form>
+            <button
+              type="button"
+              onClick={() => window.open('https://pos.snapscan.io/qr/NKJJYpV6', '_blank')}
+              className="px-3.5 py-1.5 rounded-full bg-[#0077b6] hover:bg-[#023e8a] text-white font-bold text-xs flex items-center gap-1.5 transition-transform active:scale-95 cursor-pointer shadow-sm border border-cyan-400/40"
+            >
+              <QrCode className="w-3.5 h-3.5" />
+              <span>Unlock R60 • SnapScan</span>
+            </button>
           </div>
         </div>
       )}

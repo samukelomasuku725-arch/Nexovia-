@@ -39,7 +39,7 @@ import { useLearning } from '../../context/LearningContext';
 import { useTranslation } from '../../i18n/I18nContext';
 import { SALanguageCode } from '../../i18n/types';
 import { APP_CONFIG } from '../../config/brand';
-import { PayFastSubscriptionForm } from '../payment/PayFastSubscriptionForm';
+import { QrCode, ExternalLink } from 'lucide-react';
 
 interface HeroSectionProps {
   onScrollToFinder?: () => void;
@@ -185,9 +185,18 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onScrollToFinder }) =>
                 </a>
               </div>
 
-              {/* PayFast 2-Day Free Trial Subscription Form */}
+              {/* SnapScan Instant Access Button */}
               <div className="mt-6 p-4 sm:p-5 rounded-2xl bg-slate-950/70 border border-slate-800/90 shadow-xl max-w-xl">
-                <PayFastSubscriptionForm />
+                <a
+                  href="https://pos.snapscan.io/qr/NKJJYpV6"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-full py-3.5 px-5 rounded-xl bg-[#0077b6] hover:bg-[#023e8a] text-white font-extrabold text-sm sm:text-base flex items-center justify-center gap-2 shadow-lg transition-transform active:scale-98"
+                >
+                  <QrCode className="w-5 h-5" />
+                  <span>Pay R60 with SnapScan &bull; Instant Access</span>
+                  <ExternalLink className="w-4 h-4 opacity-70" />
+                </a>
               </div>
 
               {/* 4. LANGUAGE BADGES ROW UNDER BUTTONS */}

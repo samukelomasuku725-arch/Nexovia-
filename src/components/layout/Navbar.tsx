@@ -105,6 +105,18 @@ export const Navbar: React.FC = () => {
           </button>
 
           <button
+            onClick={() => setCurrentTab('papers')}
+            className={`flex items-center gap-1.5 transition-colors hover:text-slate-900 dark:hover:text-white py-1 whitespace-nowrap ${
+              currentTab === 'papers'
+                ? 'text-cyan-600 dark:text-[#FFB612] font-semibold border-b-2 border-[#FFB612]'
+                : ''
+            }`}
+          >
+            <span className="text-sm">📚</span>
+            <span>Past Papers &amp; Memos</span>
+          </button>
+
+          <button
             onClick={() => setCurrentTab('calculator')}
             className={`flex items-center gap-1.5 transition-colors hover:text-slate-900 dark:hover:text-white py-1 whitespace-nowrap ${
               currentTab === 'calculator'
@@ -314,10 +326,10 @@ export const Navbar: React.FC = () => {
                   {user.name ? user.name.charAt(0).toUpperCase() : user.email?.charAt(0).toUpperCase()}
                 </div>
                 <div className="hidden sm:flex flex-col text-left leading-tight">
-                  <span className="truncate max-w-[130px] font-bold text-xs text-slate-900 dark:text-white">
-                    {user.name}
+                  <span className="truncate max-w-[150px] font-bold text-xs text-slate-900 dark:text-white">
+                    Welcome, {user.name || 'Learner'}
                   </span>
-                  <span className="truncate max-w-[130px] font-mono text-[10px] text-slate-500 dark:text-slate-400">
+                  <span className="truncate max-w-[150px] font-mono text-[10px] text-slate-500 dark:text-slate-400">
                     {user.email}
                   </span>
                 </div>

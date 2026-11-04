@@ -38,7 +38,7 @@ import { isTtsSupportedForLanguage } from '../services/voice/languageCapabilitie
 
 import { learnerStrugglesService } from '../services/struggles/learnerStrugglesService';
 
-export type AppTab = 'landing' | 'login' | 'signup' | 'calculator' | 'home' | 'dashboard' | 'explore' | 'learn' | 'school' | 'tvet' | 'higherEd' | 'tracks' | 'tutor' | 'scan' | 'practice' | 'saved' | 'profile' | 'adaptive' | 'assessments' | 'academicVoice' | 'progress' | 'adminBank' | 'about' | 'smartNotes' | 'myStruggles' | 'success' | 'cancel' | 'trial' | 'paywall';
+export type AppTab = 'landing' | 'login' | 'signup' | 'calculator' | 'home' | 'dashboard' | 'explore' | 'learn' | 'school' | 'tvet' | 'higherEd' | 'tracks' | 'tutor' | 'scan' | 'practice' | 'saved' | 'profile' | 'adaptive' | 'assessments' | 'academicVoice' | 'progress' | 'adminBank' | 'about' | 'smartNotes' | 'myStruggles' | 'success' | 'cancel' | 'trial' | 'paywall' | 'papers' | 'adminPayments' | 'unlock' | 'adminCodes';
 
 export interface GeminiStatusInfo {
   checked: boolean;
@@ -254,6 +254,18 @@ export const LearningProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const [currentTab, setCurrentTabState] = useState<AppTab>(() => {
     if (typeof window !== 'undefined') {
       const path = window.location.pathname;
+      if (path === '/unlock') {
+        return 'unlock';
+      }
+      if (path === '/admin/codes') {
+        return 'adminCodes';
+      }
+      if (path === '/papers') {
+        return 'papers';
+      }
+      if (path === '/admin/payments') {
+        return 'adminPayments';
+      }
       if (path === '/paywall') {
         return 'paywall';
       }
@@ -290,7 +302,7 @@ export const LearningProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       if (path === '/learn' || window.location.search.includes('lang=')) {
         return 'learn';
       }
-      if (path === '/app' || path === '/dashboard' || path === '/subjects' || path === '/papers' || path === '/quiz') {
+      if (path === '/app' || path === '/dashboard' || path === '/subjects' || path === '/quiz') {
         return 'home';
       }
       if (path === '/') {
@@ -318,6 +330,8 @@ export const LearningProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       else if (tab === 'smartNotes') targetPath = '/smart-notes';
       else if (tab === 'myStruggles') targetPath = '/my-struggles';
       else if (tab === 'learn') targetPath = '/learn';
+      else if (tab === 'papers') targetPath = '/papers';
+      else if (tab === 'adminPayments') targetPath = '/admin/payments';
 
       if (targetPath && window.location.pathname !== targetPath) {
         window.history.pushState({}, '', targetPath);

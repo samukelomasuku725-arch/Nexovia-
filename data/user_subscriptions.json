@@ -10,5 +10,17 @@
     "paystack_reference": "PAYSTACK_TEST_123",
     "created_at": "2026-11-03T08:20:16.604Z",
     "updated_at": "2026-11-03T08:20:23.691Z"
+  },
+  {
+    "user_id": "usr_1793781890528_w07rp",
+    "email": "test@nexovian.co.za",
+    "full_name": "",
+    "trial_start_date": "2026-11-04T08:44:50.528Z",
+    "trial_end_date": "2026-11-06T08:44:50.528Z",
+    "subscription_status": "active",
+    "subscription_end_date": "2026-12-04T08:45:04.116Z",
+    "paystack_reference": "SNAP-TEST123",
+    "created_at": "2026-11-04T08:44:50.528Z",
+    "updated_at": "2026-11-04T08:45:04.116Z"
   }
 ]

@@ -111,6 +111,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const [user, setUser] = useState<UserProfile | null>(() => {
     try {
+      const isLogged = localStorage.getItem('nexovian_logged_in') === 'true';
+      const rawNexUser = localStorage.getItem('nexovian_user');
+      if (isLogged && rawNexUser) {
+        const parsed = JSON.parse(rawNexUser);
+        return {
+          id: parsed.id || `usr_${(parsed.email || parsed.phone || 'learner').replace(/[^a-zA-Z0-9]/g, '_')}`,
+          name: parsed.name || 'Learner',
+          email: parsed.email || (parsed.phone ? `${parsed.phone}@learner.nexovian.ai` : 'learner@nexovian.group'),
+          preferredLanguage: parsed.language || 'en',
+          gradeOrProgramme: parsed.grade || 'Grade 10',
+          createdAt: new Date().toISOString()
+        };
+      }
       const stored = localStorage.getItem(LOCAL_USER_KEY);
       return stored ? JSON.parse(stored) : null;
     } catch {
@@ -136,7 +149,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           const isRemembered = localStorage.getItem(REMEMBER_ME_KEY) === 'true';
           const isTabActive = sessionStorage.getItem(TAB_SESSION_KEY) === 'true';
 
-          if (!isApp && !isRemembered && !isTabActive && initialSession) {
+          if (!isApp && !isRemembered && !isTabActive && initialSession && localStorage.getItem('nexovian_logged_in') !== 'true') {
             // Website visitor without Remember Me: prompt login on new visit
             await supabase.auth.signOut();
             setSession(null);
@@ -165,6 +178,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
             setUser(profile);
             localStorage.setItem(LOCAL_USER_KEY, JSON.stringify(profile));
+            localStorage.setItem('nexovian_logged_in', 'true');
             sessionStorage.setItem(TAB_SESSION_KEY, 'true');
             // Sync to Supabase profiles table
             syncUserProfileToSupabase(initialSession.user, profile.name, profile.preferredLanguage);
@@ -172,9 +186,27 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             // Check if there was no active supabase session
             setSession(null);
             setSupabaseUser(null);
-            // If there was only an old local session without real Supabase session, clear it to ensure genuine auth check
-            setUser(null);
-            localStorage.removeItem(LOCAL_USER_KEY);
+            const isLocalLogged = localStorage.getItem('nexovian_logged_in') === 'true';
+            const rawUser = localStorage.getItem('nexovian_user');
+            if (isLocalLogged && rawUser) {
+              try {
+                const parsed = JSON.parse(rawUser);
+                const localProfile: UserProfile = {
+                  id: parsed.id || `usr_${(parsed.email || parsed.phone || 'learner').replace(/[^a-zA-Z0-9]/g, '_')}`,
+                  name: parsed.name || 'Learner',
+                  email: parsed.email || (parsed.phone ? `${parsed.phone}@learner.nexovian.ai` : 'learner@nexovian.group'),
+                  preferredLanguage: parsed.language || 'en',
+                  gradeOrProgramme: parsed.grade || 'Grade 10',
+                  createdAt: new Date().toISOString()
+                };
+                setUser(localProfile);
+              } catch (_) {
+                setUser(null);
+              }
+            } else {
+              setUser(null);
+              localStorage.removeItem(LOCAL_USER_KEY);
+            }
           }
         }
       } catch (err) {
@@ -382,9 +414,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setSession(null);
       setSupabaseUser(null);
       setUser(null);
+      localStorage.removeItem('nexovian_logged_in');
       localStorage.removeItem(LOCAL_USER_KEY);
       localStorage.removeItem(REMEMBER_ME_KEY);
       sessionStorage.removeItem(TAB_SESSION_KEY);
+      // NOTE: Deliberately KEEP 'nexovian_user' so their details prefill next time!
     }
   };
 

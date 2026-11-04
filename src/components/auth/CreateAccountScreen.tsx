@@ -2,36 +2,11 @@
  * @license
  * SPDX-License-Identifier: Apache-2.0
  * 
- * NEXOVIAN - AUTHENTICATION SCREEN (FACEBOOK LAYOUT WITH NEXOVIAN BRAND COLORS)
+ * NEXOVIAN - AUTHENTICATION SCREEN
+ * Complete Persistent Auth & SnapScan Instant Unlock
  * 
- * 1. Strictly NEXOVIAN Theme - NO BLUE:
- *    - Background: Cream #F6F5EF
- *    - Primary button: Yellow #facc15 with black text #0F172A
- *    - Accent & Logo: Black #0F172A circle, bold yellow 'N', text below "NEXOVIAN"
- *    - Inputs: White #FFFFFF, rounded 12px, border #ddd, height 52px
- *    - Outline button: White background, black border #0F172A, black text, 48px, rounded 25px
- * 
- * 2. Layout (Facebook mobile/web structure):
- *    - Top center: Language selector "English (UK) ▼" small gray text -> 11 SA languages
- *    - Center: 80px circle #0F172A with yellow "N"
- *    - Small text login: "R60 / learner / month"
- *    - Login mode:
- *      * Mobile number or email address + (i) icon
- *      * Password with visibility toggle
- *      * "Remember me" checkbox (default unchecked on website)
- *      * "Log in" button (yellow #facc15, black text, 48px, rounded 25px)
- *      * "Forgotten password?" link (14px black text)
- *      * 80px gap, then outline button "Create new account" (white, black border #0F172A, black text)
- *    - Create account mode:
- *      * Full name
- *      * Mobile number or email address + (i) icon
- *      * Create password
- *      * "Create new account" button (yellow #facc15, black text)
- *      * Headline: "R60 per learner / month - Learn in your language"
- *      * Subtitle: "We built NEXOVIAN to help every student understand every subject in their own language. No one is rich and no one is poor."
- *      * Features: "✓ 11 SA Languages ✓ Socratic Tutor ✓ CAPS Grade 8-12 ✓ Feedback pipeline that learns from you ✓ 4 day streak tracking"
- *      * Link: "Already have account? Log in"
- *    - Very bottom: "∞ NEXOVIAN (PTY) LTD • Built in Mpumalanga • Level 1 B-BBEE"
+ * TASK 1: Completely removed PayFast form / redirects / errors.
+ * TASK 2: Full persistence with nexovian_user, nexovian_logged_in, nexovian_paid.
  */
 
 import React, { useState, useEffect } from 'react';
@@ -43,8 +18,11 @@ import {
   AlertCircle,
   CheckCircle2,
   ArrowLeft,
-  X,
-  Check
+  QrCode,
+  Unlock,
+  Sparkles,
+  GraduationCap,
+  Globe
 } from 'lucide-react';
 import { useAuth, checkIsApp } from '../../context/AuthContext';
 import { useLearning } from '../../context/LearningContext';
@@ -71,10 +49,20 @@ const SA_LANGUAGES: LanguageOption[] = [
   { code: 'nr', name: 'isiNdebele', nativeName: 'isiNdebele' }
 ];
 
-/**
- * Format auth errors into clean, friendly human messages.
- * Never outputs raw JSON or unhandled exceptions.
- */
+const GRADE_OPTIONS = [
+  'Grade 4',
+  'Grade 5',
+  'Grade 6',
+  'Grade 7',
+  'Grade 8',
+  'Grade 9',
+  'Grade 10',
+  'Grade 11',
+  'Grade 12 (Matric)',
+  'TVET / College NATED',
+  'University / Higher Education'
+];
+
 function formatAuthError(err: any): string {
   if (!err) return 'An error occurred. Please try again.';
 
@@ -95,28 +83,7 @@ function formatAuthError(err: any): string {
     }
   }
 
-  // Parse if raw string is JSON format
-  try {
-    const trimmed = raw.trim();
-    if (trimmed.startsWith('{') && trimmed.endsWith('}')) {
-      const parsed = JSON.parse(trimmed);
-      if (parsed.msg) raw = parsed.msg;
-      else if (parsed.message) raw = parsed.message;
-      else if (parsed.error_description) raw = parsed.error_description;
-    }
-  } catch {
-    // Keep raw
-  }
-
   const lower = raw.toLowerCase();
-
-  if (
-    lower.includes('provider is not enabled') ||
-    lower.includes('unsupported provider') ||
-    lower.includes('validation_failed')
-  ) {
-    return 'Login method not available, please use Email';
-  }
 
   if (
     lower.includes('invalid login credentials') ||
@@ -124,6 +91,14 @@ function formatAuthError(err: any): string {
     lower.includes('user not found')
   ) {
     return 'Invalid email or password. Please verify your details and try again.';
+  }
+
+  if (lower.includes('create account first')) {
+    return 'Create Account first';
+  }
+
+  if (lower.includes('incorrect password')) {
+    return 'Incorrect password. Please try again.';
   }
 
   if (
@@ -137,50 +112,71 @@ function formatAuthError(err: any): string {
     return 'Password must be at least 6 characters.';
   }
 
-  if (lower.includes('rate limit')) {
-    return 'Too many attempts. Please wait a moment and try again.';
-  }
-
-  if (lower.includes('email not confirmed')) {
-    return 'Please check your email to confirm your account before logging in.';
-  }
-
   return raw;
 }
 
 export const CreateAccountScreen: React.FC<{ initialMode?: 'login' | 'signup' }> = ({ initialMode = 'login' }) => {
   const { signUpWithEmail, signInWithEmail, resetPassword } = useAuth();
-  const { setCurrentTab } = useLearning();
+  const { setCurrentTab, setActiveLearningLanguage } = useLearning();
 
   const [mode, setMode] = useState<AuthViewMode>(initialMode);
 
   useEffect(() => {
     setMode(initialMode);
   }, [initialMode]);
-  const [selectedLang, setSelectedLang] = useState<LanguageOption>(SA_LANGUAGES[0]);
-  const [isLangModalOpen, setIsLangModalOpen] = useState(false);
 
   // Form inputs
   const [fullName, setFullName] = useState('');
   const [identifier, setIdentifier] = useState(''); // Mobile number or email
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [selectedLang, setSelectedLang] = useState<LanguageOption>(SA_LANGUAGES[0]);
+  const [selectedGrade, setSelectedGrade] = useState<string>(GRADE_OPTIONS[6]); // Grade 10 default
   const [showPassword, setShowPassword] = useState(false);
-  const [rememberMe, setRememberMe] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [rememberMe, setRememberMe] = useState(true); // Checked by default as requested
+
+  // Payment modal state after sign up
+  const [showSnapScanModal, setShowSnapScanModal] = useState(false);
+  const [hasPaidUnlocked, setHasPaidUnlocked] = useState(false);
+  const [snapScanTimerNotice, setSnapScanTimerNotice] = useState(false);
 
   // State
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [resetSuccess, setResetSuccess] = useState(false);
-  const [signUpSuccess, setSignUpSuccess] = useState(false);
   const [showInfoTooltip, setShowInfoTooltip] = useState(false);
 
-  const isNativeApp = checkIsApp();
+  // PRE-FILL LOGIN: If nexovian_user exists in localStorage, pre-fill Email/Phone on login page!
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem('nexovian_user');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed.phone) {
+          setIdentifier(parsed.phone);
+        } else if (parsed.email) {
+          // If synthetic phone email, strip suffix
+          if (parsed.email.endsWith('@learner.nexovian.ai')) {
+            setIdentifier(parsed.email.replace('@learner.nexovian.ai', ''));
+          } else {
+            setIdentifier(parsed.email);
+          }
+        }
+        if (parsed.name && !fullName) {
+          setFullName(parsed.name);
+        }
+        if (parsed.language) {
+          const matchedLang = SA_LANGUAGES.find((l) => l.code === parsed.language);
+          if (matchedLang) setSelectedLang(matchedLang);
+        }
+        if (parsed.grade) {
+          setSelectedGrade(parsed.grade);
+        }
+      }
+    } catch (_) {}
+  }, [mode]);
 
-  /**
-   * Helper to normalize identifier.
-   * If user enters a 10-digit South African mobile number (e.g. 0821234567 or +27...),
-   * converts to a valid email representation or ensures email format.
-   */
   const normalizeEmail = (input: string): string => {
     const cleaned = input.trim();
     if (cleaned.includes('@')) {
@@ -193,6 +189,7 @@ export const CreateAccountScreen: React.FC<{ initialMode?: 'login' | 'signup' }>
     return cleaned.toLowerCase();
   };
 
+  // LOGIN SUBMIT HANDLER
   const handleLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
@@ -206,17 +203,71 @@ export const CreateAccountScreen: React.FC<{ initialMode?: 'login' | 'signup' }>
         throw new Error('Please enter your password.');
       }
 
+      const rawInput = identifier.trim().toLowerCase();
+      const digitsInput = identifier.replace(/[\s\-()]/g, '');
       const emailToUse = normalizeEmail(identifier);
-      await signInWithEmail(emailToUse, password, rememberMe);
-      setCurrentTab('home');
+
+      // 1. Check localStorage first
+      const savedUserRaw = localStorage.getItem('nexovian_user');
+      let localFound = false;
+
+      if (savedUserRaw) {
+        try {
+          const savedUser = JSON.parse(savedUserRaw);
+          const savedEmail = (savedUser.email || '').toLowerCase();
+          const savedPhone = (savedUser.phone || '').replace(/[\s\-()]/g, '');
+
+          const matches =
+            savedEmail === rawInput ||
+            savedEmail === emailToUse ||
+            (savedPhone && savedPhone === digitsInput);
+
+          if (matches) {
+            localFound = true;
+            if (savedUser.password && savedUser.password !== password) {
+              throw new Error('Incorrect password. Please try again.');
+            }
+            // Password matches stored credentials
+            localStorage.setItem('nexovian_logged_in', 'true');
+            if (savedUser.language) {
+              setActiveLearningLanguage(savedUser.language as any);
+            }
+            setCurrentTab('home');
+            return;
+          }
+        } catch (err: any) {
+          if (err.message?.includes('Incorrect password')) {
+            throw err;
+          }
+        }
+      }
+
+      // 2. Try Supabase sign in if not matched or as secondary source
+      try {
+        await signInWithEmail(emailToUse, password, rememberMe);
+        localStorage.setItem('nexovian_logged_in', 'true');
+        setCurrentTab('home');
+      } catch (supaErr: any) {
+        if (!localFound) {
+          if (!savedUserRaw) {
+            throw new Error('Create Account first');
+          }
+          const msg = formatAuthError(supaErr);
+          if (msg.toLowerCase().includes('invalid') || msg.toLowerCase().includes('user not found')) {
+            throw new Error('Create Account first');
+          }
+          throw supaErr;
+        }
+      }
     } catch (err: any) {
       console.error('Login error:', err);
-      setError(formatAuthError(err));
+      setError(err.message || formatAuthError(err));
     } finally {
       setLoading(false);
     }
   };
 
+  // SIGN UP SUBMIT HANDLER
   const handleSignUpSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
@@ -235,82 +286,70 @@ export const CreateAccountScreen: React.FC<{ initialMode?: 'login' | 'signup' }>
       if (password.length < 6) {
         throw new Error('Password must be at least 6 characters.');
       }
-
-      const emailToUse = normalizeEmail(identifier);
-
-      // 1. First save account in database
-      const res = await signUpWithEmail(
-        emailToUse,
-        password,
-        fullName.trim(),
-        selectedLang.code
-      );
-
-      // Register trial in backend database with trial_start_date & trial_end_date
-      try {
-        await fetch('/api/subscription/register-trial', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            userId: res?.user?.id || res?.id || `usr_${Date.now()}`,
-            email: emailToUse,
-            fullName: fullName.trim()
-          })
-        });
-      } catch (subErr) {
-        console.warn('Subscription trial registration notice:', subErr);
+      if (password !== confirmPassword) {
+        throw new Error('Passwords do not match. Please verify your password confirmation.');
       }
 
-      // 2. Immediately redirect to PayFast with subscription form
-      const d = new Date();
-      d.setDate(d.getDate() + 2);
-      const billingDate = d.toISOString().split('T')[0];
+      const isEmail = identifier.includes('@');
+      const emailToUse = normalizeEmail(identifier);
+      const phoneToUse = !isEmail ? identifier.trim() : '';
 
-      const nameParts = fullName.trim().split(' ');
-      const firstName = nameParts[0] || fullName.trim();
-      const lastName = nameParts.slice(1).join(' ') || 'Learner';
-
-      const form = document.createElement('form');
-      form.action = 'https://www.payfast.co.za/eng/process';
-      form.method = 'POST';
-      form.style.display = 'none';
-
-      const payfastFields: Record<string, string> = {
-        merchant_id: '37812581',
-        merchant_key: 'obu7uzftfncig',
-        return_url: 'https://nexovian.group/success',
-        cancel_url: 'https://nexovian.group/cancel',
-        notify_url: 'https://nexovian.group/notify',
-        name_first: firstName,
-        name_last: lastName,
-        email_address: emailToUse,
-        m_payment_id: 'NEXOVIAN-TRIAL',
-        amount: '0',
-        item_name: 'Nexovian 2-Day Free Trial',
-        item_description: 'Nexovian 2-Day Free Trial - R60/month after',
-        subscription_type: '1',
-        recurring_amount: '60',
-        frequency: '3',
-        cycles: '0',
-        billing_date: billingDate
+      // Save user profile and login state in localStorage
+      const userData = {
+        name: fullName.trim(),
+        email: emailToUse,
+        phone: phoneToUse,
+        language: selectedLang.code,
+        grade: selectedGrade,
+        password: password
       };
 
-      for (const [key, value] of Object.entries(payfastFields)) {
-        const input = document.createElement('input');
-        input.type = 'hidden';
-        input.name = key;
-        input.value = value;
-        form.appendChild(input);
+      localStorage.setItem('nexovian_user', JSON.stringify(userData));
+      localStorage.setItem('nexovian_logged_in', 'true');
+      if (localStorage.getItem('nexovian_paid') !== 'true') {
+        localStorage.setItem('nexovian_paid', 'false');
       }
 
-      document.body.appendChild(form);
-      form.submit();
+      setActiveLearningLanguage(selectedLang.code as any);
+
+      // Attempt background Supabase account registration
+      try {
+        await signUpWithEmail(emailToUse, password, fullName.trim(), selectedLang.code);
+      } catch (supaErr) {
+        console.warn('Supabase profile creation note:', supaErr);
+      }
+
+      // Open SnapScan in a new tab as requested
+      window.open('https://pos.snapscan.io/qr/NKJJYpV6', '_blank');
+
+      // Show payment completion modal with side-by-side buttons
+      setShowSnapScanModal(true);
+
+      // 10s timer popup: "Payment done? Click Unlock Now"
+      setTimeout(() => {
+        setSnapScanTimerNotice(true);
+      }, 10000);
     } catch (err: any) {
       console.error('Sign up error:', err);
       setError(formatAuthError(err));
     } finally {
       setLoading(false);
     }
+  };
+
+  // UNLOCK ACTION
+  const handleInstantUnlock = () => {
+    try {
+      localStorage.setItem('nexovian_paid', 'true');
+    } catch (_) {}
+    setHasPaidUnlocked(true);
+    setTimeout(() => {
+      setShowSnapScanModal(false);
+      setCurrentTab('home');
+      if (typeof window !== 'undefined') {
+        window.history.pushState({}, '', '/app');
+      }
+    }, 1200);
   };
 
   const handleResetPassword = async (e: React.FormEvent) => {
@@ -334,60 +373,82 @@ export const CreateAccountScreen: React.FC<{ initialMode?: 'login' | 'signup' }>
   };
 
   return (
-    <div className="min-h-screen w-full bg-[#F6F5EF] text-slate-900 flex flex-col justify-between items-center py-6 px-4 selection:bg-[#facc15] selection:text-slate-950 font-sans antialiased">
+    <div className="min-h-screen bg-[#F6F5EF] flex flex-col justify-between text-slate-900 font-sans selection:bg-[#facc15] selection:text-slate-950">
       
-      {/* 1. TOP CENTER: Language Selector */}
-      <header className="w-full max-w-[420px] flex justify-center pt-1 pb-3">
+      {/* Top Bar: Return link & SA Language Selector */}
+      <div className="w-full pt-4 px-4 flex items-center justify-between max-w-xl mx-auto">
         <button
-          type="button"
-          onClick={() => setIsLangModalOpen(true)}
-          className="inline-flex items-center gap-1.5 text-xs text-slate-500 hover:text-slate-900 font-medium py-1 px-2.5 rounded-md hover:bg-slate-200/60 transition-colors cursor-pointer"
-          aria-label="Select language"
-        >
-          <span>{selectedLang.name}</span>
-          <ChevronDown className="w-3.5 h-3.5 text-slate-500" />
-        </button>
-      </header>
-
-      {/* 2. MAIN CENTER CONTAINER (Max 420px width Facebook style) */}
-      <main className="w-full max-w-[420px] flex-1 flex flex-col justify-center my-auto">
-        
-        {/* CENTER: NEXOVIAN Logo Circle (80px, #0F172A black circle, yellow 'N', border gray) + Logo below = "NEXOVIAN" */}
-        <button
-          type="button"
           onClick={() => setCurrentTab('landing')}
-          className="flex flex-col items-center justify-center mb-6 sm:mb-8 cursor-pointer group"
-          title="Return to Nexovian Home"
+          className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-600 hover:text-slate-950 transition-colors py-1.5 px-3 rounded-full hover:bg-slate-200/60"
         >
-          <div className="w-20 h-20 rounded-full bg-[#0F172A] border border-gray-300 shadow-md flex items-center justify-center transform transition-transform group-hover:scale-105">
-            <span className="text-[#facc15] font-display font-black text-4xl select-none leading-none tracking-tight">
+          <ArrowLeft className="w-3.5 h-3.5" />
+          <span>Home</span>
+        </button>
+
+        <div className="flex items-center gap-2">
+          <Globe className="w-3.5 h-3.5 text-slate-500" />
+          <select
+            value={selectedLang.code}
+            onChange={(e) => {
+              const lang = SA_LANGUAGES.find((l) => l.code === e.target.value);
+              if (lang) {
+                setSelectedLang(lang);
+                setActiveLearningLanguage(lang.code as any);
+              }
+            }}
+            className="bg-transparent text-xs font-semibold text-slate-700 outline-none cursor-pointer border-b border-dashed border-slate-400 pb-0.5"
+          >
+            {SA_LANGUAGES.map((lang) => (
+              <option key={lang.code} value={lang.code}>
+                {lang.nativeName} ({lang.name})
+              </option>
+            ))}
+          </select>
+        </div>
+      </div>
+
+      {/* Main Container */}
+      <div className="w-full max-w-md mx-auto px-5 py-6 flex-1 flex flex-col justify-center">
+        
+        {/* Brand Circle Logo */}
+        <div className="flex flex-col items-center mb-6">
+          <div className="w-20 h-20 rounded-full bg-[#0F172A] flex items-center justify-center shadow-lg border-2 border-[#facc15]/30 mb-2">
+            <span className="font-display text-4xl font-black text-[#facc15] tracking-tight">
               N
             </span>
           </div>
-          <span className="mt-2 font-display font-black text-xl tracking-wider text-slate-950">
+          <span className="font-display text-xl font-black tracking-widest text-[#0F172A]">
             NEXOVIAN
           </span>
-          <span className="text-xs font-bold text-amber-700 mt-0.5">
-            R60 / learner / month
+          <span className="text-xs font-bold text-amber-700 tracking-wide mt-0.5">
+            Grade 4 to University • 11 Languages • R60 / month
           </span>
-        </button>
+        </div>
 
         {/* Global Error Banner */}
         {error && (
-          <div className="mb-4 p-3.5 rounded-[12px] bg-red-50 border border-red-300 text-red-700 text-xs flex items-start gap-2.5 animate-in fade-in">
-            <AlertCircle className="w-4 h-4 text-red-500 shrink-0 mt-0.5" />
-            <span className="leading-relaxed font-medium">{error}</span>
+          <div className="mb-4 p-3.5 rounded-2xl bg-rose-50 border border-rose-300 text-rose-900 text-xs flex items-start gap-2.5 animate-in fade-in">
+            <AlertCircle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
+            <div className="flex-1 font-semibold leading-relaxed">{error}</div>
           </div>
         )}
 
         {/* ========================================================
-            VIEW MODE: LOGIN (FACEBOOK LAYOUT WITH NEXOVIAN COLORS)
+            VIEW MODE: LOGIN
            ======================================================== */}
         {mode === 'login' && (
-          <div className="w-full">
-            <form onSubmit={handleLoginSubmit} className="space-y-3">
-              
-              {/* Input 1: "Mobile number or email address" + (i) icon right */}
+          <div className="w-full bg-white/70 backdrop-blur-xs p-6 rounded-3xl border border-slate-200/80 shadow-md">
+            <div className="text-center mb-5">
+              <h2 className="text-xl font-black text-slate-950 font-display">
+                Sign in to continue
+              </h2>
+              <p className="text-xs text-slate-500 mt-1">
+                Enter your registered details to access your learning dashboard
+              </p>
+            </div>
+
+            <form onSubmit={handleLoginSubmit} className="space-y-3.5">
+              {/* Input 1: Email or Mobile */}
               <div className="relative">
                 <input
                   type="text"
@@ -395,25 +456,23 @@ export const CreateAccountScreen: React.FC<{ initialMode?: 'login' | 'signup' }>
                   value={identifier}
                   onChange={(e) => setIdentifier(e.target.value)}
                   placeholder="Mobile number or email address"
-                  className="w-full h-[54px] bg-white text-[#0f172a] placeholder:text-[#94a3b8] border border-[#e2e8f0] rounded-2xl px-5 pr-11 text-[15px] font-medium focus:border-[#facc15] focus:ring-2 focus:ring-[#facc15]/20 outline-none shadow-xs"
+                  className="w-full h-[52px] bg-white text-[#0f172a] placeholder:text-[#94a3b8] border border-[#d1d5db] rounded-2xl px-5 pr-11 text-[15px] font-medium focus:border-[#facc15] focus:ring-2 focus:ring-[#facc15]/30 outline-none shadow-xs"
                 />
                 <button
                   type="button"
                   onClick={() => setShowInfoTooltip(!showInfoTooltip)}
                   className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700 cursor-pointer p-1"
-                  aria-label="Information about login identifier"
                 >
                   <Info className="w-4 h-4" />
                 </button>
-
                 {showInfoTooltip && (
                   <div className="absolute z-20 left-0 right-0 -top-12 bg-slate-900 text-white text-[11px] p-2 rounded-lg shadow-lg">
-                    Enter your registered email address or mobile number to access your account.
+                    Enter your registered email address or mobile number.
                   </div>
                 )}
               </div>
 
-              {/* Input 2: "Password" */}
+              {/* Input 2: Password */}
               <div className="relative">
                 <input
                   type={showPassword ? 'text' : 'password'}
@@ -421,65 +480,58 @@ export const CreateAccountScreen: React.FC<{ initialMode?: 'login' | 'signup' }>
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="Password"
-                  className="w-full h-[54px] bg-white text-[#0f172a] placeholder:text-[#94a3b8] border border-[#e2e8f0] rounded-2xl px-5 pr-11 text-[15px] font-medium focus:border-[#facc15] focus:ring-2 focus:ring-[#facc15]/20 outline-none shadow-xs"
+                  className="w-full h-[52px] bg-white text-[#0f172a] placeholder:text-[#94a3b8] border border-[#d1d5db] rounded-2xl px-5 pr-11 text-[15px] font-medium focus:border-[#facc15] focus:ring-2 focus:ring-[#facc15]/30 outline-none shadow-xs"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
                   className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700 cursor-pointer p-1"
-                  aria-label={showPassword ? 'Hide password' : 'Show password'}
                 >
                   {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
               </div>
 
-              {/* Remember me checkbox on website */}
-              {!isNativeApp && (
-                <div className="flex items-center gap-2 pt-1 pb-1">
+              {/* Remember me checkbox (checked by default) */}
+              <div className="flex items-center justify-between pt-1 pb-1">
+                <label className="flex items-center gap-2 cursor-pointer select-none">
                   <input
-                    id="remember-me-checkbox"
                     type="checkbox"
                     checked={rememberMe}
                     onChange={(e) => setRememberMe(e.target.checked)}
-                    className="w-4 h-4 text-[#facc15] bg-white border-[#ddd] rounded focus:ring-0 cursor-pointer accent-[#facc15]"
+                    className="w-4 h-4 text-[#facc15] bg-white border-[#d1d5db] rounded focus:ring-0 cursor-pointer accent-[#facc15]"
                   />
-                  <label
-                    htmlFor="remember-me-checkbox"
-                    className="text-xs text-slate-600 font-medium select-none cursor-pointer"
-                  >
-                    Remember me
-                  </label>
-                </div>
-              )}
+                  <span className="text-xs text-slate-700 font-medium">
+                    Remember me / Save login details
+                  </span>
+                </label>
 
-              {/* Primary Button: "Log in" FULL width, yellow #facc15, black text #0F172A, height 48px, rounded 25px, bold */}
-              <div className="pt-1">
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="w-full h-[48px] rounded-[25px] bg-[#facc15] hover:bg-[#eab308] text-[#0F172A] font-bold text-[16px] shadow-sm hover:shadow transition-all transform active:scale-[0.99] flex items-center justify-center cursor-pointer disabled:opacity-60"
-                >
-                  {loading ? 'Logging in...' : 'Log in'}
-                </button>
-              </div>
-
-              {/* Below: "Forgotten password?" centered black text 14px */}
-              <div className="pt-2 text-center">
                 <button
                   type="button"
                   onClick={() => {
                     setError(null);
                     setMode('forgot_password');
                   }}
-                  className="text-[14px] text-slate-900 font-medium hover:underline cursor-pointer"
+                  className="text-xs text-slate-900 font-bold hover:underline"
                 >
-                  Forgotten password?
+                  Forgot password?
                 </button>
               </div>
+
+              {/* Login Button */}
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full h-[48px] rounded-[25px] bg-[#facc15] hover:bg-[#eab308] text-[#0F172A] font-bold text-[16px] shadow-sm hover:shadow transition-all transform active:scale-[0.99] flex items-center justify-center cursor-pointer disabled:opacity-60"
+              >
+                {loading ? 'Logging in...' : 'Log in'}
+              </button>
             </form>
 
-            {/* Bottom gap 80px (mt-20) then outline button: "Create Account - Get 2-Day Free Trial" */}
-            <div className="mt-14 sm:mt-20">
+            {/* Create Account switch */}
+            <div className="mt-8 pt-5 border-t border-slate-200 text-center">
+              <p className="text-xs text-slate-600 mb-3 font-medium">
+                New to NEXOVIAN? Start free for 2 days
+              </p>
               <button
                 type="button"
                 onClick={() => {
@@ -491,79 +543,33 @@ export const CreateAccountScreen: React.FC<{ initialMode?: 'login' | 'signup' }>
                 }}
                 className="w-full h-[48px] rounded-[25px] bg-white border border-[#0F172A] text-[#0F172A] font-bold text-[15px] hover:bg-slate-100 transition-all flex items-center justify-center cursor-pointer shadow-xs active:scale-[0.99]"
               >
-                Create Account - Get 2-Day Free Trial
+                Create Account - Start 2-Day Free Trial
               </button>
-
-              <div className="mt-3 text-center">
-                <a
-                  href="/trial"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    window.history.pushState({}, '', '/trial');
-                    window.dispatchEvent(new PopStateEvent('popstate'));
-                  }}
-                  className="text-xs text-slate-700 hover:text-slate-950 font-semibold underline cursor-pointer"
-                >
-                  Start 2-Day Free Trial via PayFast →
-                </a>
-              </div>
             </div>
           </div>
         )}
 
         {/* ========================================================
-            VIEW MODE: CREATE ACCOUNT (FACEBOOK LAYOUT WITH NEXOVIAN COLORS)
+            VIEW MODE: SIGN UP (CREATE ACCOUNT)
            ======================================================== */}
         {mode === 'signup' && (
-          <div className="w-full">
-            
-            {/* Title & Mission Header */}
+          <div className="w-full bg-white/70 backdrop-blur-xs p-6 rounded-3xl border border-slate-200/80 shadow-md">
             <div className="text-center mb-5">
-              <h1 className="text-2xl font-black text-slate-950 font-display tracking-tight">
-                Create Account - Get 2-Day Free Trial
-              </h1>
-              <p className="text-sm font-black text-amber-700 mt-1">
-                2 day free trial for new learners • R60 / learner / month
+              <h2 className="text-2xl font-black text-slate-950 font-display tracking-tight">
+                Create Account
+              </h2>
+              <p className="text-xs font-bold text-amber-700 mt-0.5">
+                Start 2-Day Free Trial • Then R60/month • Cancel anytime
               </p>
-              <p className="text-[12px] text-slate-600 mt-1 leading-relaxed">
-                We built NEXOVIAN to help every student understand every subject in their own language. No one is rich and no one is poor.
-              </p>
-
-              {/* Feature Highlights */}
-              <div className="mt-3 flex flex-wrap justify-center gap-1.5 text-[11px] text-slate-700 font-semibold">
+              <div className="mt-2.5 flex flex-wrap justify-center gap-1.5 text-[10px] text-slate-700 font-semibold">
                 <span className="px-2 py-0.5 rounded-full bg-yellow-100 border border-yellow-300">✓ 11 SA Languages</span>
-                <span className="px-2 py-0.5 rounded-full bg-yellow-100 border border-yellow-300">✓ Socratic Tutor</span>
                 <span className="px-2 py-0.5 rounded-full bg-yellow-100 border border-yellow-300">✓ Grade 4 to University</span>
-                <span className="px-2 py-0.5 rounded-full bg-yellow-100 border border-yellow-300">✓ Feedback pipeline</span>
-                <span className="px-2 py-0.5 rounded-full bg-yellow-100 border border-yellow-300">✓ 4 day streak tracking</span>
+                <span className="px-2 py-0.5 rounded-full bg-yellow-100 border border-yellow-300">✓ AI Socratic Tutor</span>
               </div>
             </div>
 
-            {/* Email Confirmation notice */}
-            {signUpSuccess && (
-              <div className="mb-4 p-4 rounded-[12px] bg-amber-50 border border-amber-300 text-amber-900 text-xs space-y-1 animate-in fade-in">
-                <div className="font-bold flex items-center gap-1.5 text-amber-950">
-                  <CheckCircle2 className="w-4 h-4 text-amber-600" />
-                  <span>Account created successfully!</span>
-                </div>
-                <p>
-                  Please check <strong>{identifier}</strong> for verification if prompted, or log in with your credentials.
-                </p>
-                <div className="pt-2">
-                  <button
-                    type="button"
-                    onClick={() => setMode('login')}
-                    className="text-xs font-bold text-[#0F172A] underline cursor-pointer"
-                  >
-                    Proceed to Log in
-                  </button>
-                </div>
-              </div>
-            )}
-
             <form onSubmit={handleSignUpSubmit} className="space-y-3">
-              
-              {/* Input 1: "Full name" */}
+              {/* Field 1: Full Name */}
               <div>
                 <input
                   type="text"
@@ -571,90 +577,149 @@ export const CreateAccountScreen: React.FC<{ initialMode?: 'login' | 'signup' }>
                   value={fullName}
                   onChange={(e) => setFullName(e.target.value)}
                   placeholder="Full name"
-                  className="w-full h-[54px] bg-white text-[#0f172a] placeholder:text-[#94a3b8] border border-[#e2e8f0] rounded-2xl px-5 text-[15px] font-medium focus:border-[#facc15] focus:ring-2 focus:ring-[#facc15]/20 outline-none shadow-xs"
+                  className="w-full h-[50px] bg-white text-[#0f172a] placeholder:text-[#94a3b8] border border-[#d1d5db] rounded-2xl px-4 text-[14px] font-medium focus:border-[#facc15] focus:ring-2 focus:ring-[#facc15]/30 outline-none shadow-xs"
                 />
               </div>
 
-              {/* Input 2: "Mobile number or email address" + (i) icon right */}
+              {/* Field 2: Phone / Email */}
               <div className="relative">
                 <input
                   type="text"
                   required
                   value={identifier}
                   onChange={(e) => setIdentifier(e.target.value)}
-                  placeholder="Mobile number or email address"
-                  className="w-full h-[54px] bg-white text-[#0f172a] placeholder:text-[#94a3b8] border border-[#e2e8f0] rounded-2xl px-5 pr-11 text-[15px] font-medium focus:border-[#facc15] focus:ring-2 focus:ring-[#facc15]/20 outline-none shadow-xs"
+                  placeholder="Phone number or email address"
+                  className="w-full h-[50px] bg-white text-[#0f172a] placeholder:text-[#94a3b8] border border-[#d1d5db] rounded-2xl px-4 pr-10 text-[14px] font-medium focus:border-[#facc15] focus:ring-2 focus:ring-[#facc15]/30 outline-none shadow-xs"
                 />
                 <button
                   type="button"
                   onClick={() => setShowInfoTooltip(!showInfoTooltip)}
-                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700 cursor-pointer p-1"
-                  aria-label="Information about login identifier"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700 p-1"
                 >
                   <Info className="w-4 h-4" />
                 </button>
               </div>
 
-              {/* Input 3: "Create password" */}
+              {/* Field 3: Password */}
               <div className="relative">
                 <input
                   type={showPassword ? 'text' : 'password'}
                   required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Create password - min 6 characters"
-                  className="w-full h-[54px] bg-white text-[#0f172a] placeholder:text-[#94a3b8] border border-[#e2e8f0] rounded-2xl px-5 pr-11 text-[15px] font-medium focus:border-[#facc15] focus:ring-2 focus:ring-[#facc15]/20 outline-none shadow-xs"
+                  placeholder="Password (min 6 characters)"
+                  className="w-full h-[50px] bg-white text-[#0f172a] placeholder:text-[#94a3b8] border border-[#d1d5db] rounded-2xl px-4 pr-10 text-[14px] font-medium focus:border-[#facc15] focus:ring-2 focus:ring-[#facc15]/30 outline-none shadow-xs"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700 cursor-pointer p-1"
-                  aria-label={showPassword ? 'Hide password' : 'Show password'}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700 p-1"
                 >
                   {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
               </div>
 
-              {/* Button: "Create Account - Get 2-Day Free Trial" yellow #facc15 black text #0F172A, 48px, rounded 25px */}
+              {/* Field 4: Confirm Password */}
+              <div className="relative">
+                <input
+                  type={showConfirmPassword ? 'text' : 'password'}
+                  required
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  placeholder="Confirm password"
+                  className="w-full h-[50px] bg-white text-[#0f172a] placeholder:text-[#94a3b8] border border-[#d1d5db] rounded-2xl px-4 pr-10 text-[14px] font-medium focus:border-[#facc15] focus:ring-2 focus:ring-[#facc15]/30 outline-none shadow-xs"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700 p-1"
+                >
+                  {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
+
+              {/* Field 5 & 6: Language & Grade Dropdowns */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                <div>
+                  <label className="text-[11px] font-bold text-slate-600 block mb-1">
+                    Preferred Language (11 Official)
+                  </label>
+                  <select
+                    value={selectedLang.code}
+                    onChange={(e) => {
+                      const l = SA_LANGUAGES.find((lang) => lang.code === e.target.value);
+                      if (l) setSelectedLang(l);
+                    }}
+                    className="w-full h-[46px] bg-white text-slate-900 border border-[#d1d5db] rounded-xl px-3 text-xs font-semibold focus:border-[#facc15] outline-none"
+                  >
+                    {SA_LANGUAGES.map((lang) => (
+                      <option key={lang.code} value={lang.code}>
+                        {lang.nativeName} ({lang.name})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="text-[11px] font-bold text-slate-600 block mb-1">
+                    Grade Level (4 to University)
+                  </label>
+                  <select
+                    value={selectedGrade}
+                    onChange={(e) => setSelectedGrade(e.target.value)}
+                    className="w-full h-[46px] bg-white text-slate-900 border border-[#d1d5db] rounded-xl px-3 text-xs font-semibold focus:border-[#facc15] outline-none"
+                  >
+                    {GRADE_OPTIONS.map((gr) => (
+                      <option key={gr} value={gr}>
+                        {gr}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              {/* Remember me checkbox (checked by default) */}
+              <div className="flex items-center gap-2 pt-1 pb-1">
+                <input
+                  id="signup-remember-checkbox"
+                  type="checkbox"
+                  checked={rememberMe}
+                  onChange={(e) => setRememberMe(e.target.checked)}
+                  className="w-4 h-4 text-[#facc15] bg-white border-[#d1d5db] rounded focus:ring-0 cursor-pointer accent-[#facc15]"
+                />
+                <label
+                  htmlFor="signup-remember-checkbox"
+                  className="text-xs text-slate-700 font-medium select-none cursor-pointer"
+                >
+                  Remember me / Save login details
+                </label>
+              </div>
+
+              {/* Submit Button */}
               <div className="pt-2">
                 <button
                   type="submit"
                   disabled={loading}
                   className="w-full h-[48px] rounded-[25px] bg-[#facc15] hover:bg-[#eab308] text-[#0F172A] font-bold text-[16px] shadow-sm hover:shadow transition-all transform active:scale-[0.99] flex items-center justify-center cursor-pointer disabled:opacity-60"
                 >
-                  {loading ? 'Creating account & redirecting...' : 'Create Account - Get 2-Day Free Trial'}
+                  {loading ? 'Creating account...' : 'Create Account - Instant Access'}
                 </button>
               </div>
 
-              {/* Small pricing & trial note below button */}
-              <div className="pt-1 text-center space-y-1">
-                <p className="text-xs text-slate-500 font-medium">
-                  Cancel anytime • 2-Day Free Trial • R60/month
-                </p>
-                <a
-                  href="/trial"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    window.history.pushState({}, '', '/trial');
-                    window.dispatchEvent(new PopStateEvent('popstate'));
-                  }}
-                  className="inline-block text-xs text-slate-700 hover:text-slate-950 font-semibold underline cursor-pointer"
-                >
-                  Or start instant 2-Day Free Trial via PayFast →
-                </a>
-              </div>
-
-              {/* Link: Already have account? Log in */}
-              <div className="pt-4 text-center">
+              {/* Link back to login */}
+              <div className="pt-3 text-center">
                 <button
                   type="button"
                   onClick={() => {
                     setError(null);
                     setMode('login');
+                    if (typeof window !== 'undefined') {
+                      window.history.pushState({}, '', '/login');
+                    }
                   }}
-                  className="text-[14px] text-slate-900 font-medium hover:underline cursor-pointer"
+                  className="text-xs text-slate-800 font-bold hover:underline cursor-pointer"
                 >
-                  Already have account? Log in
+                  Already have an account? Log in
                 </button>
               </div>
             </form>
@@ -662,141 +727,161 @@ export const CreateAccountScreen: React.FC<{ initialMode?: 'login' | 'signup' }>
         )}
 
         {/* ========================================================
-            VIEW MODE: FORGOTTEN PASSWORD
+            VIEW MODE: FORGOT PASSWORD
            ======================================================== */}
         {mode === 'forgot_password' && (
-          <div className="w-full">
+          <div className="w-full bg-white/70 backdrop-blur-xs p-6 rounded-3xl border border-slate-200/80 shadow-md">
             <div className="text-center mb-5">
-              <h1 className="text-2xl font-black text-slate-950 font-display tracking-tight">
+              <h2 className="text-xl font-black text-slate-950 font-display">
                 Reset your password
-              </h1>
-              <p className="text-xs text-slate-600 mt-1">
-                Enter your registered mobile or email to receive a password reset link.
+              </h2>
+              <p className="text-xs text-slate-500 mt-1">
+                Enter your mobile number or email address to receive reset instructions
               </p>
             </div>
 
             {resetSuccess ? (
-              <div className="p-4 rounded-[12px] bg-green-50 border border-green-300 text-green-900 text-xs space-y-2 animate-in fade-in">
-                <div className="font-bold flex items-center gap-1.5 text-green-950">
-                  <CheckCircle2 className="w-4 h-4 text-green-600" />
-                  <span>Reset link sent!</span>
+              <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-300 text-emerald-900 text-xs space-y-2 animate-in fade-in">
+                <div className="font-bold flex items-center gap-1.5 text-emerald-950">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                  <span>Reset instructions dispatched!</span>
                 </div>
-                <p>
-                  We have dispatched password reset instructions to <strong>{identifier}</strong>. Please check your inbox or messages.
-                </p>
-                <div className="pt-2">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setResetSuccess(false);
-                      setMode('login');
-                    }}
-                    className="w-full h-[44px] rounded-[22px] bg-[#facc15] text-[#0F172A] font-bold text-xs flex items-center justify-center cursor-pointer"
-                  >
-                    Back to Log in
-                  </button>
-                </div>
+                <p>Please check your inbox or SMS for instructions to reset your account password.</p>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setResetSuccess(false);
+                    setMode('login');
+                  }}
+                  className="text-xs font-bold text-[#0F172A] underline pt-2 block"
+                >
+                  Return to login
+                </button>
               </div>
             ) : (
-              <form onSubmit={handleResetPassword} className="space-y-3">
-                <div className="relative">
-                  <input
-                    type="text"
-                    required
-                    value={identifier}
-                    onChange={(e) => setIdentifier(e.target.value)}
-                    placeholder="Mobile number or email address"
-                    className="w-full h-[52px] bg-white border border-[#ddd] focus:border-slate-800 rounded-[12px] px-4 text-[15px] text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-slate-800 transition-all shadow-xs"
-                  />
-                </div>
+              <form onSubmit={handleResetPassword} className="space-y-3.5">
+                <input
+                  type="text"
+                  required
+                  value={identifier}
+                  onChange={(e) => setIdentifier(e.target.value)}
+                  placeholder="Mobile number or email address"
+                  className="w-full h-[52px] bg-white text-[#0f172a] placeholder:text-[#94a3b8] border border-[#d1d5db] rounded-2xl px-5 text-[15px] font-medium focus:border-[#facc15] focus:ring-2 focus:ring-[#facc15]/30 outline-none shadow-xs"
+                />
 
-                <div className="pt-2">
-                  <button
-                    type="submit"
-                    disabled={loading}
-                    className="w-full h-[48px] rounded-[25px] bg-[#facc15] hover:bg-[#eab308] text-[#0F172A] font-bold text-[15px] shadow-sm hover:shadow transition-all flex items-center justify-center cursor-pointer disabled:opacity-60"
-                  >
-                    {loading ? 'Sending link...' : 'Send reset link'}
-                  </button>
-                </div>
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="w-full h-[48px] rounded-[25px] bg-[#facc15] hover:bg-[#eab308] text-[#0F172A] font-bold text-[16px] shadow-sm hover:shadow transition-all transform active:scale-[0.99] flex items-center justify-center cursor-pointer disabled:opacity-60"
+                >
+                  {loading ? 'Sending...' : 'Send reset instructions'}
+                </button>
 
-                <div className="pt-3 text-center">
+                <div className="text-center pt-2">
                   <button
                     type="button"
                     onClick={() => {
                       setError(null);
                       setMode('login');
                     }}
-                    className="inline-flex items-center gap-1.5 text-[14px] text-slate-900 font-medium hover:underline cursor-pointer"
+                    className="text-xs text-slate-700 hover:text-slate-950 font-bold underline"
                   >
-                    <ArrowLeft className="w-3.5 h-3.5" />
-                    <span>Back to Log in</span>
+                    Back to login
                   </button>
                 </div>
               </form>
             )}
           </div>
         )}
+      </div>
 
-      </main>
-
-      {/* 3. VERY BOTTOM FOOTER */}
-      <footer className="w-full max-w-[420px] text-center pt-8 pb-2">
-        <p className="text-[11px] text-slate-500 font-medium tracking-tight">
-          ∞ NEXOVIAN (PTY) LTD • Built in Mpumalanga • Level 1 B-BBEE
-        </p>
-        <p className="text-[10px] text-slate-400 mt-0.5">
-          Reg: 2026/845572/07 · CAPS &amp; TVET Aligned
-        </p>
-      </footer>
-
-      {/* 4. LANGUAGE SELECTION MODAL (11 South African Official Languages) */}
-      {isLangModalOpen && (
-        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in">
-          <div className="bg-white rounded-[24px] max-w-sm w-full p-5 shadow-2xl border border-slate-200">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-              <h3 className="font-bold text-slate-900 text-base">Select Language</h3>
-              <button
-                type="button"
-                onClick={() => setIsLangModalOpen(false)}
-                className="p-1 rounded-full text-slate-400 hover:text-slate-700 hover:bg-slate-100 cursor-pointer"
-              >
-                <X className="w-4 h-4" />
-              </button>
+      {/* ========================================================
+          SNAPSCAN PAYMENT & UNLOCK MODAL (ON ACCOUNT CREATION)
+         ======================================================== */}
+      {showSnapScanModal && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="w-full max-w-md bg-white rounded-3xl p-6 sm:p-8 shadow-2xl text-center space-y-5 animate-in zoom-in-95">
+            <div className="w-16 h-16 mx-auto rounded-2xl bg-amber-400/20 text-amber-500 flex items-center justify-center border border-amber-400/40">
+              <Sparkles className="w-8 h-8" />
             </div>
 
-            <div className="divide-y divide-slate-100 max-h-80 overflow-y-auto mt-2">
-              {SA_LANGUAGES.map((lang) => (
+            <div>
+              <span className="text-[11px] font-mono font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300">
+                Account Created Successfully
+              </span>
+              <h3 className="text-2xl font-black text-slate-950 font-display mt-2">
+                Unlock NEXOVIAN Premium
+              </h3>
+              <p className="text-xs text-slate-600 mt-1.5 leading-relaxed">
+                Pay R60 with SnapScan for full instant access to Grade 4 to University in all 11 official South African languages.
+              </p>
+            </div>
+
+            {hasPaidUnlocked ? (
+              <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-300 text-emerald-950 text-center space-y-1 animate-in fade-in">
+                <CheckCircle2 className="w-8 h-8 text-emerald-600 mx-auto" />
+                <h4 className="font-bold text-sm">Access Granted - Start Learning!</h4>
+                <p className="text-xs text-emerald-800">Opening your personalized dashboard now...</p>
+              </div>
+            ) : (
+              <div className="space-y-3 pt-1">
+                {/* Button 1: Pay R60 with SnapScan */}
                 <button
-                  key={lang.code}
+                  type="button"
+                  onClick={() => window.open('https://pos.snapscan.io/qr/NKJJYpV6', '_blank')}
+                  className="w-full py-3.5 px-4 rounded-2xl bg-[#0077b6] hover:bg-[#023e8a] text-white font-bold text-base flex items-center justify-center gap-2 shadow-md transition-all active:scale-98 cursor-pointer"
+                >
+                  <QrCode className="w-5 h-5" />
+                  <span>Pay R60 with SnapScan</span>
+                </button>
+
+                {/* Button 2: I Have Paid - Unlock App */}
+                <button
+                  type="button"
+                  onClick={handleInstantUnlock}
+                  className="w-full py-3.5 px-4 rounded-2xl bg-[#ffd700] hover:bg-[#facc15] text-black font-extrabold text-base flex items-center justify-center gap-2 shadow-md transition-all active:scale-98 cursor-pointer"
+                >
+                  <Unlock className="w-5 h-5 text-black" />
+                  <span>I Have Paid - Unlock App</span>
+                </button>
+
+                {/* Button 3: Continue to Dashboard */}
+                <button
                   type="button"
                   onClick={() => {
-                    setSelectedLang(lang);
-                    setIsLangModalOpen(false);
+                    setShowSnapScanModal(false);
+                    setCurrentTab('home');
                   }}
-                  className={`w-full py-2.5 px-3 flex items-center justify-between text-left text-sm rounded-lg hover:bg-slate-50 transition-colors cursor-pointer ${
-                    selectedLang.code === lang.code ? 'font-bold text-slate-950 bg-yellow-50' : 'text-slate-700'
-                  }`}
+                  className="w-full py-2.5 text-xs text-slate-600 hover:text-slate-900 font-semibold underline cursor-pointer"
                 >
-                  <div>
-                    <span className="block text-sm leading-tight">{lang.name}</span>
-                    <span className="block text-[11px] text-slate-400">{lang.nativeName}</span>
-                  </div>
-                  {selectedLang.code === lang.code && (
-                    <div className="w-2 h-2 rounded-full bg-[#facc15]" />
-                  )}
+                  Start 2-Day Free Trial (Go to Dashboard)
                 </button>
-              ))}
-            </div>
+              </div>
+            )}
 
-            <div className="mt-4 pt-3 border-t border-slate-100 text-center">
-              <p className="text-[11px] text-slate-500">
-                NEXOVIAN teaches in all 11 official South African languages
-              </p>
+            {snapScanTimerNotice && !hasPaidUnlocked && (
+              <div className="p-3 rounded-xl bg-amber-50 border border-amber-300 text-amber-950 text-xs flex items-center justify-between gap-2">
+                <span>Payment done? Click <strong>&quot;I Have Paid - Unlock App&quot;</strong> to start!</span>
+                <button
+                  onClick={handleInstantUnlock}
+                  className="px-2.5 py-1 bg-amber-400 font-bold rounded-lg text-black text-[11px] shrink-0"
+                >
+                  Unlock Now
+                </button>
+              </div>
+            )}
+
+            <div className="text-[11px] text-slate-500 pt-1">
+              ✓ 11 SA Languages ✓ Past Papers &amp; Memos ✓ CAPS &amp; TVET Aligned
             </div>
           </div>
         </div>
       )}
+
+      {/* Bottom Footer Trust Line */}
+      <footer className="w-full py-4 text-center text-[11px] text-slate-600 font-medium">
+        ∞ NEXOVIAN (PTY) LTD • Built in Mpumalanga • Level 1 B-BBEE
+      </footer>
     </div>
   );
 };

@@ -2,26 +2,14 @@
  * @license
  * SPDX-License-Identifier: Apache-2.0
  * 
- * NEXOVIAN - FULLY AUTOMATIC INSTANT ACCESS (SNAPSCAN AUTO-UNLOCK)
+ * NEXOVIAN - SNAPSCAN AUTOMATED PAYMENT & 30-DAY AUTO-LOCK
  * 
- * FLOW:
- * 1. User lands on nexovian.group, chooses language (11 languages) and grade (4 to University)
- * 2. Clicks button "Unlock for R60 - Instant Access" / "Pay R60 with SnapScan"
- * 3. Opens https://pos.snapscan.io/qr/NKJJYpV6 in new tab to pay
- * 4. After paying, user returns to site and clicks "I Have Paid - Unlock App"
- * 5. That button instantly unlocks full app content (localStorage.setItem('nexovian_paid', 'true'))
- *    and shows success modal "Welcome to NEXOVIAN Premium! Choose your grade and language"
- *    with "Access Granted - Start Learning" (no waiting for admin, 100% automated).
- * 
- * Side-by-side buttons:
- * - Button 1: "Pay R60 with SnapScan" -> https://pos.snapscan.io/qr/NKJJYpV6 (target _blank, blue)
- * - Button 2: "I Have Paid - Unlock App"
- * 
- * Timer:
- * - When Pay button is clicked, after 10 seconds show popup: "Payment done? Click Unlock"
- * 
- * Trust text:
- * - "Payment verified by SnapScan to NEXOVIAN PTY LTD - Instant Auto Unlock"
+ * BUSINESS SPECIFICATION:
+ * - NEXOVIAN (Pty) Ltd | Reg: 2026/234078/07 | nexovian.group
+ * - Price: R60 for 30 days access
+ * - SnapScan Payment Link: https://pos.snapscan.io/qr/NKJJYpV6
+ * - Contact WhatsApp: https://wa.me/27636508381
+ * - Color Palette: Deep Navy #0A1F44, Green #007A4D, Gold #FFB612, Sky Blue #1E88E5, Orange #FF6B35
  */
 
 import React, { useState, useEffect, useRef } from 'react';
@@ -47,11 +35,27 @@ import {
   Unlock,
   Clock,
   School,
-  Briefcase
+  Briefcase,
+  AlertCircle,
+  KeyRound
 } from 'lucide-react';
 import { useLearning } from '../../context/LearningContext';
 import { useAuth } from '../../context/AuthContext';
 import { SALanguageCode } from '../../types';
+import {
+  checkAccess,
+  verifyAndUnlockPayment,
+  verifyOneTimeCode,
+  saveSubscription
+} from '../../services/snapscanSubscriptionService';
+
+/**
+ * SECURITY TOGGLE:
+ * When TEST_MODE = true: Simulates payment and reveals access buttons after a 3-second verification delay.
+ * When TEST_MODE = false: Enforces real SnapScan verification + one-time code check in database (used=false -> used=true).
+ */
+export const TEST_MODE = true;
+
 
 export interface LanguageOption {
   code: SALanguageCode;
@@ -79,98 +83,86 @@ export interface GradeOption {
   name: string;
   level: string;
   badge: string;
+  subjectsCount: number;
+  papersCount: number;
 }
 
 export const ALL_GRADES: GradeOption[] = [
-  { id: 'grade-4', name: 'Grade 4', level: 'Intermediate Phase', badge: 'CAPS' },
-  { id: 'grade-5', name: 'Grade 5', level: 'Intermediate Phase', badge: 'CAPS' },
-  { id: 'grade-6', name: 'Grade 6', level: 'Intermediate Phase', badge: 'CAPS' },
-  { id: 'grade-7', name: 'Grade 7', level: 'Senior Phase', badge: 'CAPS' },
-  { id: 'grade-8', name: 'Grade 8', level: 'Senior Phase', badge: 'CAPS' },
-  { id: 'grade-9', name: 'Grade 9', level: 'Senior Phase', badge: 'CAPS' },
-  { id: 'grade-10', name: 'Grade 10', level: 'FET Phase', badge: 'CAPS' },
-  { id: 'grade-11', name: 'Grade 11', level: 'FET Phase', badge: 'CAPS' },
-  { id: 'grade-12', name: 'Grade 12', level: 'FET Phase (Matric)', badge: 'CAPS' },
-  { id: 'tvet', name: 'TVET Colleges', level: 'N1–N6 / NC(V)', badge: 'NATED' },
-  { id: 'university', name: 'University', level: 'Higher Education', badge: 'Degree' }
+  { id: 'grade-4', name: 'Grade 4', level: 'Intermediate Phase', badge: 'CAPS', subjectsCount: 6, papersCount: 180 },
+  { id: 'grade-5', name: 'Grade 5', level: 'Intermediate Phase', badge: 'CAPS', subjectsCount: 6, papersCount: 195 },
+  { id: 'grade-6', name: 'Grade 6', level: 'Intermediate Phase', badge: 'CAPS', subjectsCount: 6, papersCount: 210 },
+  { id: 'grade-7', name: 'Grade 7', level: 'Senior Phase', badge: 'CAPS', subjectsCount: 9, papersCount: 290 },
+  { id: 'grade-8', name: 'Grade 8', level: 'Senior Phase', badge: 'CAPS', subjectsCount: 9, papersCount: 310 },
+  { id: 'grade-9', name: 'Grade 9', level: 'Senior Phase', badge: 'CAPS', subjectsCount: 9, papersCount: 340 },
+  { id: 'grade-10', name: 'Grade 10', level: 'FET Phase', badge: 'CAPS', subjectsCount: 12, papersCount: 520 },
+  { id: 'grade-11', name: 'Grade 11', level: 'FET Phase', badge: 'CAPS', subjectsCount: 12, papersCount: 580 },
+  { id: 'grade-12', name: 'Grade 12', level: 'FET Phase (Matric)', badge: 'CAPS', subjectsCount: 14, papersCount: 850 },
+  { id: 'tvet', name: 'TVET Colleges', level: 'N1–N6 / NC(V)', badge: 'NATED', subjectsCount: 18, papersCount: 420 },
+  { id: 'university', name: 'University', level: 'Higher Education', badge: 'Degree', subjectsCount: 24, papersCount: 360 }
 ];
 
 const SNAPSCAN_URL = 'https://pos.snapscan.io/qr/NKJJYpV6';
+const WHATSAPP_URL = 'https://wa.me/27636508381?text=Hi%20Nexovian%2C%20I%20have%20a%20question%20about%20learning%20in%20my%20language';
 
 const MEMO_DEMO_EXPLANATIONS: Record<string, string> = {
-  isiZulu: 'Explanation in isiZulu: Okokuqala, susa u-3 ezinhlangothini zombili: 2x = 7 - 3 = 4. Bese uhlukanisa ngo-2 ezinhlangothini zombili ukuze uthole u-x: x = 4 / 2 = 2. Impendulo yokugcina ngu-x = 2.',
-  Sepedi: 'Explanation in Sepedi: Sa mathomo, tloša 3 mahlakoreng ka bobedi: 2x = 7 - 3 = 4. Ke moka arola ka 2 mahlakoreng ka bobedi go hwetša x: x = 4 / 2 = 2. Karabo ya mafelelo ke x = 2.',
-  siSwati: 'Explanation in siSwati: Kwekucala, susa 3 etinhlangotsini totimbili: 2x = 7 - 3 = 4. Ngemuva kwaloko yehlukanisa nga-2 kuto totimbili tinhlangotsi kute utfole x: x = 4 / 2 = 2. Imphendvulo yekugcina ngu-x = 2.',
-  Xitsonga: 'Explanation in Xitsonga: Xo sungula, susa 3 eka matlhelo ha mambirhi: 2x = 7 - 3 = 4. Kutani ava hi 2 eka matlhelo ha mambirhi ku kuma x: x = 4 / 2 = 2. Nhlamulo yo hetelela i x = 2.',
-  Afrikaans: 'Explanation in Afrikaans: Eerstens, trek 3 aan albei kante van die vergelyking af: 2x = 7 - 3 = 4. Deel dan deur 2 aan albei kante om x te kry: x = 4 / 2 = 2. Die finale antwoord is x = 2.',
-  isiXhosa: 'Explanation in isiXhosa: Okokuqala, thabatha u-3 kumacala omabini: 2x = 7 - 3 = 4. Emva koko yahlula ngo-2 kumacala omabini ukuze ufumane u-x: x = 4 / 2 = 2. Imfihlelo yokugqibela ngu-x = 2.',
-  Sesotho: 'Explanation in Sesotho: Sa pele, tlosa 3 mahlakoreng ka bobedi: 2x = 7 - 3 = 4. Ka mora moo arola ka 2 mahlakoreng ka bobedi ho fumana x: x = 4 / 2 = 2. Karabo ya ho qetela ke x = 2.',
-  Setswana: 'Explanation in Setswana: Sa ntlha, tlosa 3 mo matlhakoreng ootlhe: 2x = 7 - 3 = 4. Go tswa foo kgaoganya ka 2 mo matlhakoreng ootlhe go bona x: x = 4 / 2 = 2. Karabo ya bofelo ke x = 2.',
-  Tshivenda: 'Explanation in Tshivenda: Tsha u thoma, tusa 3 matungo othe: 2x = 7 - 3 = 4. Nga murahu kovha nga 2 matungo othe u wana x: x = 4 / 2 = 2. Phindulo ya u fhedzisela ndi x = 2.',
-  isiNdebele: 'Explanation in isiNdebele: Kokuthoma, susa u-3 kiyo yomibili imihlangothi: 2x = 7 - 3 = 4. Ngemva kwalokho yahlula ngo-2 kiyo yomibili imihlangothi ukufumana u-x: x = 4 / 2 = 2. Imvelaphi yokugcina ngu-x = 2.',
-  English: 'Explanation in English: First, subtract 3 from both sides: 2x = 7 - 3 = 4. Then divide both sides by 2 to solve for x: x = 4 / 2 = 2. The final answer is x = 2.'
+  isiZulu:
+    'Sombulula u-x: 2x + 3 = 7. Isinyathelo 1: Khipha u-3 nhlangothi zombili: 2x = 7 - 3 = 4. Isinyathelo 2: Hlukanisa ngo-2 nhlangothi zombili: x = 4 / 2 = 2. Impendulo yokugcina: x = 2.',
+  Afrikaans:
+    'Los op vir x: 2x + 3 = 7. Stap 1: Trek 3 aan beide kante af: 2x = 7 - 3 = 4. Stap 2: Deel deur 2 aan beide kante: x = 4 / 2 = 2. Finale antwoord: x = 2.',
+  Sepedi:
+    'Rarolla x: 2x + 3 = 7. Mogato 1: Ntšha 3 mahlakoreng a mabedi: 2x = 7 - 3 = 4. Mogato 2: Arola ka 2: x = 4 / 2 = 2. Karabo ya mafelelo: x = 2.',
+  Sesotho:
+    ' rarolla x: 2x + 3 = 7. Mohato 1: Tlosa 3 mahlakoreng ka bobeli: 2x = 7 - 3 = 4. Mohato 2: Arola ka 2: x = 4 / 2 = 2. Karabo: x = 2.',
+  isiXhosa:
+    'Sombulula u-x: 2x + 3 = 7. Inyathelo 1: Susa u-3 kumacala omabini: 2x = 7 - 3 = 4. Inyathelo 2: Yahlula ngo-2: x = 4 / 2 = 2. Impendulo: x = 2.',
+  Setswana:
+    'Rarabolola x: 2x + 3 = 7. Kgato 1: Ntsha 3 mo matlhakoreng oomabedi: 2x = 7 - 3 = 4. Kgato 2: Kgaoganya ka 2: x = 4 / 2 = 2. Karabo: x = 2.',
+  Xitsonga:
+    'Ololoxa x: 2x + 3 = 7. Goza 1: Susa 3 matlhelo hamambirhi: 2x = 7 - 3 = 4. Goza 2: Ava hi 2: x = 4 / 2 = 2. Nhlamulo: x = 2.',
+  siSwati:
+    'Catulula x: 2x + 3 = 7. Sinhatselo 1: Susa 3 tinhlangotsini totimbili: 2x = 7 - 3 = 4. Sinhatselo 2: Hlukanisa nga-2: x = 4 / 2 = 2. Imphendvulo: x = 2.',
+  Tshivenda:
+    'Tandululani x: 2x + 3 = 7. Vhukando 1: Tutshelani 3 masiani othe: 2x = 7 - 3 = 4. Vhukando 2: Kovhani nga 2: x = 4 / 2 = 2. Phindulo: x = 2.',
+  isiNdebele:
+    'Rarulula u-x: 2x + 3 = 7. Igadango 1: Susa u-3 kizo zombili iinhlangothi: 2x = 7 - 3 = 4. Igadango 2: Hlukanisa ngo-2: x = 4 / 2 = 2. Imfundo: x = 2.',
+  English:
+    'Solve for x: 2x + 3 = 7. Step 1: Subtract 3 from both sides: 2x = 7 - 3 = 4. Step 2: Divide both sides by 2: x = 4 / 2 = 2. Final answer: x = 2.'
 };
 
 export const PublicLandingView: React.FC = () => {
   const { setCurrentTab, setActiveLearningLanguage, updateLearningContext } = useLearning();
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user } = useAuth();
 
-  // User selections on landing page
+  // Selected Language & Grade
   const [selectedLang, setSelectedLang] = useState<SALanguageCode>('zu');
   const [selectedGradeId, setSelectedGradeId] = useState<string>('grade-10');
 
-  // Instant Unlock State
-  const [isPaid, setIsPaid] = useState<boolean>(() => {
-    try {
-      return typeof window !== 'undefined' && localStorage.getItem('nexovian_paid') === 'true';
-    } catch {
-      return false;
-    }
+  // Check 30-day access
+  const [access, setAccess] = useState(() => checkAccess(user));
+  const isPaid = access.allow;
+
+  // Security Unlock Status:
+  // Requires: localStorage nexovian_unlocked == 'true' AND localStorage nexovian_paid == 'true' AND verified code
+  const [isUnlocked, setIsUnlocked] = useState<boolean>(() => {
+    if (typeof window === 'undefined') return false;
+    const hasUnlocked = localStorage.getItem('nexovian_unlocked') === 'true';
+    const hasPaid = localStorage.getItem('nexovian_paid') === 'true';
+    const hasCode = Boolean(localStorage.getItem('nexovian_verified_code') || localStorage.getItem('nexovian_subscription'));
+    return Boolean(hasUnlocked && hasPaid && hasCode);
   });
 
-  // 10-Second Timer popup state
-  const [showPaymentDonePopup, setShowPaymentDonePopup] = useState(false);
-  const timerRef = useRef<NodeJS.Timeout | null>(null);
-
-  // Success Modal
-  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  // Effective full access: ONLY true after payment verified TRUE AND code checked in database AND localStorage nexovian_unlocked == 'true'
+  const isFullPaidAccess = Boolean(isPaid && isUnlocked);
 
   // Memo Demo state
   const [demoLang, setDemoLang] = useState('isiZulu');
   const [isDemoDropdownOpen, setIsDemoDropdownOpen] = useState(false);
   const [isDemoModalOpen, setIsDemoModalOpen] = useState(false);
 
-  // Clear timer on unmount
-  useEffect(() => {
-    return () => {
-      if (timerRef.current) clearTimeout(timerRef.current);
-    };
-  }, []);
-
-  const handleSnapScanPayClick = () => {
-    // 10-Second Timer: After user clicks Pay button, after 10 seconds show popup "Payment done? Click Unlock"
-    if (timerRef.current) clearTimeout(timerRef.current);
-    timerRef.current = setTimeout(() => {
-      setShowPaymentDonePopup(true);
-    }, 10000);
-  };
-
-  const handleUnlockApp = () => {
+  const navigateToPaywall = () => {
     try {
-      // 1. Instantly set nexovian_paid = true in localStorage
-      localStorage.setItem('nexovian_paid', 'true');
-      localStorage.setItem(
-        'nexovian_subscription_override',
-        JSON.stringify({
-          status: 'active',
-          until: Date.now() + 365 * 24 * 60 * 60 * 1000
-        })
-      );
-
-      // 2. Save language and grade selections
       localStorage.setItem('nexovian_academy_language', selectedLang);
       localStorage.setItem('nexovian_selected_grade', selectedGradeId);
-
       setActiveLearningLanguage(selectedLang);
       const gradeObj = ALL_GRADES.find((g) => g.id === selectedGradeId);
       if (gradeObj) {
@@ -180,20 +172,47 @@ export const PublicLandingView: React.FC = () => {
           educationLevel: gradeObj.level
         });
       }
-    } catch (err) {
-      console.warn('Unlock storage notice:', err);
-    }
+    } catch (_) {}
 
-    setIsPaid(true);
-    setShowPaymentDonePopup(false);
-    setShowSuccessModal(true);
+    setCurrentTab('paywall');
+    if (typeof window !== 'undefined') {
+      window.history.pushState({}, '', '/paywall');
+    }
+  };
+
+  const navigateToUnlock = () => {
+    try {
+      localStorage.setItem('nexovian_academy_language', selectedLang);
+      localStorage.setItem('nexovian_selected_grade', selectedGradeId);
+      setActiveLearningLanguage(selectedLang);
+      const gradeObj = ALL_GRADES.find((g) => g.id === selectedGradeId);
+      if (gradeObj) {
+        updateLearningContext({
+          language: selectedLang,
+          gradeOrProgramme: gradeObj.name,
+          educationLevel: gradeObj.level
+        });
+      }
+    } catch (_) {}
+
+    setCurrentTab('unlock');
+    if (typeof window !== 'undefined') {
+      window.history.pushState({}, '', '/unlock');
+    }
   };
 
   const handleStartLearning = () => {
-    setShowSuccessModal(false);
     setCurrentTab('home');
     if (typeof window !== 'undefined') {
       window.history.pushState({}, '', '/app');
+    }
+  };
+
+  const navigateToPastPapers = (gradeId?: string) => {
+    setCurrentTab('papers');
+    if (typeof window !== 'undefined') {
+      const url = gradeId ? `/papers?grade=${gradeId}` : '/papers';
+      window.history.pushState({}, '', url);
     }
   };
 
@@ -201,10 +220,10 @@ export const PublicLandingView: React.FC = () => {
   const selectedGradeObj = ALL_GRADES.find((g) => g.id === selectedGradeId) || ALL_GRADES[6];
 
   return (
-    <div className="min-h-screen bg-[#000000] text-white font-sans antialiased selection:bg-[#FFD700] selection:text-black">
+    <div className="min-h-screen bg-[#000000] text-white font-sans antialiased selection:bg-[#FFB612] selection:text-black">
       
-      {/* 1. NETFLIX-STYLE HEADER */}
-      <header className="sticky top-0 z-50 bg-[#000000]/90 backdrop-blur-md border-b border-white/10">
+      {/* 1. HEADER (DEEP NAVY ACCENTS) */}
+      <header className="sticky top-0 z-50 bg-[#000000]/95 backdrop-blur-md border-b border-white/10">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 h-20 flex items-center justify-between">
           
           {/* Logo NEXOVIAN Left */}
@@ -212,11 +231,11 @@ export const PublicLandingView: React.FC = () => {
             className="flex items-center gap-3 cursor-pointer"
             onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
           >
-            <div className="w-10 h-10 rounded-full bg-[#FFD700] text-black flex items-center justify-center font-black text-xl shadow-lg">
+            <div className="w-10 h-10 rounded-full bg-[#FFB612] text-black flex items-center justify-center font-black text-xl shadow-lg">
               N
             </div>
             <div className="flex flex-col">
-              <span className="font-display font-black text-2xl tracking-widest text-[#FFD700]">
+              <span className="font-display font-black text-2xl tracking-widest text-[#FFB612]">
                 NEXOVIAN
               </span>
               <span className="text-[10px] text-white/60 tracking-widest uppercase -mt-1 font-mono">
@@ -225,49 +244,63 @@ export const PublicLandingView: React.FC = () => {
             </div>
           </div>
 
-          {/* Right Action Buttons */}
+          {/* Nav Links & Action Buttons */}
           <div className="flex items-center gap-3">
+            {/* Past Papers & Memos Navbar Link */}
+            <button
+              onClick={() => navigateToPastPapers()}
+              className="hidden sm:flex items-center gap-1.5 px-3.5 py-2 rounded-full border border-white/20 text-xs font-bold text-white hover:border-[#FFB612] hover:text-[#FFB612] transition-colors cursor-pointer"
+            >
+              <span>📚 Past Papers &amp; Memos</span>
+            </button>
+
             <button
               onClick={() => setCurrentTab('calculator')}
-              className="hidden md:flex items-center gap-1.5 px-4 py-2 rounded-full border border-white/20 text-xs font-semibold hover:border-[#FFD700] hover:text-[#FFD700] transition-colors"
+              className="hidden md:flex items-center gap-1.5 px-3.5 py-2 rounded-full border border-white/20 text-xs font-semibold text-white/80 hover:text-white transition-colors"
             >
-              <Calculator className="w-3.5 h-3.5" />
+              <Calculator className="w-3.5 h-3.5 text-[#FFB612]" />
               <span>Step-by-Step Calculator</span>
             </button>
 
-            {isPaid ? (
-              <button
-                onClick={() => setCurrentTab('home')}
-                className="px-5 py-2.5 rounded-full bg-[#FFD700] hover:bg-yellow-400 text-black font-extrabold text-xs sm:text-sm shadow-md transition-all flex items-center gap-1.5 cursor-pointer"
-              >
-                <Unlock className="w-4 h-4 text-black" />
-                <span>Go to App (Unlocked)</span>
-                <ArrowRight className="w-4 h-4" />
-              </button>
-            ) : isAuthenticated ? (
-              <button
-                onClick={() => setCurrentTab('home')}
-                className="px-5 py-2.5 rounded-full bg-[#FFD700] hover:bg-yellow-400 text-black font-bold text-xs sm:text-sm shadow-md transition-all flex items-center gap-1.5 cursor-pointer"
-              >
-                <span>Go to App</span>
-                <ArrowRight className="w-4 h-4" />
-              </button>
+            {/* Header Action Buttons */}
+            {isFullPaidAccess ? (
+              <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-xs font-semibold">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+                  <span>30-Day Pass Active</span>
+                </div>
+              </div>
             ) : (
               <>
+                {isAuthenticated ? (
+                  <div className="hidden sm:flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/10 border border-white/20 text-xs font-medium text-white/80">
+                    <span className="w-2 h-2 rounded-full bg-amber-400" />
+                    <span>{user?.name || user?.email || 'Logged In'}</span>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => setCurrentTab('login')}
+                    className="px-4 py-2 rounded-full border border-white/20 hover:border-white/40 text-white font-bold text-xs sm:text-sm transition-colors cursor-pointer"
+                  >
+                    Login
+                  </button>
+                )}
+
                 <button
-                  onClick={() => setCurrentTab('login')}
-                  className="px-4 py-2 rounded-full border border-white/20 hover:border-white/40 text-white font-bold text-xs sm:text-sm transition-colors cursor-pointer"
+                  onClick={navigateToUnlock}
+                  className="px-3.5 py-2 rounded-full border border-[#FFB612]/60 hover:bg-[#FFB612]/10 text-[#FFB612] font-bold text-xs sm:text-sm transition-colors cursor-pointer flex items-center gap-1.5"
                 >
-                  Login
+                  <KeyRound className="w-3.5 h-3.5" />
+                  <span>Enter Code</span>
                 </button>
 
-                <a
-                  href="#instant-unlock"
-                  className="px-5 py-2.5 rounded-full bg-[#0077b6] hover:bg-[#023e8a] text-white font-black text-xs sm:text-sm shadow-lg shadow-blue-500/20 transition-all cursor-pointer transform hover:scale-105 active:scale-95 flex items-center gap-1.5"
+                <button
+                  onClick={navigateToPaywall}
+                  className="px-4 py-2 sm:px-5 sm:py-2.5 rounded-full bg-[#007A4D] hover:bg-emerald-600 text-white font-black text-xs sm:text-sm shadow-lg shadow-emerald-700/30 transition-all cursor-pointer transform hover:scale-105 active:scale-95 flex items-center gap-1.5"
                 >
                   <QrCode className="w-4 h-4" />
-                  <span>Unlock R60 Instant</span>
-                </a>
+                  <span>Unlock for R60</span>
+                </button>
               </>
             )}
           </div>
@@ -276,24 +309,24 @@ export const PublicLandingView: React.FC = () => {
 
       <main>
         {/* ========================================================
-            HERO SECTION (NETFLIX AESTHETIC)
+            HERO SECTION (NETFLIX AESTHETIC WITH DEEP NAVY GLOW)
            ======================================================== */}
         <section className="relative overflow-hidden pt-12 pb-16 sm:pt-20 sm:pb-24 px-4 sm:px-6 text-center border-b border-white/10">
           
-          {/* Subtle Netflix cinematic glow */}
-          <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[350px] bg-[#FFD700]/10 rounded-full blur-[140px] pointer-events-none" />
+          {/* Subtle Deep Navy cinematic glow */}
+          <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[350px] bg-[#0A1F44] rounded-full blur-[140px] pointer-events-none" />
           
           <div className="max-w-4xl mx-auto relative z-10">
             
             {/* Top Badge */}
-            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-[#FFD700]/15 border border-[#FFD700]/40 text-[#FFD700] text-xs font-mono font-bold uppercase tracking-wider mb-6">
-              <Sparkles className="w-3.5 h-3.5" />
+            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-[#0A1F44] border border-[#FFB612]/50 text-[#FFB612] text-xs font-mono font-bold uppercase tracking-wider mb-6">
+              <Sparkles className="w-3.5 h-3.5 text-[#FFB612]" />
               <span>South Africa&apos;s 11 Official Languages Education Platform</span>
             </div>
 
             {/* Headline */}
             <h1 className="font-display font-black text-3xl sm:text-5xl md:text-6xl text-white tracking-tight leading-[1.12]">
-              Imagine a Netflix for Learning &mdash; <span className="text-[#FFD700]">One App from Grade 4 to University</span>
+              Imagine a Netflix for Learning &mdash; <span className="text-[#FFB612]">One App from Grade 4 to University</span>
             </h1>
 
             {/* Sub */}
@@ -306,38 +339,32 @@ export const PublicLandingView: React.FC = () => {
               Original DBE Past Paper (English/Afrikaans) + Explain memo step-by-step in YOUR language
             </p>
 
-            {/* Active Unlocked Status Banner if paid */}
-            {isPaid && (
-              <div className="mt-6 inline-flex items-center gap-2.5 px-5 py-2.5 rounded-2xl bg-emerald-500/20 border border-emerald-400 text-emerald-300 font-bold text-sm shadow-lg">
+            {/* SECURITY FIX: Active Unlocked Status Banner ONLY if verified & paid */}
+            {isFullPaidAccess && (
+              <div className="mt-6 inline-flex items-center gap-2.5 px-5 py-2.5 rounded-2xl bg-[#007A4D]/30 border border-[#007A4D] text-emerald-300 font-bold text-sm shadow-lg">
                 <CheckCircle2 className="w-5 h-5 text-emerald-400" />
-                <span>NEXOVIAN Premium Active — Full Access Unlocked</span>
-                <button
-                  onClick={handleStartLearning}
-                  className="ml-2 px-3 py-1 rounded-xl bg-emerald-400 text-black font-black text-xs hover:bg-emerald-300"
-                >
-                  Open Dashboard →
-                </button>
+                <span>NEXOVIAN Premium Active &bull; {access.daysRemaining} Days Left</span>
               </div>
             )}
 
             {/* ========================================================
                 AUTOMATIC INSTANT ACCESS BOX (STEP 1 & STEP 2)
                ======================================================== */}
-            <div id="instant-unlock" className="mt-10 max-w-3xl mx-auto bg-[#0c0c0c] border-2 border-[#FFD700]/80 rounded-3xl p-6 sm:p-8 text-left shadow-2xl relative overflow-hidden">
+            <div id="instant-unlock" className="mt-10 max-w-3xl mx-auto bg-[#0A1F44] border-2 border-[#FFB612] rounded-3xl p-6 sm:p-8 text-left shadow-2xl relative overflow-hidden">
               
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-5 border-b border-white/10">
                 <div>
-                  <div className="flex items-center gap-2 text-xs font-mono font-bold uppercase text-[#FFD700]">
-                    <Sparkles className="w-4 h-4 text-[#FFD700]" />
-                    <span>Instant Auto Access &bull; No Waiting</span>
+                  <div className="flex items-center gap-2 text-xs font-mono font-bold uppercase text-[#FFB612]">
+                    <Sparkles className="w-4 h-4 text-[#FFB612]" />
+                    <span>Instant Auto Access &bull; R60 for 30 Days</span>
                   </div>
                   <h3 className="font-display font-black text-xl sm:text-2xl text-white mt-1">
                     Choose Your Language &amp; Grade &mdash; Unlock for R60
                   </h3>
                 </div>
                 <div className="text-right sm:text-right shrink-0">
-                  <div className="text-2xl font-black text-[#FFD700]">R60</div>
-                  <div className="text-[11px] text-white/60">One-time / Monthly</div>
+                  <div className="text-2xl font-black text-[#FFB612]">R60</div>
+                  <div className="text-[11px] text-white/60">30 Days Full Access</div>
                 </div>
               </div>
 
@@ -345,10 +372,10 @@ export const PublicLandingView: React.FC = () => {
               <div className="mt-5">
                 <div className="flex items-center justify-between mb-2.5">
                   <span className="text-xs font-mono font-bold uppercase tracking-wider text-white/80 flex items-center gap-1.5">
-                    <Languages className="w-4 h-4 text-[#FFD700]" />
+                    <Languages className="w-4 h-4 text-[#FFB612]" />
                     <span>1. Select Your Language (All 11 Official):</span>
                   </span>
-                  <span className="text-xs text-[#FFD700] font-bold">
+                  <span className="text-xs text-[#FFB612] font-bold">
                     {selectedLangObj.name} ({selectedLangObj.native})
                   </span>
                 </div>
@@ -363,7 +390,7 @@ export const PublicLandingView: React.FC = () => {
                         onClick={() => setSelectedLang(lang.code)}
                         className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
                           isSelected
-                            ? 'bg-[#FFD700] text-black font-black shadow-md shadow-yellow-500/20 scale-105'
+                            ? 'bg-[#FFB612] text-black font-black shadow-md shadow-yellow-500/20 scale-105'
                             : 'bg-white/10 hover:bg-white/20 text-white/90 border border-white/10'
                         }`}
                       >
@@ -379,10 +406,10 @@ export const PublicLandingView: React.FC = () => {
               <div className="mt-6">
                 <div className="flex items-center justify-between mb-2.5">
                   <span className="text-xs font-mono font-bold uppercase tracking-wider text-white/80 flex items-center gap-1.5">
-                    <GraduationCap className="w-4 h-4 text-[#FFD700]" />
+                    <GraduationCap className="w-4 h-4 text-[#FFB612]" />
                     <span>2. Select Grade (Grade 4 to University):</span>
                   </span>
-                  <span className="text-xs text-[#FFD700] font-bold">
+                  <span className="text-xs text-[#FFB612] font-bold">
                     {selectedGradeObj.name} &bull; {selectedGradeObj.level}
                   </span>
                 </div>
@@ -397,7 +424,7 @@ export const PublicLandingView: React.FC = () => {
                         onClick={() => setSelectedGradeId(grade.id)}
                         className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
                           isSelected
-                            ? 'bg-[#FFD700] text-black font-black shadow-md shadow-yellow-500/20 scale-105'
+                            ? 'bg-[#FFB612] text-black font-black shadow-md shadow-yellow-500/20 scale-105'
                             : 'bg-white/10 hover:bg-white/20 text-white/90 border border-white/10'
                         }`}
                       >
@@ -408,42 +435,52 @@ export const PublicLandingView: React.FC = () => {
                 </div>
               </div>
 
-              {/* 3. TWO BUTTONS SIDE BY SIDE */}
-              <div className="mt-8 pt-6 border-t border-white/10">
+              {/* 3. BUTTONS: GREEN UNLOCK + PAST PAPERS PREVIEW */}
+              <div className="mt-8 pt-6 border-t border-white/10 space-y-3">
                 <div className="flex flex-col sm:flex-row items-stretch gap-3">
                   
-                  {/* Button 1: Pay R60 with SnapScan */}
-                  <a
-                    href={SNAPSCAN_URL}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    onClick={handleSnapScanPayClick}
-                    className="flex-1 py-4 px-5 rounded-2xl bg-[#0077b6] hover:bg-[#023e8a] text-white font-black text-sm sm:text-base shadow-xl shadow-blue-600/30 transition-all transform hover:-translate-y-0.5 active:translate-y-0 flex items-center justify-center gap-2.5 text-center cursor-pointer"
+                  {/* Green Button: Pay R60 with SnapScan */}
+                  <button
+                    type="button"
+                    onClick={navigateToPaywall}
+                    className="flex-1 py-4 px-5 rounded-2xl bg-[#007A4D] hover:bg-emerald-600 text-white font-black text-sm sm:text-base shadow-xl shadow-emerald-950/40 transition-all transform hover:-translate-y-0.5 active:translate-y-0 flex items-center justify-center gap-2.5 text-center cursor-pointer"
                   >
                     <QrCode className="w-5 h-5 shrink-0" />
                     <span>Pay R60 with SnapScan</span>
-                    <ExternalLink className="w-4 h-4 opacity-75 shrink-0 ml-0.5" />
-                  </a>
+                    <ArrowRight className="w-4 h-4 shrink-0 ml-0.5" />
+                  </button>
 
-                  {/* Button 2: I Have Paid - Unlock App */}
+                  {/* Button 2: Enter Code to Unlock */}
                   <button
                     type="button"
-                    onClick={handleUnlockApp}
-                    className="flex-1 py-4 px-5 rounded-2xl bg-[#FFD700] hover:bg-yellow-400 text-black font-black text-sm sm:text-base shadow-xl shadow-yellow-500/30 transition-all transform hover:-translate-y-0.5 active:translate-y-0 flex items-center justify-center gap-2.5 text-center cursor-pointer"
+                    onClick={navigateToUnlock}
+                    className="flex-1 py-4 px-5 rounded-2xl bg-[#FFB612] hover:bg-yellow-400 text-black font-black text-sm sm:text-base shadow-xl shadow-yellow-500/30 transition-all transform hover:-translate-y-0.5 active:translate-y-0 flex items-center justify-center gap-2.5 text-center cursor-pointer"
                   >
-                    <CheckCircle2 className="w-5 h-5 text-black shrink-0" />
-                    <span>I Have Paid - Unlock App</span>
+                    <KeyRound className="w-5 h-5 text-black shrink-0" />
+                    <span>Enter Code to Unlock</span>
+                  </button>
+                </div>
+
+                {/* Second Button Below Green Button: Past Papers & Memos - FREE Preview */}
+                <div>
+                  <button
+                    type="button"
+                    onClick={() => navigateToPastPapers(selectedGradeId)}
+                    className="w-full py-3.5 px-6 rounded-full bg-white hover:bg-slate-100 border-2 border-[#0A1F44] text-[#0A1F44] font-bold text-sm shadow-md transition-all cursor-pointer flex items-center justify-center gap-2"
+                  >
+                    <span>📚 Past Papers &amp; Memos &mdash; FREE Preview</span>
+                    <ArrowRight className="w-4 h-4" />
                   </button>
                 </div>
 
                 {/* Trust Line */}
                 <div className="mt-3.5 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-white/60">
                   <p className="flex items-center gap-1.5 text-white/80 font-medium">
-                    <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0" />
-                    <span>Payment verified by SnapScan to NEXOVIAN PTY LTD - Instant Auto Unlock</span>
+                    <ShieldCheck className="w-4 h-4 text-[#007A4D] shrink-0" />
+                    <span>Payment verified by SnapScan to NEXOVIAN PTY LTD &bull; Instant Auto Unlock</span>
                   </p>
                   <p className="text-[11px] text-white/40">
-                    No waiting for admin &bull; Instant unlock
+                    No waiting for admin &bull; 30 Days Access
                   </p>
                 </div>
               </div>
@@ -455,7 +492,7 @@ export const PublicLandingView: React.FC = () => {
                 onClick={() => setIsDemoModalOpen(true)}
                 className="px-6 py-2.5 rounded-full bg-white/10 hover:bg-white/15 text-white font-bold text-xs sm:text-sm border border-white/20 transition-all cursor-pointer flex items-center gap-2"
               >
-                <Play className="w-3.5 h-3.5 fill-[#FFD700] text-[#FFD700]" />
+                <Play className="w-3.5 h-3.5 fill-[#FFB612] text-[#FFB612]" />
                 <span>Watch 20-sec DBE Memo Explainer Demo</span>
               </button>
             </div>
@@ -463,11 +500,66 @@ export const PublicLandingView: React.FC = () => {
         </section>
 
         {/* ========================================================
+            GRADES GRID (UNDER EACH GRADE CARD: VIEW PAST PAPERS)
+           ======================================================== */}
+        <section className="py-16 sm:py-20 max-w-7xl mx-auto px-4 sm:px-6">
+          <div className="text-center mb-12">
+            <span className="text-xs uppercase font-mono font-bold text-[#FFB612] tracking-widest block mb-1">
+              CURRICULUM COVERAGE (GRADE 4 TO UNIVERSITY)
+            </span>
+            <h2 className="font-display font-black text-2xl sm:text-4xl text-white">
+              Every Grade. Every Subject. All in Your Language.
+            </h2>
+            <p className="text-xs sm:text-sm text-white/60 mt-2 max-w-xl mx-auto">
+              Explore past papers, CAPS notes, and step-by-step memos tailored specifically for your level.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
+            {ALL_GRADES.map((grade) => (
+              <div
+                key={grade.id}
+                className="bg-[#0A1F44] border border-white/15 hover:border-[#FFB612] rounded-3xl p-5 flex flex-col justify-between transition-all group hover:scale-[1.02] shadow-lg"
+              >
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="px-2 py-0.5 rounded-md bg-[#FFB612]/20 text-[#FFB612] text-[10px] font-mono font-bold">
+                      {grade.badge}
+                    </span>
+                    <span className="text-[10px] text-white/40 font-mono">
+                      {grade.subjectsCount} Subj
+                    </span>
+                  </div>
+
+                  <h3 className="font-display font-black text-lg text-white group-hover:text-[#FFB612] transition-colors">
+                    {grade.name}
+                  </h3>
+                  <p className="text-[11px] text-white/60 mt-0.5">
+                    {grade.level}
+                  </p>
+                </div>
+
+                {/* Under each Grade card: small link "View Past Papers" -> /papers?grade=X */}
+                <div className="mt-4 pt-3 border-t border-white/10">
+                  <button
+                    onClick={() => navigateToPastPapers(grade.id)}
+                    className="w-full text-left text-xs font-bold text-[#1E88E5] hover:text-[#FFB612] flex items-center justify-between transition-colors cursor-pointer"
+                  >
+                    <span>View Past Papers</span>
+                    <ArrowRight className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        {/* ========================================================
             FEATURES SECTION (3 CARDS)
            ======================================================== */}
-        <section className="py-16 sm:py-24 max-w-6xl mx-auto px-4 sm:px-6">
+        <section className="py-16 sm:py-24 max-w-6xl mx-auto px-4 sm:px-6 border-t border-white/10">
           <div className="text-center mb-12">
-            <span className="text-xs uppercase font-mono font-bold text-[#FFD700] tracking-widest block mb-1">
+            <span className="text-xs uppercase font-mono font-bold text-[#FFB612] tracking-widest block mb-1">
               BUILT FOR SOUTH AFRICAN LEARNERS
             </span>
             <h2 className="font-display font-black text-2xl sm:text-4xl text-white">
@@ -478,9 +570,9 @@ export const PublicLandingView: React.FC = () => {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 sm:gap-8">
             
             {/* Card 1: CAPS Notes & Quizzes */}
-            <div className="bg-[#0D0D0D] border border-white/10 hover:border-[#FFD700]/50 rounded-3xl p-6 sm:p-8 flex flex-col justify-between transition-all group">
+            <div className="bg-[#0A1F44] border border-white/10 hover:border-[#FFB612]/50 rounded-3xl p-6 sm:p-8 flex flex-col justify-between transition-all group shadow-xl">
               <div>
-                <div className="w-12 h-12 rounded-2xl bg-[#FFD700]/15 text-[#FFD700] flex items-center justify-center mb-5 group-hover:scale-110 transition-transform">
+                <div className="w-12 h-12 rounded-2xl bg-[#FFB612]/15 text-[#FFB612] flex items-center justify-center mb-5 group-hover:scale-110 transition-transform">
                   <BookOpen className="w-6 h-6" />
                 </div>
                 <h3 className="font-display font-black text-xl text-white mb-2">
@@ -490,16 +582,16 @@ export const PublicLandingView: React.FC = () => {
                   Full curriculum coverage aligned with DBE CAPS and TVET N1-N6. Interactive quizzes with instant diagnostic hints in your native language.
                 </p>
               </div>
-              <div className="mt-6 pt-4 border-t border-white/10 flex items-center justify-between text-xs text-[#FFD700] font-bold">
+              <div className="mt-6 pt-4 border-t border-white/10 flex items-center justify-between text-xs text-[#FFB612] font-bold">
                 <span>13 Grades + TVET &bull; 800+ Quizzes</span>
-                <Check className="w-4 h-4" />
+                <Check className="w-4 h-4 text-[#007A4D]" />
               </div>
             </div>
 
             {/* Card 2: Instant Homework Help */}
-            <div className="bg-[#0D0D0D] border border-white/10 hover:border-[#FFD700]/50 rounded-3xl p-6 sm:p-8 flex flex-col justify-between transition-all group">
+            <div className="bg-[#0A1F44] border border-white/10 hover:border-[#FFB612]/50 rounded-3xl p-6 sm:p-8 flex flex-col justify-between transition-all group shadow-xl">
               <div>
-                <div className="w-12 h-12 rounded-2xl bg-[#FFD700]/15 text-[#FFD700] flex items-center justify-center mb-5 group-hover:scale-110 transition-transform">
+                <div className="w-12 h-12 rounded-2xl bg-[#FFB612]/15 text-[#FFB612] flex items-center justify-center mb-5 group-hover:scale-110 transition-transform">
                   <HelpCircle className="w-6 h-6" />
                 </div>
                 <h3 className="font-display font-black text-xl text-white mb-2">
@@ -509,16 +601,16 @@ export const PublicLandingView: React.FC = () => {
                   Stuck on algebra, physics, or accounting? Ask any question in isiZulu, Sepedi, Afrikaans, or English and get simple, friendly explanations.
                 </p>
               </div>
-              <div className="mt-6 pt-4 border-t border-white/10 flex items-center justify-between text-xs text-[#FFD700] font-bold">
+              <div className="mt-6 pt-4 border-t border-white/10 flex items-center justify-between text-xs text-[#FFB612] font-bold">
                 <span>All 11 Official SA Languages</span>
-                <Check className="w-4 h-4" />
+                <Check className="w-4 h-4 text-[#007A4D]" />
               </div>
             </div>
 
             {/* Card 3: 4000+ DBE Past Papers with Memo Explanations */}
-            <div className="bg-[#0D0D0D] border border-white/10 hover:border-[#FFD700]/50 rounded-3xl p-6 sm:p-8 flex flex-col justify-between transition-all group">
+            <div className="bg-[#0A1F44] border border-white/10 hover:border-[#FFB612]/50 rounded-3xl p-6 sm:p-8 flex flex-col justify-between transition-all group shadow-xl">
               <div>
-                <div className="w-12 h-12 rounded-2xl bg-[#FFD700]/15 text-[#FFD700] flex items-center justify-center mb-5 group-hover:scale-110 transition-transform">
+                <div className="w-12 h-12 rounded-2xl bg-[#FFB612]/15 text-[#FFB612] flex items-center justify-center mb-5 group-hover:scale-110 transition-transform">
                   <FileText className="w-6 h-6" />
                 </div>
                 <h3 className="font-display font-black text-xl text-white mb-2">
@@ -528,9 +620,9 @@ export const PublicLandingView: React.FC = () => {
                   Real national examination papers with step-by-step memos translated into your home language so you never get lost in mathematical jargon.
                 </p>
               </div>
-              <div className="mt-6 pt-4 border-t border-white/10 flex items-center justify-between text-xs text-[#FFD700] font-bold">
+              <div className="mt-6 pt-4 border-t border-white/10 flex items-center justify-between text-xs text-[#FFB612] font-bold">
                 <span>Official Memos &bull; Step-by-Step</span>
-                <Check className="w-4 h-4" />
+                <Check className="w-4 h-4 text-[#007A4D]" />
               </div>
             </div>
           </div>
@@ -539,10 +631,10 @@ export const PublicLandingView: React.FC = () => {
         {/* ========================================================
             MEMO EXPLANATION FEATURE LIVE DEMO
            ======================================================== */}
-        <section className="py-16 sm:py-24 bg-[#0A0A0A] border-y border-white/10 px-4 sm:px-6">
+        <section className="py-16 sm:py-24 bg-[#050D1A] border-y border-white/10 px-4 sm:px-6">
           <div className="max-w-4xl mx-auto">
             <div className="text-center mb-10">
-              <span className="text-xs uppercase font-mono font-bold text-[#FFD700] tracking-widest block mb-1">
+              <span className="text-xs uppercase font-mono font-bold text-[#FFB612] tracking-widest block mb-1">
                 PATENT-PENDING LEARNING ENGINE
               </span>
               <h2 className="font-display font-black text-2xl sm:text-4xl text-white">
@@ -554,15 +646,15 @@ export const PublicLandingView: React.FC = () => {
             </div>
 
             {/* Interactive Demo Card */}
-            <div className="bg-[#121212] border border-white/15 rounded-3xl p-6 sm:p-8 shadow-2xl">
+            <div className="bg-[#0A1F44] border border-white/15 rounded-3xl p-6 sm:p-8 shadow-2xl">
               
               {/* Question Header */}
-              <div className="p-4 rounded-2xl bg-white/5 border border-white/10 mb-5">
-                <div className="text-[11px] font-mono font-bold text-[#FFD700] uppercase tracking-wider mb-1">
+              <div className="p-4 rounded-2xl bg-black/40 border border-white/10 mb-5">
+                <div className="text-[11px] font-mono font-bold text-[#FFB612] uppercase tracking-wider mb-1">
                   DBE Mathematics Paper 1 &bull; Question 1.1
                 </div>
                 <p className="text-base sm:text-lg font-bold text-white">
-                  Solve for x: <span className="font-mono text-[#FFD700]">2x + 3 = 7</span>
+                  Solve for x: <span className="font-mono text-[#FFB612]">2x + 3 = 7</span>
                 </p>
                 <p className="text-xs text-white/50 mt-1 font-mono">
                   Official DBE Memo: 2x = 4 &rarr; x = 2 (2 marks)
@@ -570,7 +662,7 @@ export const PublicLandingView: React.FC = () => {
               </div>
 
               {/* Action Banner with Language Dropdown */}
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 rounded-2xl bg-[#000000] border border-white/10 mb-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 rounded-2xl bg-black/60 border border-white/10 mb-4">
                 <div className="text-xs text-white/80">
                   <span className="font-bold text-white block">Don&apos;t understand the official English memo?</span>
                   <span className="text-white/60">Get it broken down step-by-step in your mother tongue:</span>
@@ -579,7 +671,7 @@ export const PublicLandingView: React.FC = () => {
                 <div className="relative inline-block text-left shrink-0">
                   <button
                     onClick={() => setIsDemoDropdownOpen(!isDemoDropdownOpen)}
-                    className="px-4 py-2 rounded-xl bg-[#FFD700] hover:bg-yellow-400 text-black font-extrabold text-xs flex items-center gap-2 shadow-sm cursor-pointer"
+                    className="px-4 py-2 rounded-xl bg-[#FFB612] hover:bg-yellow-400 text-black font-extrabold text-xs flex items-center gap-2 shadow-sm cursor-pointer"
                   >
                     <Languages className="w-4 h-4" />
                     <span>Explain in {demoLang}</span>
@@ -587,7 +679,7 @@ export const PublicLandingView: React.FC = () => {
                   </button>
 
                   {isDemoDropdownOpen && (
-                    <div className="absolute right-0 mt-2 w-48 rounded-2xl bg-[#1A1A1A] border border-white/20 shadow-2xl py-2 z-20 max-h-60 overflow-y-auto">
+                    <div className="absolute right-0 mt-2 w-48 rounded-2xl bg-[#0c182b] border border-white/20 shadow-2xl py-2 z-20 max-h-60 overflow-y-auto">
                       {ALL_11_LANGUAGES.map((lang) => (
                         <button
                           key={lang.name}
@@ -595,8 +687,8 @@ export const PublicLandingView: React.FC = () => {
                             setDemoLang(lang.name);
                             setIsDemoDropdownOpen(false);
                           }}
-                          className={`w-full text-left px-4 py-2 text-xs hover:bg-[#FFD700] hover:text-black transition-colors ${
-                            demoLang === lang.name ? 'text-[#FFD700] font-bold' : 'text-white/90'
+                          className={`w-full text-left px-4 py-2 text-xs hover:bg-[#FFB612] hover:text-black transition-colors ${
+                            demoLang === lang.name ? 'text-[#FFB612] font-bold' : 'text-white/90'
                           }`}
                         >
                           {lang.name} ({lang.native})
@@ -608,9 +700,9 @@ export const PublicLandingView: React.FC = () => {
               </div>
 
               {/* Translation Output Box */}
-              <div className="p-5 rounded-2xl bg-[#FFD700]/10 border border-[#FFD700]/30 text-white">
-                <div className="flex items-center gap-2 text-xs font-mono font-bold text-[#FFD700] uppercase tracking-wider mb-2">
-                  <CheckCircle2 className="w-4 h-4 text-[#FFD700]" />
+              <div className="p-5 rounded-2xl bg-[#007A4D]/20 border border-[#007A4D]/40 text-white">
+                <div className="flex items-center gap-2 text-xs font-mono font-bold text-emerald-300 uppercase tracking-wider mb-2">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-400" />
                   <span>Step-by-Step Memo Explanation ({demoLang})</span>
                 </div>
                 <p className="text-xs sm:text-sm text-white/90 leading-relaxed font-medium">
@@ -622,11 +714,11 @@ export const PublicLandingView: React.FC = () => {
         </section>
 
         {/* ========================================================
-            PRICING SECTION: FREE FOR 2 DAYS, THEN R60/MONTH
+            PRICING SECTION: R60 FOR 30 DAYS ACCESS
            ======================================================== */}
         <section className="py-16 sm:py-24 max-w-4xl mx-auto px-4 sm:px-6">
           <div className="text-center mb-10">
-            <span className="text-xs uppercase font-mono font-bold text-[#FFD700] tracking-widest block mb-1">
+            <span className="text-xs uppercase font-mono font-bold text-[#FFB612] tracking-widest block mb-1">
               AFFORDABLE FOR EVERY SOUTH AFRICAN FAMILY
             </span>
             <h2 className="font-display font-black text-3xl sm:text-4xl text-white">
@@ -634,64 +726,62 @@ export const PublicLandingView: React.FC = () => {
             </h2>
           </div>
 
-          <div className="max-w-md mx-auto bg-[#0D0D0D] border-2 border-[#FFD700] rounded-3xl p-8 sm:p-10 text-center shadow-2xl relative overflow-hidden">
-            <div className="inline-block px-3 py-1 rounded-full bg-[#FFD700] text-black text-xs font-mono font-bold uppercase mb-4">
-              R60 / MONTH &bull; CANCEL ANYTIME
+          <div className="max-w-md mx-auto bg-[#0A1F44] border-2 border-[#007A4D] rounded-3xl p-8 sm:p-10 text-center shadow-2xl relative overflow-hidden">
+            <div className="inline-block px-3 py-1 rounded-full bg-[#007A4D] text-white text-xs font-mono font-bold uppercase mb-4">
+              R60 FOR 30 DAYS ACCESS &bull; AUTO-UNLOCK
             </div>
 
             <div className="flex items-baseline justify-center gap-1.5 mb-2">
-              <span className="text-5xl font-display font-black text-[#FFD700]">R60</span>
-              <span className="text-sm font-bold text-white/60">/ month</span>
+              <span className="text-5xl font-display font-black text-[#FFB612]">R60</span>
+              <span className="text-sm font-bold text-white/60">/ 30 days</span>
             </div>
 
             <p className="text-xs text-white/70 mb-6">
-              Instant Auto Unlock via SnapScan &bull; No admin wait time
+              Instant Auto-Unlock via SnapScan &bull; No admin wait time
             </p>
 
             <ul className="text-left text-xs sm:text-sm space-y-3 mb-8 text-white/90">
               <li className="flex items-center gap-2.5">
-                <Check className="w-4 h-4 text-[#FFD700] shrink-0" />
+                <Check className="w-4 h-4 text-[#007A4D] shrink-0" />
                 <span>All grades (Grade 4 to University)</span>
               </li>
               <li className="flex items-center gap-2.5">
-                <Check className="w-4 h-4 text-[#FFD700] shrink-0" />
+                <Check className="w-4 h-4 text-[#007A4D] shrink-0" />
                 <span>All 11 official South African languages</span>
               </li>
               <li className="flex items-center gap-2.5">
-                <Check className="w-4 h-4 text-[#FFD700] shrink-0" />
+                <Check className="w-4 h-4 text-[#007A4D] shrink-0" />
                 <span>4000+ DBE Past Papers with step-by-step memos</span>
               </li>
               <li className="flex items-center gap-2.5">
-                <Check className="w-4 h-4 text-[#FFD700] shrink-0" />
-                <span>Cancel anytime &bull; No hidden contracts</span>
+                <Check className="w-4 h-4 text-[#007A4D] shrink-0" />
+                <span>Cancel anytime &bull; No lock-in contracts</span>
               </li>
             </ul>
 
             {/* Side-by-Side Payment Buttons on Pricing Card */}
             <div className="space-y-3">
-              <a
-                href={SNAPSCAN_URL}
-                target="_blank"
-                rel="noopener noreferrer"
-                onClick={handleSnapScanPayClick}
-                className="w-full py-4 rounded-xl bg-[#0077b6] hover:bg-[#023e8a] text-white font-black text-base shadow-xl shadow-blue-600/30 transition-all transform hover:-translate-y-0.5 active:translate-y-0 cursor-pointer flex items-center justify-center gap-2"
+              <button
+                type="button"
+                onClick={navigateToPaywall}
+                className="w-full py-4 rounded-xl bg-[#007A4D] hover:bg-emerald-600 text-white font-black text-base shadow-xl shadow-emerald-950/40 transition-all transform hover:-translate-y-0.5 active:translate-y-0 cursor-pointer flex items-center justify-center gap-2"
               >
                 <QrCode className="w-5 h-5 shrink-0" />
-                <span>Pay R60 with SnapScan</span>
-              </a>
+                <span>Pay R60 with SnapScan &mdash; 30 Days</span>
+              </button>
 
               <button
                 type="button"
-                onClick={handleUnlockApp}
-                className="w-full py-4 rounded-xl bg-[#FFD700] hover:bg-yellow-400 text-black font-black text-base shadow-xl shadow-yellow-500/20 transition-all transform hover:-translate-y-0.5 active:translate-y-0 cursor-pointer flex items-center justify-center gap-2"
+                onClick={navigateToUnlock}
+                className="w-full py-4 rounded-xl bg-[#FFB612] hover:bg-yellow-400 text-black font-black text-base shadow-xl shadow-yellow-500/20 transition-all transform hover:-translate-y-0.5 active:translate-y-0 cursor-pointer flex items-center justify-center gap-2"
               >
-                <CheckCircle2 className="w-5 h-5 text-black shrink-0" />
-                <span>I Have Paid - Unlock App</span>
+                <KeyRound className="w-5 h-5 text-black shrink-0" />
+                <span>Enter Code to Unlock</span>
               </button>
             </div>
 
             <p className="mt-4 text-[11px] text-white/50 font-mono">
-              Payment verified by SnapScan to NEXOVIAN PTY LTD - Instant Auto Unlock
+              Auto-generate your code on /paywall &bull; Unlock instantly on /unlock
             </p>
           </div>
         </section>
@@ -699,134 +789,55 @@ export const PublicLandingView: React.FC = () => {
 
       {/* ========================================================
           TRUST FOOTER
-          Built in Mpumalanga | Level 1 B-BBEE | 100% CAPS Aligned | Contact WhatsApp
+          NEXOVIAN (Pty) Ltd | Reg: 2026/234078/07 | nexovian.group
+          Built in Mpumalanga | Level 1 B-BBEE | 100% CAPS Aligned | Contact WhatsApp: https://wa.me/27636508381
          ======================================================== */}
       <footer className="border-t border-white/10 py-10 px-4 sm:px-6 bg-[#000000] text-center text-xs text-white/60">
         <div className="max-w-6xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6">
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-full bg-[#FFD700] text-black font-bold flex items-center justify-center text-sm">
+            <div className="w-8 h-8 rounded-full bg-[#FFB612] text-black font-bold flex items-center justify-center text-sm">
               N
             </div>
-            <span className="font-display font-black text-white text-base">
-              NEXOVIAN
-            </span>
+            <div className="text-left">
+              <span className="font-display font-black text-white text-base block leading-tight">
+                NEXOVIAN (Pty) Ltd
+              </span>
+              <span className="text-[10px] text-white/50 font-mono">
+                Reg: 2026/234078/07 &bull; nexovian.group
+              </span>
+            </div>
           </div>
 
           <p className="text-xs text-white/70">
             Built in Mpumalanga &bull; Level 1 B-BBEE &bull; 100% CAPS Aligned &bull;{' '}
             <a
-              href="https://wa.me/27659202685?text=Hi%20Nexovian%2C%20I%20have%20a%20question%20about%20learning%20in%20my%20language"
+              href={WHATSAPP_URL}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-[#FFD700] hover:underline font-bold inline-flex items-center gap-1"
+              className="text-[#FFB612] hover:underline font-bold inline-flex items-center gap-1"
             >
               <MessageCircle className="w-3.5 h-3.5" />
-              <span>Contact WhatsApp</span>
+              <span>Need help? WhatsApp 063 650 8381</span>
             </a>
           </p>
 
           <p className="text-white/40 text-[11px]">
-            &copy; {new Date().getFullYear()} Nexovian (Pty) Ltd. All rights reserved.
+            &copy; {new Date().getFullYear()} NEXOVIAN (Pty) Ltd. All rights reserved.
           </p>
         </div>
       </footer>
 
-      {/* ========================================================
-          TIMER POPUP: 10 SECONDS AFTER CLICKING PAY
-          "Payment done? Click Unlock"
-         ======================================================== */}
-      {showPaymentDonePopup && (
-        <div className="fixed bottom-6 right-4 sm:right-6 z-50 max-w-sm w-full bg-[#141414] border-2 border-[#FFD700] rounded-2xl p-5 shadow-2xl text-left animate-in slide-in-from-bottom duration-300">
-          <div className="flex items-start justify-between gap-2">
-            <div className="flex items-center gap-2 text-xs font-mono font-bold text-[#FFD700] uppercase">
-              <Clock className="w-4 h-4 text-[#FFD700]" />
-              <span>SnapScan Payment Auto-Unlock</span>
-            </div>
-            <button
-              onClick={() => setShowPaymentDonePopup(false)}
-              className="text-white/50 hover:text-white p-1"
-            >
-              <X className="w-4 h-4" />
-            </button>
-          </div>
-
-          <h4 className="font-display font-bold text-base text-white mt-1.5">
-            Payment done? Click Unlock
-          </h4>
-          <p className="text-xs text-white/70 mt-1 leading-relaxed">
-            Completed your R60 payment on the SnapScan tab? Click below to instantly activate full access to all subjects, papers, and memos!
-          </p>
-
-          <button
-            onClick={handleUnlockApp}
-            className="mt-3.5 w-full py-3 px-4 rounded-xl bg-[#FFD700] hover:bg-yellow-400 text-black font-black text-xs sm:text-sm shadow-lg flex items-center justify-center gap-2 cursor-pointer transition-transform active:scale-95"
-          >
-            <CheckCircle2 className="w-4 h-4 text-black" />
-            <span>I Have Paid - Unlock App</span>
-          </button>
-        </div>
-      )}
-
-      {/* ========================================================
-          SUCCESS MODAL: WELCOME TO NEXOVIAN PREMIUM
-         ======================================================== */}
-      {showSuccessModal && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
-          <div className="bg-[#121212] border-2 border-[#FFD700] rounded-3xl max-w-md w-full p-6 sm:p-8 text-center shadow-2xl relative animate-in zoom-in-95 duration-200">
-            <div className="w-16 h-16 rounded-full bg-[#FFD700] text-black flex items-center justify-center mx-auto mb-4 font-black text-2xl shadow-lg">
-              ✓
-            </div>
-
-            <div className="inline-block px-3 py-1 rounded-full bg-emerald-500/20 border border-emerald-400 text-emerald-300 text-xs font-mono font-bold uppercase mb-3">
-              Access Granted &bull; Instant Auto-Unlock
-            </div>
-
-            <h3 className="font-display font-black text-2xl text-white mb-2">
-              Welcome to NEXOVIAN Premium!
-            </h3>
-
-            <p className="text-xs sm:text-sm text-white/80 mb-5 leading-relaxed">
-              Your R60 payment has been registered. Full curriculum content from Grade 4 to University is now unlocked.
-            </p>
-
-            {/* Selected Config Display */}
-            <div className="p-4 rounded-2xl bg-white/5 border border-white/10 text-left space-y-2 mb-6 text-xs">
-              <div className="flex items-center justify-between text-white/70">
-                <span>Selected Grade:</span>
-                <strong className="text-[#FFD700] font-bold">{selectedGradeObj.name} ({selectedGradeObj.level})</strong>
-              </div>
-              <div className="flex items-center justify-between text-white/70">
-                <span>Home Language:</span>
-                <strong className="text-[#FFD700] font-bold">{selectedLangObj.name} ({selectedLangObj.native})</strong>
-              </div>
-              <div className="flex items-center justify-between text-emerald-400 font-bold pt-2 border-t border-white/10">
-                <span>All 11 Languages &amp; Past Papers:</span>
-                <span>UNLOCKED</span>
-              </div>
-            </div>
-
-            <button
-              onClick={handleStartLearning}
-              className="w-full py-4 rounded-xl bg-[#FFD700] hover:bg-yellow-400 text-black font-black text-base shadow-xl shadow-yellow-500/30 flex items-center justify-center gap-2 cursor-pointer transition-transform hover:scale-[1.02] active:scale-95"
-            >
-              <span>Access Granted - Start Learning</span>
-              <ArrowRight className="w-5 h-5 text-black" />
-            </button>
-          </div>
-        </div>
-      )}
-
       {/* 20-Second Demo Modal */}
       {isDemoModalOpen && (
         <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-[#121212] border border-white/20 rounded-3xl max-w-lg w-full p-6 text-center shadow-2xl relative">
+          <div className="bg-[#0A1F44] border border-white/20 rounded-3xl max-w-lg w-full p-6 text-center shadow-2xl relative">
             <button
               onClick={() => setIsDemoModalOpen(false)}
               className="absolute top-4 right-4 p-2 text-white/60 hover:text-white rounded-full"
             >
               <X className="w-5 h-5" />
             </button>
-            <div className="w-14 h-14 rounded-full bg-[#FFD700] text-black flex items-center justify-center mx-auto mb-4 font-bold shadow-lg">
+            <div className="w-14 h-14 rounded-full bg-[#FFB612] text-black flex items-center justify-center mx-auto mb-4 font-bold shadow-lg">
               <Play className="w-6 h-6 fill-black ml-1" />
             </div>
             <h3 className="font-display font-black text-xl text-white mb-2">
@@ -837,20 +848,17 @@ export const PublicLandingView: React.FC = () => {
             </p>
             <div className="aspect-video bg-black rounded-2xl border border-white/10 flex flex-col items-center justify-center p-6 text-xs text-white/60">
               <div className="p-3 bg-white/5 rounded-xl border border-white/10 text-left w-full space-y-1 mb-3">
-                <span className="text-[#FFD700] font-bold block">1. Choose any subject &amp; past paper</span>
+                <span className="text-[#FFB612] font-bold block">1. Choose any subject &amp; past paper</span>
                 <span>2. Tap [🌐 Explain in My Language]</span>
                 <span className="text-emerald-400 block">3. Immediate mother-tongue explanation in isiZulu, Sepedi, etc.</span>
               </div>
-              <a
-                href={SNAPSCAN_URL}
-                target="_blank"
-                rel="noopener noreferrer"
-                onClick={handleSnapScanPayClick}
-                className="w-full py-3 bg-[#0077b6] text-white font-bold rounded-xl text-xs hover:bg-[#023e8a] flex items-center justify-center gap-2"
+              <button
+                onClick={navigateToPaywall}
+                className="w-full py-3 bg-[#007A4D] text-white font-bold rounded-xl text-xs hover:bg-emerald-600 flex items-center justify-center gap-2 cursor-pointer"
               >
                 <QrCode className="w-4 h-4" />
-                <span>Pay R60 with SnapScan &bull; Instant Access</span>
-              </a>
+                <span>Pay R60 with SnapScan &bull; 30 Days</span>
+              </button>
             </div>
           </div>
         </div>

@@ -3,57 +3,62 @@
  * SPDX-License-Identifier: Apache-2.0
  * 
  * NEXOVIAN PAYWALL VIEW (/paywall)
- * Modern Netflix-style black & gold paywall with SnapScan Instant Auto-Unlock & Paystack Inline
+ * Design: Deep Navy #0A1F44, Green #007A4D, Gold #FFB612, Sky Blue #1E88E5, Orange #FF6B35.
  * 
- * Features:
- * - Two side-by-side buttons:
- *   Button 1: "Pay R60 with SnapScan" -> https://pos.snapscan.io/qr/NKJJYpV6 (target _blank, blue)
- *   Button 2: "I Have Paid - Unlock App" (or "I HAVE PAID - UNLOCK NOW")
- * - 10-second timer: "Payment done? Click Unlock"
- * - Trust text: "Payment verified by SnapScan to NEXOVIAN PTY LTD - Instant Auto Unlock"
- * - Instant access: localStorage.setItem('nexovian_paid','true')
- * - When nexovian_paid == true, never show paywall again, show full app dashboard.
+ * Flow:
+ * - Button 1 Green: "Pay R60 with SnapScan - 30 Days" -> https://pos.snapscan.io/qr/NKJJYpV6 (new tab)
+ * - Text under: "Step 1: Pay R60 on SnapScan. Step 2: Come back here, enter your phone + SnapScan reference to get your code instantly."
+ * - Form: Phone Number + SnapScan Reference + Email + Button "Get My Unlock Code"
+ * - On submit -> POST /api/generate-code:
+ *   a) Validate phone (10 digits) and reference not empty
+ *   b) Auto-generate UNIQUE code NEX-XXXXXX
+ *   c) Save to DB status='unused', phone, email, reference
+ *   d) Show success screen INSTANTLY on same page: Big Gold box: "YOUR UNLOCK CODE IS: NEX-482910" + Button [Copy Code] + Text "Write it down. Use once only. Valid 30 days after use."
+ *   e) Button below: "Enter Code to Unlock" -> /unlock
+ * - Help only: Small link at bottom: "Need help? WhatsApp 063 650 8381"
  */
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Lock,
   Sparkles,
   CheckCircle2,
   AlertCircle,
   MessageCircle,
-  LogOut,
   ArrowRight,
   ShieldCheck,
-  Zap,
-  BookOpen,
-  Award,
-  Layers,
   QrCode,
   ExternalLink,
+  Copy,
+  Check,
   Clock,
-  X,
-  CreditCard
+  Layers,
+  GraduationCap
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useLearning } from '../../context/LearningContext';
+import { checkAccess, generateUnlockCodeApi } from '../../services/snapscanSubscriptionService';
 
 const SNAPSCAN_URL = 'https://pos.snapscan.io/qr/NKJJYpV6';
+const WHATSAPP_URL = 'https://wa.me/27636508381?text=Hi%20Nexovian%2C%20I%20have%20a%20question%20about%20my%20unlock%20code';
 
 export const PaywallView: React.FC = () => {
-  const { user, logout } = useAuth();
-  const { setCurrentTab, userProgress } = useLearning();
+  const { user } = useAuth();
+  const { setCurrentTab } = useLearning();
 
-  const [reason, setReason] = useState<'trial_expired' | 'subscription_expired' | 'expired'>('trial_expired');
-  const [isProcessing, setIsProcessing] = useState(false);
+  const [phone, setPhone] = useState('');
+  const [reference, setReference] = useState('');
+  const [email, setEmail] = useState(user?.email || '');
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [showPaymentDonePopup, setShowPaymentDonePopup] = useState(false);
-  const [showSuccessModal, setShowSuccessModal] = useState(false);
-  const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const [generatedCode, setGeneratedCode] = useState<string | null>(null);
+  const [isCopied, setIsCopied] = useState(false);
+  const [reason, setReason] = useState<string>('subscription_expired');
 
   useEffect(() => {
-    // If already paid, redirect straight to dashboard
-    if (typeof window !== 'undefined' && localStorage.getItem('nexovian_paid') === 'true') {
+    // If user already has active 30-day access, skip to home
+    const status = checkAccess(user);
+    if (status.allow) {
       setCurrentTab('home');
       return;
     }
@@ -61,352 +66,376 @@ export const PaywallView: React.FC = () => {
     if (typeof window !== 'undefined') {
       const params = new URLSearchParams(window.location.search);
       const r = params.get('reason');
-      if (r === 'subscription_expired') {
-        setReason('subscription_expired');
-      } else if (r === 'trial_expired') {
-        setReason('trial_expired');
-      } else {
-        setReason('trial_expired');
-      }
+      if (r) setReason(r);
     }
+  }, [user, setCurrentTab]);
 
-    return () => {
-      if (timerRef.current) clearTimeout(timerRef.current);
-    };
-  }, [setCurrentTab]);
-
-  const quizzesCount = userProgress.quizAttempts?.length || 4;
-  const lessonsCount = userProgress.completedLessonIds?.length || 12;
-
-  const handleSnapScanPayClick = () => {
-    // 10-second timer: "Payment done? Click Unlock"
-    if (timerRef.current) clearTimeout(timerRef.current);
-    timerRef.current = setTimeout(() => {
-      setShowPaymentDonePopup(true);
-    }, 10000);
+  const handlePayClick = () => {
+    window.open(SNAPSCAN_URL, '_blank');
   };
 
-  const handleUnlockApp = () => {
-    try {
-      localStorage.setItem('nexovian_paid', 'true');
-      localStorage.setItem(
-        'nexovian_subscription_override',
-        JSON.stringify({
-          status: 'active',
-          until: Date.now() + 365 * 24 * 60 * 60 * 1000
-        })
-      );
-    } catch (_) {}
-
-    setShowPaymentDonePopup(false);
-    setShowSuccessModal(true);
-  };
-
-  const handleStartLearning = () => {
-    setShowSuccessModal(false);
-    setCurrentTab('home');
-    if (typeof window !== 'undefined') {
-      window.history.pushState({}, '', '/dashboard');
-    }
-  };
-
-  // Paystack Public Key
-  const paystackKey =
-    (import.meta as any).env?.NEXT_PUBLIC_PAYSTACK_KEY ||
-    (import.meta as any).env?.VITE_PAYSTACK_PUBLIC_KEY ||
-    'pk_test_d3a776106e5797d1ec093e0388d1844bdf9d2ea0';
-
-  const userEmail = user?.email || 'learner@nexovian.group';
-
-  const handlePaystackPayment = () => {
-    setIsProcessing(true);
+  const handleGenerateCodeSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
     setErrorMessage(null);
 
-    if (typeof window.PaystackPop?.setup === 'function') {
-      const paymentRef = `NEXOVIAN_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
-      const handler = window.PaystackPop.setup({
-        key: paystackKey,
-        email: userEmail,
-        amount: 6000,
-        currency: 'ZAR',
-        ref: paymentRef,
-        metadata: {
-          user_id: user?.id,
-          email: userEmail,
-          company: 'NEXOVIAN'
-        },
-        callback: async (response) => {
-          try {
-            const res = await fetch('/api/verify-payment', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                reference: response.reference || paymentRef,
-                email: userEmail,
-                userId: user?.id
-              })
-            });
+    const cleanPhone = phone.trim();
+    const cleanRef = reference.trim();
 
-            if (res.ok) {
-              handleUnlockApp();
-            } else {
-              handleUnlockApp();
-            }
-          } catch (err: any) {
-            handleUnlockApp();
-          } finally {
-            setIsProcessing(false);
-          }
-        },
-        onClose: () => {
-          setIsProcessing(false);
-        }
+    if (!cleanPhone || cleanPhone.replace(/\D/g, '').length < 10) {
+      setErrorMessage('Please enter a valid 10-digit phone number (e.g. 0821234567).');
+      return;
+    }
+
+    if (!cleanRef || cleanRef.length < 2) {
+      setErrorMessage('Please enter your SnapScan reference or receipt number.');
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const result = await generateUnlockCodeApi({
+        phone: cleanPhone,
+        reference: cleanRef,
+        email: email.trim() || user?.email
       });
 
-      handler.openIframe();
-    } else {
-      handleUnlockApp();
+      if (!result.success || !result.code) {
+        setErrorMessage(result.message || 'Failed to generate code. Please verify details.');
+      } else {
+        setGeneratedCode(result.code);
+        // Save temporary generated code for easy auto-fill on /unlock
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('nexovian_last_generated_code', result.code);
+          localStorage.setItem('nexovian_last_phone', cleanPhone);
+        }
+      }
+    } catch (err: any) {
+      setErrorMessage(err?.message || 'Error communicating with server.');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
-  const handleSwitchAccount = async () => {
-    await logout();
-    setCurrentTab('login');
+  const handleCopyCode = async () => {
+    if (!generatedCode) return;
+    try {
+      await navigator.clipboard.writeText(generatedCode);
+      setIsCopied(true);
+      setTimeout(() => setIsCopied(false), 2500);
+    } catch (_) {
+      setIsCopied(true);
+    }
+  };
+
+  const navigateToUnlock = () => {
+    setCurrentTab('unlock');
+    if (typeof window !== 'undefined') {
+      window.history.pushState({}, '', '/unlock');
+    }
   };
 
   return (
-    <div className="min-h-screen bg-[#000000] text-white flex flex-col justify-between selection:bg-[#FFD700] selection:text-black font-sans antialiased">
+    <div className="min-h-screen bg-[#0A1F44] text-white font-sans antialiased selection:bg-[#FFB612] selection:text-black py-10 px-4 sm:px-6 flex flex-col justify-between">
       
-      {/* Top Brand Bar */}
-      <header className="border-b border-white/10 px-6 py-4 flex items-center justify-between max-w-5xl mx-auto w-full">
-        <div className="flex items-center gap-2.5 cursor-pointer" onClick={() => setCurrentTab('landing')}>
-          <div className="w-8 h-8 rounded-full bg-[#FFD700] text-black font-black flex items-center justify-center text-sm shadow-sm">
+      {/* Top Bar */}
+      <div className="max-w-4xl mx-auto w-full flex items-center justify-between pb-6 border-b border-white/10">
+        <div
+          className="flex items-center gap-3 cursor-pointer"
+          onClick={() => {
+            setCurrentTab('landing');
+            if (typeof window !== 'undefined') window.history.pushState({}, '', '/');
+          }}
+        >
+          <div className="w-10 h-10 rounded-full bg-[#FFB612] text-black font-black flex items-center justify-center text-lg shadow-lg">
             N
           </div>
-          <span className="font-display font-black text-xl tracking-wider text-white">
-            NEXOVIAN
-          </span>
-        </div>
-        <button
-          onClick={handleSwitchAccount}
-          className="text-xs text-white/70 hover:text-white flex items-center gap-1.5 transition-colors cursor-pointer"
-        >
-          <LogOut className="w-3.5 h-3.5" />
-          <span>Login with different account</span>
-        </button>
-      </header>
-
-      {/* Main Paywall Card */}
-      <main className="flex-1 flex items-center justify-center px-4 py-10">
-        <div className="max-w-xl w-full bg-[#0D0D0D] border-2 border-[#FFD700] rounded-3xl p-6 sm:p-10 shadow-2xl shadow-yellow-500/10 text-center relative overflow-hidden">
-          
-          {/* Subtle gold radial background glow */}
-          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-72 h-72 bg-[#FFD700]/10 rounded-full blur-3xl pointer-events-none" />
-
-          {/* Lock Icon */}
-          <div className="w-16 h-16 rounded-2xl bg-[#FFD700]/15 border border-[#FFD700]/40 text-[#FFD700] flex items-center justify-center mx-auto mb-5 shadow-lg relative z-10">
-            <Lock className="w-8 h-8" />
+          <div>
+            <span className="font-display font-black text-xl tracking-wider text-white block leading-tight">
+              NEXOVIAN
+            </span>
+            <span className="text-[10px] text-[#FFB612] font-mono uppercase tracking-wider">
+              The Learning Brain
+            </span>
           </div>
+        </div>
 
-          {/* Heading based on ?reason parameter */}
-          <h1 className="font-display font-black text-2xl sm:text-3xl text-white tracking-tight relative z-10">
-            {reason === 'trial_expired'
-              ? 'Your 2-Day Free Trial Ended'
-              : 'Your Subscription Ended'}
-          </h1>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={navigateToUnlock}
+            className="px-3.5 py-1.5 rounded-full border border-[#FFB612]/50 text-[#FFB612] hover:bg-[#FFB612]/10 text-xs font-bold transition-colors cursor-pointer"
+          >
+            Have a code? Unlock &rarr;
+          </button>
+          <button
+            onClick={() => {
+              setCurrentTab('landing');
+              if (typeof window !== 'undefined') window.history.pushState({}, '', '/');
+            }}
+            className="text-xs font-bold text-white/70 hover:text-white transition-colors"
+          >
+            &larr; Home
+          </button>
+        </div>
+      </div>
 
-          <p className="mt-2 text-sm text-white/70 relative z-10">
-            Unlock instant full access to Grade 4 to University in all 11 official South African languages.
-          </p>
-
-          {/* What They Lose Callout */}
-          <div className="mt-6 p-4 rounded-2xl bg-white/5 border border-white/10 text-left space-y-2 relative z-10">
-            <div className="flex items-center gap-2 text-xs font-bold text-[#FFD700] uppercase tracking-wider font-mono">
-              <Sparkles className="w-4 h-4 text-[#FFD700]" />
-              <span>Keep Your Learning Momentum</span>
+      {/* Main Content Box */}
+      <main className="max-w-xl mx-auto w-full my-auto py-8">
+        
+        {/* Expiration or lock notice banner if applicable */}
+        {reason === 'subscription_expired' && !generatedCode && (
+          <div className="mb-6 p-4 rounded-2xl bg-amber-500/15 border border-amber-400 text-amber-200 text-xs flex items-center gap-3 shadow-lg">
+            <Clock className="w-5 h-5 text-amber-400 shrink-0" />
+            <div>
+              <strong className="block font-bold">Your 30-day access has expired.</strong>
+              <span>Pay R60 on SnapScan below to get your new unlock code instantly.</span>
             </div>
-            <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
-              You learned <strong className="text-white font-bold">{quizzesCount} quizzes</strong> &amp;{' '}
-              <strong className="text-white font-bold">{lessonsCount} topics</strong> &mdash; don&apos;t lose your mastery streak and exam notes!
+          </div>
+        )}
+
+        <div className="bg-[#000000] border-2 border-[#007A4D] rounded-3xl p-6 sm:p-10 shadow-2xl relative overflow-hidden">
+          
+          {/* Header */}
+          <div className="text-center pb-6 border-b border-white/10">
+            <div className="w-16 h-16 rounded-full bg-[#007A4D]/20 border-2 border-[#007A4D] text-[#007A4D] flex items-center justify-center mx-auto mb-4 shadow-xl">
+              <Lock className="w-8 h-8 text-[#007A4D]" />
+            </div>
+
+            <div className="inline-block px-3.5 py-1 rounded-full bg-[#FFB612]/20 border border-[#FFB612]/40 text-[#FFB612] text-xs font-mono font-bold uppercase mb-2">
+              R60 FOR 30 DAYS &bull; ONE CODE, ONE USE
+            </div>
+
+            <h1 className="font-display font-black text-3xl sm:text-4xl text-white tracking-tight">
+              Unlock Full App &mdash; R60
+            </h1>
+            <p className="mt-2 text-xs sm:text-sm text-white/70 max-w-md mx-auto">
+              30 days full access &mdash; All grades (Grade 4 to University), all subjects, all 11 languages
             </p>
           </div>
 
-          {/* Price Box */}
-          <div className="my-6 py-4 border-y border-white/10 flex items-baseline justify-center gap-1.5 relative z-10">
-            <span className="text-4xl sm:text-5xl font-display font-black text-[#FFD700]">
-              R60
-            </span>
-            <span className="text-sm font-bold text-white/60">
-              / month
-            </span>
+          {/* Value Checklist */}
+          <div className="py-4 grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs text-white/90 border-b border-white/10">
+            <div className="flex items-center gap-2">
+              <Check className="w-4 h-4 text-[#007A4D] shrink-0" />
+              <span>Grade 4 to University CAPS</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Check className="w-4 h-4 text-[#007A4D] shrink-0" />
+              <span>All 11 Official SA Languages</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Check className="w-4 h-4 text-[#007A4D] shrink-0" />
+              <span>4,000+ DBE Past Papers &amp; Memos</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Check className="w-4 h-4 text-[#007A4D] shrink-0" />
+              <span>Instant AI Homework &amp; Memo Tutor</span>
+            </div>
           </div>
 
-          {/* Features List */}
-          <ul className="text-xs sm:text-sm text-left space-y-2.5 mb-7 text-white/80 relative z-10">
-            <li className="flex items-center gap-2.5">
-              <CheckCircle2 className="w-4 h-4 text-[#FFD700] shrink-0" />
-              <span>All grades: Grade 4, 5, 6, 7, 8, 9, 10, 11, 12, TVET &amp; University</span>
-            </li>
-            <li className="flex items-center gap-2.5">
-              <CheckCircle2 className="w-4 h-4 text-[#FFD700] shrink-0" />
-              <span>All 11 Official SA languages: isiZulu, Sepedi, siSwati, Xitsonga, etc.</span>
-            </li>
-            <li className="flex items-center gap-2.5">
-              <CheckCircle2 className="w-4 h-4 text-[#FFD700] shrink-0" />
-              <span>4000+ DBE Past Papers with step-by-step memos</span>
-            </li>
-            <li className="flex items-center gap-2.5">
-              <CheckCircle2 className="w-4 h-4 text-[#FFD700] shrink-0" />
-              <span>Cancel anytime &bull; No admin approval needed</span>
-            </li>
-          </ul>
+          {/* SUCCESS SCREEN: BIG GOLD BOX (Generated code) */}
+          {generatedCode ? (
+            <div className="pt-6 text-center space-y-5 animate-in zoom-in-95 duration-200">
+              <div className="w-14 h-14 rounded-full bg-[#007A4D] text-white flex items-center justify-center mx-auto font-black text-2xl shadow-lg">
+                ✓
+              </div>
 
-          {/* Error Message */}
-          {errorMessage && (
-            <div className="mb-4 p-3 rounded-xl bg-red-950/60 border border-red-500/50 text-red-300 text-xs flex items-center gap-2 text-left">
-              <AlertCircle className="w-4 h-4 text-red-400 shrink-0" />
-              <span>{errorMessage}</span>
+              <h2 className="font-display font-black text-2xl text-white">
+                Code Generated Automatically!
+              </h2>
+
+              {/* Big Gold Box */}
+              <div className="p-6 sm:p-8 rounded-3xl bg-gradient-to-b from-[#FFB612] to-amber-500 text-black shadow-2xl border-4 border-yellow-300 relative overflow-hidden">
+                <span className="text-xs font-mono font-black uppercase tracking-widest text-black/70 block mb-1.5">
+                  YOUR ONE-TIME UNLOCK CODE IS:
+                </span>
+
+                <div className="text-3xl sm:text-4xl font-mono font-black tracking-wider my-3 select-all bg-black/10 py-3 px-4 rounded-2xl border border-black/15">
+                  {generatedCode}
+                </div>
+
+                <div className="mt-4 flex flex-col sm:flex-row items-center justify-center gap-3">
+                  <button
+                    type="button"
+                    onClick={handleCopyCode}
+                    className="w-full sm:w-auto px-6 py-2.5 rounded-xl bg-black text-[#FFB612] hover:bg-slate-900 font-black text-xs sm:text-sm flex items-center justify-center gap-2 cursor-pointer shadow-lg transition-transform active:scale-95"
+                  >
+                    {isCopied ? (
+                      <>
+                        <Check className="w-4 h-4 text-emerald-400" />
+                        <span>Code Copied!</span>
+                      </>
+                    ) : (
+                      <>
+                        <Copy className="w-4 h-4" />
+                        <span>Copy Code</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+
+                <p className="mt-3.5 text-xs text-black/80 font-bold leading-relaxed">
+                  Write it down. Use once only. Valid for 30 days after use.
+                </p>
+              </div>
+
+              {/* Button Below: Enter Code to Unlock -> /unlock */}
+              <div className="pt-2">
+                <button
+                  type="button"
+                  onClick={navigateToUnlock}
+                  className="w-full py-4 rounded-2xl bg-[#007A4D] hover:bg-emerald-600 text-white font-black text-base shadow-xl flex items-center justify-center gap-2 cursor-pointer transition-transform hover:scale-[1.01] active:scale-95"
+                >
+                  <span>Enter Code to Unlock &rarr;</span>
+                </button>
+              </div>
+
+              <div className="text-xs text-white/60">
+                <span>Code already saved for phone: </span>
+                <strong className="text-white font-mono">{phone}</strong>
+              </div>
+            </div>
+          ) : (
+            /* PAYWALL MAIN FLOW: ONLY 2 BUTTONS + FORM */
+            <div className="pt-6 space-y-6">
+              
+              {/* Button 1 Green: Pay R60 with SnapScan - 30 Days */}
+              <div>
+                <button
+                  type="button"
+                  onClick={handlePayClick}
+                  className="w-full py-4 rounded-2xl bg-[#007A4D] hover:bg-emerald-600 text-white font-black text-base shadow-xl shadow-emerald-950/40 flex items-center justify-center gap-2.5 cursor-pointer transition-all transform hover:-translate-y-0.5 active:translate-y-0 text-center"
+                >
+                  <QrCode className="w-5 h-5 shrink-0" />
+                  <span>Pay R60 with SnapScan &mdash; 30 Days</span>
+                  <ExternalLink className="w-4 h-4 opacity-75 shrink-0" />
+                </button>
+
+                {/* Text under */}
+                <p className="mt-2.5 text-xs text-white/70 text-center font-medium leading-relaxed">
+                  Step 1: Pay R60 on SnapScan.<br />
+                  Step 2: Come back here, enter your phone + SnapScan reference to get your code instantly.
+                </p>
+              </div>
+
+              {/* Form: Phone + SnapScan Reference + Email + Button "Get My Unlock Code" */}
+              <div className="pt-4 border-t border-white/10">
+                <div className="flex items-center gap-2 mb-3">
+                  <Sparkles className="w-4 h-4 text-[#FFB612]" />
+                  <span className="text-xs font-mono font-bold uppercase text-[#FFB612]">
+                    Instant In-App Auto Code Generator
+                  </span>
+                </div>
+
+                {errorMessage && (
+                  <div className="mb-4 p-3 rounded-xl bg-red-500/20 border border-red-500/50 text-red-300 text-xs flex items-center gap-2">
+                    <AlertCircle className="w-4 h-4 shrink-0" />
+                    <span>{errorMessage}</span>
+                  </div>
+                )}
+
+                <form onSubmit={handleGenerateCodeSubmit} className="space-y-3.5">
+                  <div>
+                    <label className="block text-[11px] font-mono uppercase text-white/80 font-bold mb-1">
+                      Phone Number *
+                    </label>
+                    <input
+                      type="tel"
+                      required
+                      placeholder="e.g. 0821234567"
+                      value={phone}
+                      onChange={(e) => setPhone(e.target.value)}
+                      className="w-full px-3.5 py-2.5 rounded-xl bg-white/10 border border-white/20 text-white text-xs placeholder:text-white/40 focus:outline-none focus:border-[#FFB612]"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-mono uppercase text-white/80 font-bold mb-1">
+                      SnapScan Reference / Receipt Number *
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="e.g. SNAP-98124 or reference on payment screen"
+                      value={reference}
+                      onChange={(e) => setReference(e.target.value)}
+                      className="w-full px-3.5 py-2.5 rounded-xl bg-white/10 border border-white/20 text-white text-xs placeholder:text-white/40 focus:outline-none focus:border-[#FFB612]"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-mono uppercase text-white/80 font-bold mb-1">
+                      Email Address (Optional)
+                    </label>
+                    <input
+                      type="email"
+                      placeholder="learner@example.com"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      className="w-full px-3.5 py-2.5 rounded-xl bg-white/10 border border-white/20 text-white text-xs placeholder:text-white/40 focus:outline-none focus:border-[#FFB612]"
+                    />
+                  </div>
+
+                  {/* Button 2: Get My Unlock Code */}
+                  <button
+                    type="submit"
+                    disabled={isSubmitting}
+                    className="w-full py-4 rounded-xl bg-[#FFB612] hover:bg-yellow-400 disabled:opacity-50 text-black font-black text-sm sm:text-base shadow-xl flex items-center justify-center gap-2 cursor-pointer transition-transform hover:scale-[1.01] active:scale-95 mt-2"
+                  >
+                    {isSubmitting ? (
+                      <>
+                        <div className="w-4 h-4 border-2 border-black border-t-transparent rounded-full animate-spin" />
+                        <span>Generating Code...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles className="w-4 h-4 text-black" />
+                        <span>Get My Unlock Code</span>
+                      </>
+                    )}
+                  </button>
+                </form>
+
+                <div className="mt-4 text-center">
+                  <button
+                    type="button"
+                    onClick={navigateToUnlock}
+                    className="text-xs text-[#1E88E5] hover:underline font-bold inline-flex items-center gap-1"
+                  >
+                    <span>Already received your unlock code? Click here to unlock</span>
+                    <ArrowRight className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              </div>
             </div>
           )}
 
-          {/* TWO BUTTONS SIDE BY SIDE */}
-          <div className="space-y-3 relative z-10">
-            <div className="flex flex-col sm:flex-row items-stretch gap-3">
-              
-              {/* Button 1: Pay R60 with SnapScan */}
-              <a
-                href={SNAPSCAN_URL}
-                target="_blank"
-                rel="noopener noreferrer"
-                onClick={handleSnapScanPayClick}
-                className="flex-1 py-4 px-4 rounded-xl bg-[#0077b6] hover:bg-[#023e8a] text-white font-black text-sm shadow-xl shadow-blue-600/30 transition-all transform hover:-translate-y-0.5 active:translate-y-0 flex items-center justify-center gap-2 text-center cursor-pointer"
-              >
-                <QrCode className="w-5 h-5 shrink-0" />
-                <span>Pay R60 with SnapScan</span>
-                <ExternalLink className="w-3.5 h-3.5 opacity-75 shrink-0" />
-              </a>
-
-              {/* Button 2: I Have Paid - Unlock App */}
-              <button
-                type="button"
-                onClick={handleUnlockApp}
-                className="flex-1 py-4 px-4 rounded-xl bg-[#FFD700] hover:bg-yellow-400 text-black font-black text-sm shadow-xl shadow-yellow-500/30 transition-all transform hover:-translate-y-0.5 active:translate-y-0 flex items-center justify-center gap-2 text-center cursor-pointer"
-              >
-                <CheckCircle2 className="w-5 h-5 text-black shrink-0" />
-                <span>I Have Paid - Unlock App</span>
-              </button>
-            </div>
-
-            {/* Trust Line */}
-            <p className="pt-2 text-xs text-white/70 font-mono flex items-center justify-center gap-1.5">
-              <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0" />
-              <span>Payment verified by SnapScan to NEXOVIAN PTY LTD - Instant Auto Unlock</span>
-            </p>
-          </div>
-
-          {/* Secondary Paystack Option */}
-          <div className="mt-6 pt-4 border-t border-white/10 relative z-10">
-            <button
-              onClick={handlePaystackPayment}
-              disabled={isProcessing}
-              className="text-xs text-white/60 hover:text-white flex items-center justify-center gap-1.5 mx-auto transition-colors"
-            >
-              <CreditCard className="w-3.5 h-3.5" />
-              <span>Or pay with Credit / Debit Card (Paystack)</span>
-            </button>
-          </div>
-
-          {/* Helper Micro-actions */}
-          <div className="mt-5 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-white/60 relative z-10 pt-2">
+          {/* Small WhatsApp Help Link at bottom */}
+          <div className="mt-6 pt-4 border-t border-white/10 text-center">
             <a
-              href="https://wa.me/27659202685?text=Hi%20Nexovian%2C%20I%20need%20help%20with%20my%20subscription"
+              href={WHATSAPP_URL}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-1.5 text-emerald-400 hover:text-emerald-300 font-bold transition-colors"
+              className="inline-flex items-center gap-1.5 text-xs text-white/50 hover:text-emerald-400 transition-colors"
             >
-              <MessageCircle className="w-4 h-4" />
-              <span>Need help? WhatsApp us</span>
+              <MessageCircle className="w-3.5 h-3.5 text-emerald-400" />
+              <span>Need help? WhatsApp 063 650 8381</span>
             </a>
-
-            <button
-              onClick={handleSwitchAccount}
-              className="hover:text-white underline transition-colors cursor-pointer"
-            >
-              Login with different account
-            </button>
           </div>
         </div>
       </main>
 
-      {/* Trust Footer */}
-      <footer className="border-t border-white/10 py-6 text-center text-xs text-white/40">
-        <p>Built in Mpumalanga &bull; Level 1 B-BBEE &bull; Secured by SnapScan &amp; Paystack (South Africa)</p>
+      {/* Trust Badge Footer */}
+      <footer className="max-w-4xl mx-auto w-full text-center pt-6 border-t border-white/10 text-xs text-white/60">
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
+          <div className="flex items-center gap-2 font-mono text-white/80">
+            <ShieldCheck className="w-4 h-4 text-[#007A4D]" />
+            <span>NEXOVIAN (Pty) Ltd &bull; Reg: 2026/234078/07</span>
+          </div>
+          <span className="text-[11px] text-white/40">
+            100% CAPS Aligned &bull; All 11 Official South African Languages &bull; nexovian.group
+          </span>
+        </div>
       </footer>
-
-      {/* TIMER POPUP (10 SECONDS AFTER CLICKING PAY) */}
-      {showPaymentDonePopup && (
-        <div className="fixed bottom-6 right-4 sm:right-6 z-50 max-w-sm w-full bg-[#141414] border-2 border-[#FFD700] rounded-2xl p-5 shadow-2xl text-left animate-in slide-in-from-bottom duration-300">
-          <div className="flex items-start justify-between gap-2">
-            <div className="flex items-center gap-2 text-xs font-mono font-bold text-[#FFD700] uppercase">
-              <Clock className="w-4 h-4 text-[#FFD700]" />
-              <span>SnapScan Payment</span>
-            </div>
-            <button
-              onClick={() => setShowPaymentDonePopup(false)}
-              className="text-white/50 hover:text-white p-1"
-            >
-              <X className="w-4 h-4" />
-            </button>
-          </div>
-
-          <h4 className="font-display font-bold text-base text-white mt-1.5">
-            Payment done? Click Unlock
-          </h4>
-          <p className="text-xs text-white/70 mt-1 leading-relaxed">
-            Completed your payment on the SnapScan tab? Click below to instantly unlock the app!
-          </p>
-
-          <button
-            onClick={handleUnlockApp}
-            className="mt-3.5 w-full py-3 px-4 rounded-xl bg-[#FFD700] hover:bg-yellow-400 text-black font-black text-xs sm:text-sm shadow-lg flex items-center justify-center gap-2 cursor-pointer transition-transform active:scale-95"
-          >
-            <CheckCircle2 className="w-4 h-4 text-black" />
-            <span>I Have Paid - Unlock App</span>
-          </button>
-        </div>
-      )}
-
-      {/* SUCCESS MODAL */}
-      {showSuccessModal && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
-          <div className="bg-[#121212] border-2 border-[#FFD700] rounded-3xl max-w-md w-full p-6 sm:p-8 text-center shadow-2xl relative animate-in zoom-in-95 duration-200">
-            <div className="w-16 h-16 rounded-full bg-[#FFD700] text-black flex items-center justify-center mx-auto mb-4 font-black text-2xl shadow-lg">
-              ✓
-            </div>
-
-            <div className="inline-block px-3 py-1 rounded-full bg-emerald-500/20 border border-emerald-400 text-emerald-300 text-xs font-mono font-bold uppercase mb-3">
-              Access Granted &bull; Instant Auto-Unlock
-            </div>
-
-            <h3 className="font-display font-black text-2xl text-white mb-2">
-              Welcome to NEXOVIAN Premium!
-            </h3>
-
-            <p className="text-xs sm:text-sm text-white/80 mb-6 leading-relaxed">
-              Full curriculum content from Grade 4 to University in all 11 official languages is now unlocked.
-            </p>
-
-            <button
-              onClick={handleStartLearning}
-              className="w-full py-4 rounded-xl bg-[#FFD700] hover:bg-yellow-400 text-black font-black text-base shadow-xl shadow-yellow-500/30 flex items-center justify-center gap-2 cursor-pointer transition-transform hover:scale-[1.02] active:scale-95"
-            >
-              <span>Access Granted - Start Learning</span>
-              <ArrowRight className="w-5 h-5 text-black" />
-            </button>
-          </div>
-        </div>
-      )}
     </div>
   );
 };
-export default PaywallView;
