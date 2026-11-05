@@ -46,10 +46,12 @@ import {
   WHATSAPP_REMIND_URL,
   PREMIUM_TRIAL_ENDS_AT
 } from '../../services/antiAbuseService';
-import { QrCode, Unlock } from 'lucide-react';
+import { QrCode, Unlock, KeyRound } from 'lucide-react';
+import { useLearning } from '../../context/LearningContext';
 
 export const SubscriptionBanner: React.FC = () => {
   const { user } = useAuth();
+  const { setCurrentTab } = useLearning();
   const [subStatus, setSubStatus] = useState<SubscriptionStatus | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
 
@@ -195,13 +197,15 @@ export const SubscriptionBanner: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => {
-                    localStorage.setItem('nexovian_paid', 'true');
-                    window.location.reload();
+                    setCurrentTab('unlock');
+                    if (typeof window !== 'undefined') {
+                      window.history.pushState({}, '', '/unlock');
+                    }
                   }}
-                  className="w-full h-[48px] rounded-[25px] bg-[#ffd700] hover:bg-[#facc15] text-black font-extrabold text-sm sm:text-[15px] flex items-center justify-center gap-2 shadow-sm transition-all active:scale-98 cursor-pointer"
+                  className="w-full h-[48px] rounded-[25px] bg-[#FFB612] hover:bg-yellow-400 text-black font-extrabold text-sm sm:text-[15px] flex items-center justify-center gap-2 shadow-sm transition-all active:scale-98 cursor-pointer"
                 >
-                  <Unlock className="w-4 h-4 text-black" />
-                  <span>I Have Paid - Unlock</span>
+                  <KeyRound className="w-4 h-4 text-black" />
+                  <span>Enter Code to Unlock</span>
                 </button>
               </div>
 

@@ -337,19 +337,13 @@ export const CreateAccountScreen: React.FC<{ initialMode?: 'login' | 'signup' }>
     }
   };
 
-  // UNLOCK ACTION
-  const handleInstantUnlock = () => {
-    try {
-      localStorage.setItem('nexovian_paid', 'true');
-    } catch (_) {}
-    setHasPaidUnlocked(true);
-    setTimeout(() => {
-      setShowSnapScanModal(false);
-      setCurrentTab('home');
-      if (typeof window !== 'undefined') {
-        window.history.pushState({}, '', '/app');
-      }
-    }, 1200);
+  // UNLOCK ACTION - Redirect to /unlock to enter single-use verified code
+  const handleGoToUnlock = () => {
+    setShowSnapScanModal(false);
+    setCurrentTab('unlock');
+    if (typeof window !== 'undefined') {
+      window.history.pushState({}, '', '/unlock');
+    }
   };
 
   const handleResetPassword = async (e: React.FormEvent) => {
@@ -829,23 +823,23 @@ export const CreateAccountScreen: React.FC<{ initialMode?: 'login' | 'signup' }>
                 <button
                   type="button"
                   onClick={() => window.open('https://pos.snapscan.io/qr/NKJJYpV6', '_blank')}
-                  className="w-full py-3.5 px-4 rounded-2xl bg-[#0077b6] hover:bg-[#023e8a] text-white font-bold text-base flex items-center justify-center gap-2 shadow-md transition-all active:scale-98 cursor-pointer"
+                  className="w-full py-3.5 px-4 rounded-2xl bg-[#007A4D] hover:bg-emerald-600 text-white font-bold text-base flex items-center justify-center gap-2 shadow-md transition-all active:scale-98 cursor-pointer"
                 >
                   <QrCode className="w-5 h-5" />
                   <span>Pay R60 with SnapScan</span>
                 </button>
 
-                {/* Button 2: I Have Paid - Unlock App */}
+                {/* Button 2: Enter Code to Unlock */}
                 <button
                   type="button"
-                  onClick={handleInstantUnlock}
-                  className="w-full py-3.5 px-4 rounded-2xl bg-[#ffd700] hover:bg-[#facc15] text-black font-extrabold text-base flex items-center justify-center gap-2 shadow-md transition-all active:scale-98 cursor-pointer"
+                  onClick={handleGoToUnlock}
+                  className="w-full py-3.5 px-4 rounded-2xl bg-[#FFB612] hover:bg-yellow-400 text-black font-extrabold text-base flex items-center justify-center gap-2 shadow-md transition-all active:scale-98 cursor-pointer"
                 >
                   <Unlock className="w-5 h-5 text-black" />
-                  <span>I Have Paid - Unlock App</span>
+                  <span>Enter Code to Unlock</span>
                 </button>
 
-                {/* Button 3: Continue to Dashboard */}
+                {/* Button 3: Continue to Dashboard (if trial allowed) */}
                 <button
                   type="button"
                   onClick={() => {
@@ -861,12 +855,12 @@ export const CreateAccountScreen: React.FC<{ initialMode?: 'login' | 'signup' }>
 
             {snapScanTimerNotice && !hasPaidUnlocked && (
               <div className="p-3 rounded-xl bg-amber-50 border border-amber-300 text-amber-950 text-xs flex items-center justify-between gap-2">
-                <span>Payment done? Click <strong>&quot;I Have Paid - Unlock App&quot;</strong> to start!</span>
+                <span>Payment done? Click <strong>&quot;Enter Code to Unlock&quot;</strong> to start!</span>
                 <button
-                  onClick={handleInstantUnlock}
+                  onClick={handleGoToUnlock}
                   className="px-2.5 py-1 bg-amber-400 font-bold rounded-lg text-black text-[11px] shrink-0"
                 >
-                  Unlock Now
+                  Enter Code
                 </button>
               </div>
             )}

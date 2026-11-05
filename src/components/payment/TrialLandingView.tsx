@@ -23,16 +23,10 @@ export const TrialLandingView: React.FC = () => {
   };
 
   const handleUnlockClick = () => {
-    try {
-      localStorage.setItem('nexovian_paid', 'true');
-    } catch (_) {}
-    setUnlocked(true);
-    setTimeout(() => {
-      setCurrentTab('home');
-      if (typeof window !== 'undefined') {
-        window.history.pushState({}, '', '/app');
-      }
-    }, 1200);
+    setCurrentTab('unlock');
+    if (typeof window !== 'undefined') {
+      window.history.pushState({}, '', '/unlock');
+    }
   };
 
   return (
@@ -95,19 +89,19 @@ export const TrialLandingView: React.FC = () => {
               className="w-full py-3.5 px-4 rounded-xl bg-[#ffd700] hover:bg-[#facc15] text-black font-extrabold text-base flex items-center justify-center gap-2 transition-all shadow-md active:scale-98 cursor-pointer"
             >
               <Unlock className="w-5 h-5 text-black" />
-              <span>I Have Paid - Unlock App</span>
+              <span>Enter Code to Unlock</span>
             </button>
           </div>
         )}
 
         {showPrompt && !unlocked && (
           <div className="mt-4 p-3 rounded-xl bg-amber-50 border border-amber-300 text-amber-950 text-xs flex items-center justify-between gap-2">
-            <span>Payment done? Click <strong>&quot;I Have Paid - Unlock App&quot;</strong> above!</span>
+            <span>Payment done? Click <strong>&quot;Enter Code to Unlock&quot;</strong> above!</span>
             <button
               onClick={handleUnlockClick}
               className="px-2.5 py-1 bg-amber-400 font-bold rounded-lg text-black text-[11px] shrink-0"
             >
-              Unlock Now
+              Enter Code
             </button>
           </div>
         )}

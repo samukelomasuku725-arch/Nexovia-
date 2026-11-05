@@ -1252,9 +1252,8 @@ const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'nexovian2026admin';
 
 function checkAdminAuth(req: Request): boolean {
   const sentPassword = (req.headers['x-admin-password'] as string) || (req.query.password as string) || (req.body?.password as string);
-  const targetPassword = (process.env.ADMIN_PASSWORD || 'nexovian2026admin').trim();
+  const targetPassword = (process.env.ADMIN_PASSWORD || 'nexovian2026admin').replace(/^["']|["']$/g, '').trim();
   const cleanSent = (sentPassword || '').trim();
-  console.log('[DEBUG checkAdminAuth] cleanSent:', cleanSent, 'targetPassword:', targetPassword);
   return cleanSent === targetPassword || cleanSent === 'nexovian2026admin';
 }
 

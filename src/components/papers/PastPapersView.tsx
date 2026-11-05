@@ -32,7 +32,8 @@ import {
   Download,
   Eye,
   Check,
-  AlertCircle
+  AlertCircle,
+  KeyRound
 } from 'lucide-react';
 import { useLearning } from '../../context/LearningContext';
 import { useAuth } from '../../context/AuthContext';
@@ -313,15 +314,6 @@ export const PastPapersView: React.FC = () => {
   const [selectedLanguage, setSelectedLanguage] = useState<string>('English');
   const [activePaperId, setActivePaperId] = useState<string>(PAST_PAPERS_DATABASE[0].id);
 
-  // SnapScan Unlock Modal state
-  const [isUnlockModalOpen, setIsUnlockModalOpen] = useState(false);
-  const [phoneInput, setPhoneInput] = useState('');
-  const [referenceInput, setReferenceInput] = useState('');
-  const [emailInput, setEmailInput] = useState(user?.email || '');
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [modalError, setModalError] = useState<string | null>(null);
-  const [modalSuccess, setModalSuccess] = useState<string | null>(null);
-
   // Check access status
   const [accessState, setAccessState] = useState(() => checkAccess(user));
 
@@ -340,49 +332,17 @@ export const PastPapersView: React.FC = () => {
     }
   }, []);
 
-  const handleOpenSnapScan = () => {
-    window.open(SNAPSCAN_URL, '_blank');
+  const navigateToPaywall = () => {
+    setCurrentTab('paywall');
+    if (typeof window !== 'undefined') {
+      window.history.pushState({}, '', '/paywall');
+    }
   };
 
-  const handleVerifySubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setModalError(null);
-    setModalSuccess(null);
-
-    if (!phoneInput.trim()) {
-      setModalError('Please enter your phone number.');
-      return;
-    }
-    if (!referenceInput.trim()) {
-      setModalError('Please enter your SnapScan payment reference / receipt.');
-      return;
-    }
-
-    setIsSubmitting(true);
-    try {
-      const result = await verifyAndUnlockPayment({
-        phone: phoneInput,
-        reference: referenceInput,
-        email: emailInput || user?.email,
-        name: user?.name
-      });
-
-      if (!result.success) {
-        setModalError(result.message || 'Verification failed. Please check details.');
-      } else {
-        setModalSuccess(
-          `Payment Verified! Your Access Code: ${result.access_code}. Full memo access unlocked for 30 days!`
-        );
-        const updated = checkAccess(user);
-        setAccessState(updated);
-        setTimeout(() => {
-          setIsUnlockModalOpen(false);
-        }, 2200);
-      }
-    } catch (err: any) {
-      setModalError(err?.message || 'Verification failed. Please try again.');
-    } finally {
-      setIsSubmitting(false);
+  const navigateToUnlock = () => {
+    setCurrentTab('unlock');
+    if (typeof window !== 'undefined') {
+      window.history.pushState({}, '', '/unlock');
     }
   };
 
@@ -436,13 +396,22 @@ export const PastPapersView: React.FC = () => {
                 <span>Full Access Active ({accessState.daysRemaining}d left)</span>
               </div>
             ) : (
-              <button
-                onClick={() => setIsUnlockModalOpen(true)}
-                className="px-4 py-2 rounded-full bg-[#007A4D] hover:bg-emerald-600 text-white font-black text-xs sm:text-sm shadow-md transition-all flex items-center gap-1.5 cursor-pointer transform hover:scale-105"
-              >
-                <QrCode className="w-4 h-4" />
-                <span>Unlock Full Memo — R60</span>
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={navigateToUnlock}
+                  className="px-3 py-1.5 rounded-full border border-[#FFB612]/60 hover:bg-[#FFB612]/10 text-[#FFB612] font-bold text-xs transition-colors cursor-pointer flex items-center gap-1"
+                >
+                  <KeyRound className="w-3.5 h-3.5" />
+                  <span>Enter Code</span>
+                </button>
+                <button
+                  onClick={navigateToPaywall}
+                  className="px-4 py-2 rounded-full bg-[#007A4D] hover:bg-emerald-600 text-white font-black text-xs sm:text-sm shadow-md transition-all flex items-center gap-1.5 cursor-pointer transform hover:scale-105"
+                >
+                  <QrCode className="w-4 h-4" />
+                  <span>Unlock for R60</span>
+                </button>
+              </div>
             )}
           </div>
         </div>
@@ -620,19 +589,18 @@ export const PastPapersView: React.FC = () => {
 
               <div className="pt-2 space-y-2">
                 <button
-                  onClick={handleOpenSnapScan}
-                  className="w-full py-3 rounded-2xl bg-[#1E88E5] hover:bg-blue-600 text-white font-black text-xs sm:text-sm flex items-center justify-center gap-2 shadow-lg cursor-pointer"
-                >
-                  <QrCode className="w-4 h-4" />
-                  <span>Pay R60 with SnapScan</span>
-                  <ExternalLink className="w-3.5 h-3.5 opacity-75" />
-                </button>
-                <button
-                  onClick={() => setIsUnlockModalOpen(true)}
+                  onClick={navigateToPaywall}
                   className="w-full py-3 rounded-2xl bg-[#007A4D] hover:bg-emerald-600 text-white font-black text-xs sm:text-sm flex items-center justify-center gap-2 shadow-lg cursor-pointer"
                 >
-                  <CheckCircle2 className="w-4 h-4" />
-                  <span>I Have Paid &mdash; Unlock Now</span>
+                  <QrCode className="w-4 h-4" />
+                  <span>Pay R60 with SnapScan &mdash; 30 Days</span>
+                </button>
+                <button
+                  onClick={navigateToUnlock}
+                  className="w-full py-3 rounded-2xl bg-[#FFB612] hover:bg-yellow-400 text-black font-black text-xs sm:text-sm flex items-center justify-center gap-2 shadow-lg cursor-pointer"
+                >
+                  <KeyRound className="w-4 h-4 text-black" />
+                  <span>Enter Code to Unlock</span>
                 </button>
               </div>
             </div>
@@ -766,17 +734,18 @@ export const PastPapersView: React.FC = () => {
 
                             <div className="flex flex-col sm:flex-row items-center gap-2.5">
                               <button
-                                onClick={handleOpenSnapScan}
+                                onClick={navigateToPaywall}
                                 className="px-5 py-2.5 rounded-xl bg-[#007A4D] hover:bg-emerald-600 text-white font-black text-xs sm:text-sm flex items-center gap-2 shadow-lg cursor-pointer transform hover:scale-105"
                               >
                                 <QrCode className="w-4 h-4" />
                                 <span>Unlock Full Memo &mdash; R60</span>
                               </button>
                               <button
-                                onClick={() => setIsUnlockModalOpen(true)}
-                                className="px-4 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-white font-bold text-xs border border-white/20 cursor-pointer"
+                                onClick={navigateToUnlock}
+                                className="px-4 py-2.5 rounded-xl bg-[#FFB612] hover:bg-yellow-400 text-black font-black text-xs border border-white/20 cursor-pointer flex items-center gap-1.5"
                               >
-                                I Have Paid &mdash; Unlock Now
+                                <KeyRound className="w-3.5 h-3.5 text-black" />
+                                <span>Enter Code to Unlock</span>
                               </button>
                             </div>
                           </div>
@@ -789,126 +758,22 @@ export const PastPapersView: React.FC = () => {
             </div>
           </div>
         </div>
+
+        {/* Footer */}
+        <footer className="mt-16 pt-8 border-t border-white/10 text-center text-xs text-white/50">
+          <p>
+            NEXOVIAN (Pty) Ltd &bull; 100% CAPS Aligned &bull;{' '}
+            <a
+              href="https://wa.me/27636508381"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-[#FFB612] hover:underline font-bold"
+            >
+              Need help? WhatsApp 063 650 8381
+            </a>
+          </p>
+        </footer>
       </main>
-
-      {/* SnapScan Instant Auto-Unlock Modal */}
-      {isUnlockModalOpen && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
-          <div className="bg-[#0A1F44] border-2 border-[#007A4D] rounded-3xl max-w-md w-full p-6 sm:p-8 text-left shadow-2xl relative animate-in zoom-in-95 duration-200">
-            <div className="flex items-center justify-between pb-3 border-b border-white/10 mb-4">
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-full bg-[#007A4D] text-white flex items-center justify-center font-bold text-sm">
-                  ✓
-                </div>
-                <div>
-                  <h3 className="font-display font-black text-lg text-white">
-                    Unlock Full Past Papers &amp; Memos
-                  </h3>
-                  <span className="text-[10px] text-[#FFB612] font-mono">
-                    R60 for 30 Days &bull; Instant Auto-Unlock
-                  </span>
-                </div>
-              </div>
-              <button
-                onClick={() => setIsUnlockModalOpen(false)}
-                className="text-white/50 hover:text-white p-1 rounded-lg"
-              >
-                ✕
-              </button>
-            </div>
-
-            {modalSuccess ? (
-              <div className="p-4 rounded-2xl bg-emerald-500/20 border border-emerald-400 text-emerald-300 text-xs text-center space-y-2">
-                <CheckCircle2 className="w-8 h-8 text-emerald-400 mx-auto" />
-                <p className="font-bold">{modalSuccess}</p>
-                <p className="text-[11px] text-white/60">Redirecting to full paper content...</p>
-              </div>
-            ) : (
-              <form onSubmit={handleVerifySubmit} className="space-y-4">
-                <div className="p-3.5 rounded-2xl bg-black/40 border border-white/10 text-xs text-white/80 space-y-1">
-                  <span className="text-[#FFB612] font-bold block">
-                    Step 1: Pay R60 via SnapScan
-                  </span>
-                  <a
-                    href={SNAPSCAN_URL}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1.5 text-[#1E88E5] hover:underline font-bold"
-                  >
-                    <span>Click here to open SnapScan QR in new tab</span>
-                    <ExternalLink className="w-3.5 h-3.5" />
-                  </a>
-                </div>
-
-                <div className="text-xs text-white/70 font-medium">
-                  Step 2: Enter your details to activate full access immediately:
-                </div>
-
-                {modalError && (
-                  <div className="p-3 rounded-xl bg-red-500/20 border border-red-500/50 text-red-300 text-xs flex items-center gap-2">
-                    <AlertCircle className="w-4 h-4 shrink-0" />
-                    <span>{modalError}</span>
-                  </div>
-                )}
-
-                <div>
-                  <label className="block text-[11px] font-mono font-bold uppercase text-white/70 mb-1">
-                    Phone Number (Used for SnapScan) *
-                  </label>
-                  <input
-                    type="tel"
-                    required
-                    placeholder="e.g. 0821234567"
-                    value={phoneInput}
-                    onChange={(e) => setPhoneInput(e.target.value)}
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-black/50 border border-white/20 text-white text-xs placeholder:text-white/40 focus:outline-none focus:border-[#FFB612]"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-[11px] font-mono font-bold uppercase text-white/70 mb-1">
-                    SnapScan Reference / Receipt Number *
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="e.g. SNAP-98214 or receipt number"
-                    value={referenceInput}
-                    onChange={(e) => setReferenceInput(e.target.value)}
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-black/50 border border-white/20 text-white text-xs placeholder:text-white/40 focus:outline-none focus:border-[#FFB612]"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-[11px] font-mono font-bold uppercase text-white/70 mb-1">
-                    Email Address (Optional)
-                  </label>
-                  <input
-                    type="email"
-                    placeholder="learner@example.com"
-                    value={emailInput}
-                    onChange={(e) => setEmailInput(e.target.value)}
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-black/50 border border-white/20 text-white text-xs placeholder:text-white/40 focus:outline-none focus:border-[#FFB612]"
-                  />
-                </div>
-
-                <button
-                  type="submit"
-                  disabled={isSubmitting}
-                  className="w-full py-3.5 rounded-xl bg-[#007A4D] hover:bg-emerald-600 disabled:opacity-50 text-white font-black text-sm shadow-xl flex items-center justify-center gap-2 cursor-pointer transition-transform hover:scale-[1.01] active:scale-95"
-                >
-                  <CheckCircle2 className="w-4 h-4" />
-                  <span>{isSubmitting ? 'Verifying...' : 'I Have Paid &mdash; Unlock Now'}</span>
-                </button>
-
-                <p className="text-[11px] text-white/50 text-center font-mono">
-                  NEXOVIAN (Pty) Ltd &bull; Instant Auto-Unlock &bull; Valid for 30 Days
-                </p>
-              </form>
-            )}
-          </div>
-        </div>
-      )}
     </div>
   );
 };
