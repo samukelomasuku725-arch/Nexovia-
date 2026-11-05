@@ -57,7 +57,7 @@ export const MobileTabBar: React.FC = () => {
   return (
     <>
       <nav
-        className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 dark:bg-slate-950/95 backdrop-blur-lg border-t border-slate-200 dark:border-slate-800/80 pb-safe transition-colors shadow-lg w-full max-w-full overflow-hidden"
+        className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-[#0F0F0F]/95 backdrop-blur-lg border-t border-[#262626] pb-safe transition-colors shadow-2xl w-full max-w-full overflow-hidden"
         aria-label="Mobile Bottom Navigation"
       >
         <div className="grid grid-cols-6 h-16 items-center px-1">
@@ -69,7 +69,7 @@ export const MobileTabBar: React.FC = () => {
               <button
                 key={tab.id}
                 onClick={tab.action}
-                className="flex flex-col items-center justify-center min-h-[48px] min-w-[44px] py-1 text-center select-none active:scale-95 transition-transform"
+                className="flex flex-col items-center justify-center min-h-[48px] min-w-[44px] py-1 text-center select-none active:scale-95 transition-transform cursor-pointer"
                 aria-label={tab.label}
                 aria-current={isActive ? 'page' : undefined}
               >
@@ -77,22 +77,22 @@ export const MobileTabBar: React.FC = () => {
                   <Icon
                     className={`w-5 h-5 transition-colors ${
                       isActive
-                        ? 'text-cyan-400 stroke-[2.25] drop-shadow-[0_0_8px_rgba(6,182,212,0.6)]'
-                        : 'text-slate-400 dark:text-slate-500'
+                        ? 'text-[#FACC15] stroke-[2.25] drop-shadow-[0_0_8px_rgba(250,204,21,0.6)]'
+                        : 'text-slate-500'
                     }`}
                   />
                 </div>
                 <span
                   className={`text-[9.5px] font-medium tracking-tight mt-1 truncate max-w-[50px] transition-colors ${
                     isActive
-                      ? 'text-cyan-400 font-bold'
-                      : 'text-slate-500 dark:text-slate-400'
+                      ? 'text-[#FACC15] font-bold'
+                      : 'text-slate-400'
                   }`}
                 >
                   {tab.label}
                 </span>
                 {isActive && (
-                  <span className="w-1.5 h-1.5 bg-cyan-400 rounded-full mt-0.5 shadow-[0_0_8px_#00f0ff]" />
+                  <span className="w-1.5 h-1.5 bg-[#FACC15] rounded-full mt-0.5 shadow-[0_0_8px_#FACC15]" />
                 )}
               </button>
             );
@@ -109,5 +109,3 @@ export const MobileTabBar: React.FC = () => {
     </>
   );
 };
-
-

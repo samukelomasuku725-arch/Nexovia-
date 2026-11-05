@@ -54,7 +54,7 @@ export const Navbar: React.FC = () => {
   };
 
   return (
-    <header className="sticky top-0 z-30 bg-white/95 dark:bg-slate-950/95 backdrop-blur-md border-b border-slate-200/80 dark:border-slate-800 transition-colors w-full max-w-full overflow-hidden">
+    <header className="sticky top-0 z-30 bg-[#0F0F0F]/95 backdrop-blur-md border-b border-[#262626] transition-colors w-full max-w-full overflow-hidden">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 h-14 md:h-16 flex items-center justify-between gap-3 w-full max-w-full">
         {/* Zone 1: Futuristic N Logo Mark & Wordmark */}
         <div className="flex items-center gap-3">
@@ -63,29 +63,29 @@ export const Navbar: React.FC = () => {
             className="flex items-center gap-2.5 text-left group focus:outline-none cursor-pointer"
             aria-label={`${APP_CONFIG.appName} Home`}
           >
-            {/* New SVG LogoIcon: 40x40, rounded 10px, dark #1e293b, neon cyan N with glow & circuit lines/brain */}
+            {/* LogoIcon: 40x40, rounded 10px, dark #0F0F0F, vibrant #FACC15 yellow glow & circuit lines/brain */}
             <LogoIcon size={40} className="shrink-0 group-hover:scale-105 transition-transform" />
             <div>
               <div className="flex items-center gap-1.5">
-                <span className="font-display text-lg sm:text-xl font-black tracking-wider bg-gradient-to-r from-blue-400 via-indigo-300 to-purple-400 bg-clip-text text-transparent block leading-tight">
+                <span className="font-display text-lg sm:text-xl font-black tracking-wider text-white block leading-tight">
                   {APP_CONFIG.appName}
                 </span>
-                <span className="hidden xl:inline-block w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse shadow-[0_0_8px_#00ffff]" />
+                <span className="hidden xl:inline-block w-1.5 h-1.5 rounded-full bg-[#FACC15] animate-pulse shadow-[0_0_8px_#FACC15]" />
               </div>
-              <span className="hidden sm:block text-[9.5px] font-mono tracking-tight text-slate-500 dark:text-cyan-400/80 -mt-0.5 truncate max-w-[210px]">
+              <span className="hidden sm:block text-[9.5px] font-mono tracking-tight text-[#FACC15] -mt-0.5 truncate max-w-[210px]">
                 The Learning Brain That Grows With You
               </span>
             </div>
           </button>
         </div>
 
-        {/* Zone 2: 4-6 clean text navigation links (Hidden on mobile, bottom tab bar takes over) */}
-        <nav className="hidden md:flex items-center gap-4 lg:gap-6 text-sm font-medium text-slate-600 dark:text-slate-400" aria-label="Main Navigation">
+        {/* Zone 2: clean text navigation links (Hidden on mobile, bottom tab bar takes over) */}
+        <nav className="hidden md:flex items-center gap-4 lg:gap-6 text-sm font-medium text-slate-400" aria-label="Main Navigation">
           <button
             onClick={() => setCurrentTab('home')}
-            className={`transition-colors hover:text-slate-900 dark:hover:text-white py-1 whitespace-nowrap ${
+            className={`transition-colors hover:text-white py-1 whitespace-nowrap ${
               currentTab === 'home' || currentTab === 'dashboard'
-                ? 'text-cyan-600 dark:text-cyan-300 font-semibold border-b-2 border-cyan-400 shadow-[0_4px_12px_-4px_rgba(6,182,212,0.4)]'
+                ? 'text-[#FACC15] font-bold border-b-2 border-[#FACC15] shadow-[0_4px_12px_-4px_rgba(250,204,21,0.5)]'
                 : ''
             }`}
           >
@@ -94,21 +94,21 @@ export const Navbar: React.FC = () => {
 
           <button
             onClick={() => setCurrentTab('learn')}
-            className={`flex items-center gap-1.5 transition-colors hover:text-slate-900 dark:hover:text-white py-1 whitespace-nowrap ${
+            className={`flex items-center gap-1.5 transition-colors hover:text-white py-1 whitespace-nowrap ${
               currentTab === 'learn' || currentTab === 'school' || currentTab === 'tvet' || currentTab === 'higherEd'
-                ? 'text-cyan-600 dark:text-cyan-300 font-semibold border-b-2 border-cyan-400 shadow-[0_4px_12px_-4px_rgba(6,182,212,0.4)]'
+                ? 'text-[#FACC15] font-bold border-b-2 border-[#FACC15] shadow-[0_4px_12px_-4px_rgba(250,204,21,0.5)]'
                 : ''
             }`}
           >
-            <BookOpen className="w-4 h-4 text-cyan-400" />
+            <BookOpen className="w-4 h-4 text-[#FACC15]" />
             <span>Learn</span>
           </button>
 
           <button
             onClick={() => setCurrentTab('papers')}
-            className={`flex items-center gap-1.5 transition-colors hover:text-slate-900 dark:hover:text-white py-1 whitespace-nowrap ${
+            className={`flex items-center gap-1.5 transition-colors hover:text-white py-1 whitespace-nowrap ${
               currentTab === 'papers'
-                ? 'text-cyan-600 dark:text-[#FFB612] font-semibold border-b-2 border-[#FFB612]'
+                ? 'text-[#FACC15] font-bold border-b-2 border-[#FACC15]'
                 : ''
             }`}
           >
@@ -118,61 +118,61 @@ export const Navbar: React.FC = () => {
 
           <button
             onClick={() => setCurrentTab('calculator')}
-            className={`flex items-center gap-1.5 transition-colors hover:text-slate-900 dark:hover:text-white py-1 whitespace-nowrap ${
+            className={`flex items-center gap-1.5 transition-colors hover:text-white py-1 whitespace-nowrap ${
               currentTab === 'calculator'
-                ? 'text-amber-500 dark:text-amber-300 font-semibold border-b-2 border-amber-400'
+                ? 'text-[#FACC15] font-bold border-b-2 border-[#FACC15]'
                 : ''
             }`}
           >
-            <Calculator className="w-4 h-4 text-amber-400" />
+            <Calculator className="w-4 h-4 text-[#FACC15]" />
             <span>Math Solver</span>
           </button>
 
           <button
             onClick={() => setCurrentTab('tutor')}
-            className={`flex items-center gap-1.5 transition-colors hover:text-slate-900 dark:hover:text-white py-1 whitespace-nowrap ${
+            className={`flex items-center gap-1.5 transition-colors hover:text-white py-1 whitespace-nowrap ${
               currentTab === 'tutor'
-                ? 'text-purple-600 dark:text-purple-300 font-semibold border-b-2 border-purple-400 shadow-[0_4px_12px_-4px_rgba(168,85,247,0.4)]'
+                ? 'text-[#FACC15] font-bold border-b-2 border-[#FACC15] shadow-[0_4px_12px_-4px_rgba(250,204,21,0.5)]'
                 : ''
             }`}
           >
-            <Sparkles className="w-4 h-4 text-purple-400" />
+            <Sparkles className="w-4 h-4 text-[#FACC15]" />
             <span>Ask Nexovian AI</span>
           </button>
 
           <button
             onClick={() => setCurrentTab('academicVoice')}
-            className={`flex items-center gap-1.5 transition-colors hover:text-slate-900 dark:hover:text-white py-1 whitespace-nowrap ${
+            className={`flex items-center gap-1.5 transition-colors hover:text-white py-1 whitespace-nowrap ${
               currentTab === 'academicVoice'
-                ? 'text-cyan-600 dark:text-cyan-300 font-semibold border-b-2 border-cyan-400 shadow-[0_4px_12px_-4px_rgba(6,182,212,0.4)]'
+                ? 'text-[#FACC15] font-bold border-b-2 border-[#FACC15] shadow-[0_4px_12px_-4px_rgba(250,204,21,0.5)]'
                 : ''
             }`}
           >
-            <Mic className="w-4 h-4 text-cyan-400" />
+            <Mic className="w-4 h-4 text-[#FACC15]" />
             <span>Voice-to-Document</span>
           </button>
 
           <button
             onClick={() => setCurrentTab('progress')}
-            className={`flex items-center gap-1.5 transition-colors hover:text-slate-900 dark:hover:text-white py-1 whitespace-nowrap ${
+            className={`flex items-center gap-1.5 transition-colors hover:text-white py-1 whitespace-nowrap ${
               currentTab === 'progress'
-                ? 'text-cyan-600 dark:text-cyan-300 font-semibold border-b-2 border-cyan-400 shadow-[0_4px_12px_-4px_rgba(6,182,212,0.4)]'
+                ? 'text-[#FACC15] font-bold border-b-2 border-[#FACC15] shadow-[0_4px_12px_-4px_rgba(250,204,21,0.5)]'
                 : ''
             }`}
           >
-            <TrendingUp className="w-4 h-4 text-cyan-400" />
+            <TrendingUp className="w-4 h-4 text-[#FACC15]" />
             <span>My Progress</span>
           </button>
 
           <button
             onClick={() => setCurrentTab('smartNotes')}
-            className={`flex items-center gap-1.5 transition-colors hover:text-slate-900 dark:hover:text-white py-1 whitespace-nowrap ${
+            className={`flex items-center gap-1.5 transition-colors hover:text-white py-1 whitespace-nowrap ${
               currentTab === 'smartNotes'
-                ? 'text-cyan-600 dark:text-cyan-300 font-semibold border-b-2 border-cyan-400 shadow-[0_4px_12px_-4px_rgba(6,182,212,0.4)]'
+                ? 'text-[#FACC15] font-bold border-b-2 border-[#FACC15]'
                 : ''
             }`}
           >
-            <Folder className="w-4 h-4 text-cyan-400" />
+            <Folder className="w-4 h-4 text-[#FACC15]" />
             <span>Smart Notes</span>
           </button>
 

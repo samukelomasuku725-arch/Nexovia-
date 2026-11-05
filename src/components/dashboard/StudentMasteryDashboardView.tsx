@@ -80,6 +80,7 @@ import { OhmsLawInteractiveWidget } from '../interactive/OhmsLawInteractiveWidge
 import { HeroSection } from '../home/HeroSection';
 import { MissionVisionSection } from '../home/MissionVisionSection';
 import { MissionHeroBanner } from '../home/MissionHeroBanner';
+import { HomeSocraticHero } from '../home/HomeSocraticHero';
 import { checkAccess } from '../../services/snapscanSubscriptionService';
 
 export const StudentMasteryDashboardView: React.FC = () => {
@@ -209,16 +210,16 @@ export const StudentMasteryDashboardView: React.FC = () => {
   }, [subInfo.allow, setCurrentTab]);
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 pb-24 md:pb-12 text-slate-900 dark:text-slate-100 transition-colors w-full max-w-[100vw] overflow-x-hidden">
+    <div className="min-h-screen bg-[#0F0F0F] text-[#F8FAFC] pb-24 md:pb-12 transition-colors w-full max-w-[100vw] overflow-x-hidden">
       {/* 30-Day Subscription Countdown Banner */}
       {subInfo.status === 'active' && subInfo.daysRemaining > 7 && (
-        <div className="bg-[#007A4D]/15 dark:bg-[#007A4D]/25 border-b border-[#007A4D]/40 text-emerald-800 dark:text-emerald-300 px-4 py-2 text-xs font-bold">
+        <div className="bg-[#007A4D]/15 border-b border-[#007A4D]/40 text-emerald-300 px-4 py-2 text-xs font-bold">
           <div className="max-w-7xl mx-auto w-full flex items-center justify-between gap-2">
             <span className="flex items-center gap-2">
               <CheckCircle2 className="w-4 h-4 text-emerald-500" />
               <span>Subscription Active &mdash; {subInfo.daysRemaining} days remaining (Expires: {subInfo.expiresAtFormatted})</span>
             </span>
-            <span className="text-[11px] font-mono text-emerald-600 dark:text-emerald-400">
+            <span className="text-[11px] font-mono text-emerald-400">
               Access Code: {subInfo.accessCode}
             </span>
           </div>
@@ -226,7 +227,7 @@ export const StudentMasteryDashboardView: React.FC = () => {
       )}
 
       {subInfo.status === 'active' && subInfo.daysRemaining <= 7 && (
-        <div className="bg-amber-500/15 dark:bg-amber-500/25 border-b border-amber-400 text-amber-900 dark:text-amber-200 px-4 py-2 text-xs font-bold">
+        <div className="bg-amber-500/15 border-b border-amber-400 text-amber-200 px-4 py-2 text-xs font-bold">
           <div className="max-w-7xl mx-auto w-full flex items-center justify-between gap-2">
             <span className="flex items-center gap-2">
               <Clock className="w-4 h-4 text-amber-500" />
@@ -246,7 +247,7 @@ export const StudentMasteryDashboardView: React.FC = () => {
       )}
 
       {subInfo.status !== 'active' && (
-        <div className="bg-red-500/20 border-b border-red-500/50 text-red-900 dark:text-red-200 px-4 py-2 text-xs font-bold">
+        <div className="bg-red-500/20 border-b border-red-500/50 text-red-200 px-4 py-2 text-xs font-bold">
           <div className="max-w-7xl mx-auto w-full flex items-center justify-between gap-2">
             <span className="flex items-center gap-2">
               <AlertCircle className="w-4 h-4 text-red-500" />
@@ -266,7 +267,7 @@ export const StudentMasteryDashboardView: React.FC = () => {
       )}
 
       {/* 1. TOP HEADER & LEARNER COCKPIT BAR */}
-      <header className="bg-white dark:bg-slate-900 border-b border-slate-200/80 dark:border-slate-800 sticky top-0 z-30 shadow-xs backdrop-blur-md bg-white/95 dark:bg-slate-900/95 w-full max-w-full overflow-hidden">
+      <header className="bg-[#141414] border-b border-[#262626] sticky top-0 z-30 shadow-xs backdrop-blur-md w-full max-w-full overflow-hidden">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between gap-2 sm:gap-4 w-full max-w-full">
           {/* Learner Info */}
           <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
@@ -372,6 +373,8 @@ export const StudentMasteryDashboardView: React.FC = () => {
 
       {/* 2. MAIN DASHBOARD CONTENT GRID */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8 space-y-8 w-full max-w-full overflow-hidden">
+        {/* ASK NEXOVIA SOCRATIC TUTOR HERO (BIG N LOGO + 4 ACTION CARDS) */}
+        <HomeSocraticHero />
 
         {/* SUB NAVIGATION TABS: Overview, My Mastery, Progress Tracker, Study Plan */}
         <div className="w-full max-w-full px-4 sm:px-0">

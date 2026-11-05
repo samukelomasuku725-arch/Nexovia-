@@ -204,7 +204,7 @@ const MainLayout: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 transition-colors pb-16 md:pb-0 w-full max-w-[100vw] overflow-x-hidden">
+    <div className="min-h-screen flex flex-col bg-[#0F0F0F] text-[#F8FAFC] transition-colors pb-16 md:pb-0 w-full max-w-[100vw] overflow-x-hidden">
       {/* 2-Day Free Trial / Subscription Notification */}
       <SubscriptionBanner />
 

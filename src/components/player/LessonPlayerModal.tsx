@@ -305,9 +305,10 @@ export const LessonPlayerModal: React.FC = () => {
             }`}
           >
             {/* Overview Box */}
-            <div className="bg-amber-500/10 dark:bg-amber-950/20 border border-amber-500/20 rounded-2xl p-5 mb-8">
-              <h3 className="text-xs font-bold uppercase tracking-wider text-amber-700 dark:text-amber-400 mb-2">
-                Executive Concept Overview
+            <div className="bg-[#18181B] border border-[#FACC15]/30 rounded-2xl p-5 mb-8 shadow-md">
+              <h3 className="text-xs font-mono font-bold uppercase tracking-wider text-[#FACC15] mb-2 flex items-center gap-1.5">
+                <span className="w-1.5 h-1.5 rounded-full bg-[#FACC15]" />
+                <span>Core Concept Overview</span>
               </h3>
               <div className="text-sm sm:text-base text-slate-800 dark:text-slate-200 leading-relaxed font-normal">
                 <CleanFormulaRenderer content={activeLesson.content.overview} />
