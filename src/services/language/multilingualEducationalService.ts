@@ -429,6 +429,38 @@ export const PRACTICE_UI_LOCALIZATIONS: Record<SALanguageCode, PracticeUiStrings
     verifiedLexiconBadge: 'CURRICULUM PRACTICE',
     unverifiedDisclaimer: 'Curriculum-aligned practice questions · CAPS & NATED verified',
     contentFallbackNotice: 'Content in this language is temporarily unavailable. You can continue in English.'
+  },
+
+  // South African Sign Language (SASL 🤟)
+  sasl: {
+    adaptivePracticeTitle: 'SASL 🤟 Visual Practice Session',
+    question: 'Question',
+    questionCount: 'Question {current} of {total}',
+    score: 'Score',
+    accuracy: 'Accuracy',
+    needAHint: 'Need a Hint / Sign?',
+    hideHint: 'Hide Hint',
+    hintPrefix: 'Visual Hint:',
+    checkAnswer: 'Check Answer',
+    submitAnswer: 'Submit Answer',
+    nextQuestion: 'Next Question',
+    tryAgain: 'Try Again',
+    correctHeading: 'Correct! Well reasoned.',
+    incorrectHeading: 'Needs Review',
+    reviewConcept: 'Review the visual concept:',
+    explanationPrefix: 'Explanation & Signs:',
+    showExplanation: 'Show Explanation',
+    askAiTutor: 'Ask AI Tutor (Visual/SASL)',
+    quitSession: 'Quit Session',
+    practiceAgain: 'Practice Again',
+    sessionCompleted: 'Practice Session Completed!',
+    doneViewDashboard: 'Done & View Dashboard',
+    answeredCount: 'Answered',
+    endLevel: 'End Level',
+    engineAssessment: 'Engine Assessment:',
+    verifiedLexiconBadge: 'SASL 🤟 VISUAL PRACTICE',
+    unverifiedDisclaimer: 'Curriculum-aligned practice questions with visual SASL educational resources',
+    contentFallbackNotice: 'Visual explanations available below.'
   }
 };
 

@@ -12,7 +12,7 @@
  * - If user has active subscription (checkAccess), all questions are unlocked!
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   BookOpen,
   FileText,
@@ -39,8 +39,7 @@ import { useLearning } from '../../context/LearningContext';
 import { useAuth } from '../../context/AuthContext';
 import { checkAccess, verifyAndUnlockPayment } from '../../services/snapscanSubscriptionService';
 import { ALL_11_LANGUAGES } from '../home/PublicLandingView';
-
-const SNAPSCAN_URL = 'https://pos.snapscan.io/qr/NKJJYpV6';
+import { EXPANDED_PAST_PAPERS_CATALOG, BASE_GRADE_SUBJECT_MAP } from '../../data/expandedPastPapersCatalog';
 
 interface PastPaperQuestion {
   id: string;
@@ -64,7 +63,7 @@ interface PastPaper {
   questions: PastPaperQuestion[];
 }
 
-export const PAST_PAPERS_DATABASE: PastPaper[] = [
+const ORIGINAL_BASE_PAPERS: PastPaper[] = [
   {
     id: 'paper-math-g12-2024-p1',
     title: 'DBE Mathematics Paper 1 (Algebra & Calculus)',
@@ -276,6 +275,12 @@ export const PAST_PAPERS_DATABASE: PastPaper[] = [
   }
 ];
 
+// Combine existing Grade 12 Math/Physics papers + FULL catalog for all Grades 4 to University
+export const PAST_PAPERS_DATABASE: PastPaper[] = [
+  ...ORIGINAL_BASE_PAPERS,
+  ...EXPANDED_PAST_PAPERS_CATALOG
+];
+
 export const ALL_GRADE_FILTERS = [
   { id: 'all', name: 'All Grades' },
   { id: 'grade-4', name: 'Grade 4' },
@@ -313,6 +318,23 @@ export const PastPapersView: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [selectedLanguage, setSelectedLanguage] = useState<string>('English');
   const [activePaperId, setActivePaperId] = useState<string>(PAST_PAPERS_DATABASE[0].id);
+
+  // Dynamic subjects based on selectedGrade
+  const availableSubjectsForGrade = useMemo(() => {
+    if (selectedGrade === 'all') {
+      return ALL_SUBJECT_FILTERS;
+    }
+    const gradeTier = BASE_GRADE_SUBJECT_MAP[selectedGrade];
+    if (gradeTier && gradeTier.subjects.length > 0) {
+      return ['All Subjects', ...gradeTier.subjects];
+    }
+    return ALL_SUBJECT_FILTERS;
+  }, [selectedGrade]);
+
+  const handleGradeChange = (gradeId: string) => {
+    setSelectedGrade(gradeId);
+    setSelectedSubject('All Subjects');
+  };
 
   // Check access status
   const [accessState, setAccessState] = useState(() => checkAccess(user));
@@ -459,7 +481,7 @@ export const PastPapersView: React.FC = () => {
                 return (
                   <button
                     key={grade.id}
-                    onClick={() => setSelectedGrade(grade.id)}
+                    onClick={() => handleGradeChange(grade.id)}
                     className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                       isSelected
                         ? 'bg-[#FFB612] text-black font-black shadow-md scale-105'
@@ -473,13 +495,13 @@ export const PastPapersView: React.FC = () => {
             </div>
           </div>
 
-          {/* Subject Selector Pills */}
+          {/* Subject Selector Pills (Dynamic per Grade) */}
           <div className="pt-1">
             <span className="text-[11px] font-mono uppercase tracking-wider text-white/60 block mb-2 font-bold">
               2. Choose Subject:
             </span>
             <div className="flex flex-wrap gap-2">
-              {ALL_SUBJECT_FILTERS.map((subj) => {
+              {availableSubjectsForGrade.map((subj) => {
                 const isSelected = selectedSubject === subj;
                 return (
                   <button
@@ -551,6 +573,11 @@ export const PastPapersView: React.FC = () => {
                     <h3 className="font-display font-black text-base text-white mb-1.5">
                       {paper.title}
                     </h3>
+
+                    <div className="mb-2 text-[11px] text-amber-200/90 font-mono flex items-center gap-1.5">
+                      <Sparkles className="w-3 h-3 text-[#FFB612] shrink-0" />
+                      <span>Original English/Afrikaans + Explain in YOUR language [{selectedLanguage}]</span>
+                    </div>
 
                     <div className="flex items-center justify-between text-xs text-white/60 pt-3 border-t border-white/10">
                       <span>{paper.gradeName} &bull; {paper.subject}</span>

@@ -90,6 +90,11 @@ export function saveSubscription(data: SnapScanSubscriptionData): void {
 
 export function isAppUnlocked(user?: any): boolean {
   if (typeof window === 'undefined') return false;
+  // Free promotional week: bypass all locks till Wed 12 Nov 2026
+  if (Date.now() < new Date("2026-11-12T21:59:59Z").getTime()) {
+    return true;
+  }
+
   // Admin bypass
   const email = user?.email?.toLowerCase?.() || '';
   if (email && ADMIN_EMAILS.includes(email)) return true;
@@ -110,6 +115,23 @@ export function isAppUnlocked(user?: any): boolean {
  */
 export function checkAccess(user?: any): AccessCheckResult {
   const now = Date.now();
+  const freeTillTime = new Date("2026-11-12T21:59:59Z").getTime();
+
+  // Rule 3: Free Access Till Wednesday 12 Nov 2026 23:59 SAST
+  if (now < freeTillTime) {
+    const msRemaining = freeTillTime - now;
+    const daysRemaining = Math.max(0, Math.ceil(msRemaining / (1000 * 60 * 60 * 24)));
+    const hoursRemaining = Math.max(0, Math.round(msRemaining / (1000 * 60 * 60)));
+    return {
+      allow: true,
+      status: 'active',
+      daysRemaining,
+      hoursRemaining,
+      expiresAtFormatted: 'Wed 12 Nov 2026 23:59 SAST (Free Week)',
+      accessCode: 'NEX-FREE-WEEK',
+      isNearExpiry: false
+    };
+  }
 
   // Admin bypass
   const email = user?.email?.toLowerCase?.() || '';

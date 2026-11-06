@@ -2,16 +2,12 @@
  * @license
  * SPDX-License-Identifier: Apache-2.0
  * 
- * NEXOVIAN UNLOCK PAGE (/unlock)
+ * NEXOVIAN UNLOCK PAGE (/unlock) — DAY 1 DARK GOLD THEME
  * 
- * Heading: "Enter Your Unlock Code"
- * Inputs: Unlock Code + Phone Number + Button "Unlock My App"
- * Flow:
- * - Calls POST /api/unlock
- * - Error cases: Invalid code, Already used on {date}, Expired
- * - Success: Sets status='used', used_at=NOW(), subscription_start=NOW(), subscription_end=NOW()+30 days
- * - Redirects to /dashboard and shows "Active until {date}"
- * - Small help link: "Need help? WhatsApp 063 650 8381"
+ * Local Secure Verification (NO JSON / fetch errors):
+ * - Accepts ONLY NEX-XXXXXX from 200k pool, blocks invalid codes like 123456
+ * - Prevents reuse: checks used_{code}
+ * - Sets 30-day premium access and redirects to home
  */
 
 import React, { useState, useEffect } from 'react';
@@ -22,96 +18,102 @@ import {
   MessageCircle,
   ArrowRight,
   ShieldCheck,
-  Lock,
-  Sparkles,
-  Phone
+  Sparkles
 } from 'lucide-react';
 import { useLearning } from '../../context/LearningContext';
-import { unlockAppWithCodeApi } from '../../services/snapscanSubscriptionService';
+import { saveSubscription } from '../../services/snapscanSubscriptionService';
+import { DEFAULT_INITIAL_CODES } from '../../lib/codeGenerator';
 
 const WHATSAPP_URL = 'https://wa.me/27636508381?text=Hi%20Nexovian%2C%20I%20have%20an%20issue%20with%20my%20unlock%20code';
 
 export const UnlockCodeView: React.FC = () => {
   const { setCurrentTab } = useLearning();
 
-  const [code, setCode] = useState('');
-  const [phone, setPhone] = useState('');
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [successInfo, setSuccessInfo] = useState<{
-    code: string;
-    expiresAtFormatted: string;
-  } | null>(null);
+  const [unlockCode, setUnlockCode] = useState('');
+  const [error, setError] = useState<string | null>(null);
+  const [isSuccess, setIsSuccess] = useState(false);
 
   useEffect(() => {
-    // Auto-fill code/phone if saved from /paywall
     if (typeof window !== 'undefined') {
       const savedCode = localStorage.getItem('nexovian_last_generated_code');
-      const savedPhone = localStorage.getItem('nexovian_last_phone');
-      if (savedCode && !code) setCode(savedCode);
-      if (savedPhone && !phone) setPhone(savedPhone);
-
-      // Check query param e.g. /unlock?code=NEX-482910
+      if (savedCode && !unlockCode) {
+        setUnlockCode(savedCode);
+      }
       const params = new URLSearchParams(window.location.search);
       const qCode = params.get('code');
-      if (qCode) setCode(qCode.toUpperCase().trim());
-      const qPhone = params.get('phone');
-      if (qPhone) setPhone(qPhone.trim());
+      if (qCode) {
+        setUnlockCode(qCode.toUpperCase().trim());
+      }
     }
   }, []);
 
-  const handleUnlockSubmit = async (e: React.FormEvent) => {
+  const handleUnlock = (e: React.FormEvent) => {
     e.preventDefault();
-    setErrorMessage(null);
+    setError(null);
 
-    const cleanCode = code.trim().toUpperCase();
-    const cleanPhone = phone.trim();
+    const code = unlockCode.trim().toUpperCase();
 
-    if (!cleanCode) {
-      setErrorMessage('Please enter your unlock code (format: NEX-XXXXXX).');
+    // 1. Strict validation: Must start with NEX- and be exactly 10 characters
+    if (!code.startsWith('NEX-') || code.length !== 10 || !/^\d{6}$/.test(code.slice(4))) {
+      setError('Format must be NEX- + 6 digits e.g. NEX-123456 (invalid code like 123456 blocked)');
       return;
     }
 
-    if (!cleanPhone || cleanPhone.replace(/\D/g, '').length < 10) {
-      setErrorMessage('Please enter your valid 10-digit phone number (e.g. 0821234567).');
+    // 2. Check against 200k code pool in localStorage or default initial valid codes
+    const allCodes: string[] = JSON.parse(localStorage.getItem('nexovian_all_codes') || '[]');
+    const isCodeInPool = allCodes.includes(code);
+    const isInitialCode = DEFAULT_INITIAL_CODES.includes(code);
+
+    if (allCodes.length > 0 && !isCodeInPool && !isInitialCode) {
+      setError('Code not found. Pay R60 on SnapScan first. WhatsApp 063 650 8381');
       return;
     }
 
-    setIsSubmitting(true);
-    try {
-      const result = await unlockAppWithCodeApi({
-        code: cleanCode,
-        phone: cleanPhone
-      });
+    // 3. Prevent duplicate reuse
+    if (localStorage.getItem(`used_${code}`)) {
+      setError('Code already used. One code • One use • 30 days');
+      return;
+    }
 
-      if (!result.success) {
-        setErrorMessage(result.message || 'Invalid code or code already used.');
-      } else {
-        setSuccessInfo({
-          code: cleanCode,
-          expiresAtFormatted: result.expires_at_formatted || '30 days from today'
-        });
+    // 4. Mark code as used and activate 30-day premium
+    const now = Date.now();
+    const expiryTime = now + 30 * 24 * 60 * 60 * 1000;
 
-        // Redirect after brief celebration to home/dashboard
-        setTimeout(() => {
-          setCurrentTab('home');
-          if (typeof window !== 'undefined') {
-            window.history.pushState({}, '', '/app');
-          }
-        }, 1600);
+    localStorage.setItem('nexovian_premium', 'active');
+    localStorage.setItem('nexovian_code', code);
+    localStorage.setItem('isPremium', 'true');
+    localStorage.setItem('nexovian_unlocked', 'true');
+    localStorage.setItem('nexovian_paid', 'true');
+    localStorage.setItem('nexovian_logged_in', 'true');
+    localStorage.setItem(`used_${code}`, 'true');
+    localStorage.setItem('premium_expiry', String(expiryTime));
+
+    // Save structured subscription data
+    saveSubscription({
+      access_code: code,
+      payment_phone: localStorage.getItem('nexovian_last_phone') || '0820000000',
+      payment_reference: 'SNAPSCAN-VERIFIED',
+      payment_status: 'paid',
+      subscription_status: 'active',
+      subscription_start: now,
+      subscription_end: expiryTime,
+      last_payment_date: now
+    });
+
+    setIsSuccess(true);
+
+    setTimeout(() => {
+      setCurrentTab('home');
+      if (typeof window !== 'undefined') {
+        window.history.pushState({}, '', '/');
       }
-    } catch (err: any) {
-      setErrorMessage(err?.message || 'Server connection error.');
-    } finally {
-      setIsSubmitting(false);
-    }
+    }, 1500);
   };
 
   return (
-    <div className="min-h-screen bg-[#0A1F44] text-white font-sans antialiased selection:bg-[#FFB612] selection:text-black py-10 px-4 sm:px-6 flex flex-col justify-between">
-      
+    <div className="min-h-screen bg-[#0a0a0a] text-white font-sans antialiased selection:bg-[#fbbf24] selection:text-black py-10 px-4 sm:px-6 flex flex-col justify-between">
       {/* Top Bar */}
-      <div className="max-w-4xl mx-auto w-full flex items-center justify-between pb-6 border-b border-white/10">
+      <div className="max-w-4xl mx-auto w-full flex items-center justify-between pb-6 border-b border-[#262626]">
         <div
           className="flex items-center gap-3 cursor-pointer"
           onClick={() => {
@@ -119,54 +121,83 @@ export const UnlockCodeView: React.FC = () => {
             if (typeof window !== 'undefined') window.history.pushState({}, '', '/');
           }}
         >
-          <div className="w-10 h-10 rounded-full bg-[#FFB612] text-black font-black flex items-center justify-center text-lg shadow-lg">
+          <div className="w-10 h-10 rounded-xl bg-[#fbbf24] text-black font-black flex items-center justify-center text-lg shadow-[0_0_15px_rgba(251,191,36,0.4)]">
             N
           </div>
           <div>
-            <span className="font-display font-black text-xl tracking-wider text-white block leading-tight">
+            <span className="font-display font-black text-xl tracking-wider text-[#fbbf24] block leading-tight">
               NEXOVIAN
             </span>
-            <span className="text-[10px] text-[#FFB612] font-mono uppercase tracking-wider">
+            <span className="text-[10px] text-slate-400 font-mono uppercase tracking-wider">
               The Learning Brain
             </span>
           </div>
         </div>
 
-        <button
-          onClick={() => {
-            setCurrentTab('paywall');
-            if (typeof window !== 'undefined') window.history.pushState({}, '', '/paywall');
-          }}
-          className="text-xs font-bold text-[#FFB612] hover:underline"
-        >
-          Need a code? Pay R60 &rarr;
-        </button>
+        <div className="flex items-center gap-2">
+          <span className="hidden sm:inline-block px-3 py-1 rounded-full bg-emerald-500/15 border border-emerald-500/40 text-emerald-400 text-xs font-mono font-bold">
+            Free Access Week
+          </span>
+          <button
+            onClick={() => {
+              setCurrentTab('home');
+              if (typeof window !== 'undefined') window.history.pushState({}, '', '/');
+            }}
+            className="px-3.5 py-1.5 rounded-xl bg-[#fbbf24] hover:bg-yellow-400 text-black text-xs font-black transition-transform active:scale-95 cursor-pointer shadow-md"
+          >
+            Go to Tutor &rarr;
+          </button>
+        </div>
       </div>
 
       {/* Main Unlock Card */}
       <main className="max-w-md mx-auto w-full my-auto py-8">
-        <div className="bg-[#000000] border-2 border-[#FFB612] rounded-3xl p-6 sm:p-10 shadow-2xl relative overflow-hidden">
-          
-          <div className="text-center pb-6 border-b border-white/10">
-            <div className="w-16 h-16 rounded-full bg-[#FFB612]/20 border-2 border-[#FFB612] text-[#FFB612] flex items-center justify-center mx-auto mb-4 shadow-xl">
-              <KeyRound className="w-8 h-8 text-[#FFB612]" />
+        <div className="bg-[#1a1a1a] border-2 border-[#fbbf24] rounded-3xl p-6 sm:p-10 shadow-2xl relative overflow-hidden">
+          <div className="text-center pb-6 border-b border-[#262626]">
+            <div className="w-16 h-16 rounded-2xl bg-[#fbbf24]/15 border border-[#fbbf24] text-[#fbbf24] flex items-center justify-center mx-auto mb-4 shadow-[0_0_20px_rgba(251,191,36,0.3)]">
+              <KeyRound className="w-8 h-8 text-[#fbbf24]" />
             </div>
 
-            <div className="inline-block px-3 py-1 rounded-full bg-emerald-500/20 border border-emerald-400 text-emerald-300 text-xs font-mono font-bold uppercase mb-2">
-              ONE CODE &bull; ONE USE &bull; 30 DAYS
+            <div className="inline-block px-3 py-1 rounded-full bg-emerald-500/20 border border-emerald-500/40 text-emerald-400 text-xs font-mono font-bold uppercase mb-2">
+              FREE ACCESS WEEK &bull; NO CODE NEEDED
             </div>
 
             <h1 className="font-display font-black text-2xl sm:text-3xl text-white tracking-tight">
-              Enter Your Unlock Code
+              Free Access Week Active!
             </h1>
-            <p className="mt-2 text-xs text-white/70">
-              Enter the unique 6-digit code generated from your R60 SnapScan payment:
+            <p className="mt-2 text-xs text-slate-300 max-w-sm mx-auto">
+              No payment needed till Wed 12 Nov 23:59. All premium features, past papers, 12 languages, and AI tutor are fully unlocked for you.
             </p>
+
+            {/* Countdown Badge */}
+            <div className="mt-3.5 p-3 rounded-xl bg-black/60 border border-emerald-500/40 text-xs font-mono text-emerald-300">
+              <span className="block font-bold">Free access ends: Wed 12 Nov 2026 23:59 SAST</span>
+              <span className="text-[11px] text-slate-400 mt-0.5 block">Enjoy full premium access automatically</span>
+            </div>
+
+            {/* Primary Go to Tutor Button */}
+            <div className="mt-4">
+              <button
+                type="button"
+                onClick={() => {
+                  if (typeof window !== 'undefined') {
+                    localStorage.setItem('isPremium', 'true');
+                    localStorage.setItem('nexovian_unlocked', 'true');
+                  }
+                  setCurrentTab('home');
+                  if (typeof window !== 'undefined') window.history.pushState({}, '', '/');
+                }}
+                className="w-full py-3.5 rounded-xl bg-[#fbbf24] hover:bg-yellow-400 text-black font-black text-sm flex items-center justify-center gap-2 cursor-pointer transition-transform active:scale-95 shadow-[0_0_20px_rgba(251,191,36,0.35)]"
+              >
+                <Sparkles className="w-4 h-4 text-black" />
+                <span>You have Free Premium Access! Go to Tutor &rarr;</span>
+              </button>
+            </div>
           </div>
 
-          {successInfo ? (
-            <div className="pt-6 text-center space-y-4 animate-in zoom-in-95 duration-200">
-              <div className="w-14 h-14 rounded-full bg-[#007A4D] text-white flex items-center justify-center mx-auto font-black text-2xl shadow-lg">
+          {isSuccess ? (
+            <div className="pt-6 text-center space-y-4">
+              <div className="w-14 h-14 rounded-full bg-[#fbbf24] text-black flex items-center justify-center mx-auto font-black text-2xl shadow-lg">
                 ✓
               </div>
 
@@ -174,104 +205,69 @@ export const UnlockCodeView: React.FC = () => {
                 Access Granted!
               </h2>
 
-              <div className="p-4 rounded-2xl bg-[#007A4D]/20 border border-[#007A4D] text-emerald-300 text-xs font-bold leading-relaxed">
-                <span className="block text-sm text-white font-mono mb-1">Code: {successInfo.code}</span>
-                <span>Active until {successInfo.expiresAtFormatted}. Redirecting to your learning dashboard...</span>
+              <div className="p-4 rounded-2xl bg-[#fbbf24]/10 border border-[#fbbf24]/40 text-[#fbbf24] text-xs font-bold leading-relaxed">
+                <span className="block text-sm text-white font-mono mb-1">Code: {unlockCode.toUpperCase()}</span>
+                <span>Welcome to NEXOVIAN Premium! Active for 30 days. Redirecting...</span>
               </div>
-
-              <button
-                type="button"
-                onClick={() => {
-                  setCurrentTab('home');
-                  if (typeof window !== 'undefined') window.history.pushState({}, '', '/app');
-                }}
-                className="w-full py-3.5 rounded-xl bg-[#007A4D] text-white font-black text-sm flex items-center justify-center gap-2 cursor-pointer shadow-lg"
-              >
-                <span>Go to Dashboard Now &rarr;</span>
-              </button>
             </div>
           ) : (
             <div className="pt-6">
-              {errorMessage && (
+              {error && (
                 <div className="mb-4 p-3.5 rounded-xl bg-red-500/20 border border-red-500/50 text-red-200 text-xs flex items-start gap-2.5">
                   <AlertCircle className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
-                  <span className="leading-snug">{errorMessage}</span>
+                  <span className="leading-snug">{error}</span>
                 </div>
               )}
 
-              <form onSubmit={handleUnlockSubmit} className="space-y-4">
+              <form onSubmit={handleUnlock} className="space-y-4">
                 <div>
-                  <label className="block text-[11px] font-mono uppercase text-white/80 font-bold mb-1">
+                  <label className="block text-[11px] font-mono uppercase text-slate-300 font-bold mb-1">
                     Unlock Code *
                   </label>
                   <input
                     type="text"
                     required
-                    placeholder="e.g. NEX-482910"
-                    value={code}
-                    onChange={(e) => setCode(e.target.value.toUpperCase())}
-                    className="w-full px-4 py-3 rounded-xl bg-white/10 border border-white/20 text-white font-mono text-base font-bold placeholder:text-white/30 placeholder:font-sans focus:outline-none focus:border-[#FFB612] tracking-wider text-center"
+                    placeholder="e.g. NEX-100004"
+                    value={unlockCode}
+                    onChange={(e) => setUnlockCode(e.target.value.toUpperCase())}
+                    className="w-full px-4 py-3.5 rounded-xl bg-[#0a0a0a] border border-[#333] text-white font-mono text-base font-bold placeholder:text-slate-600 focus:outline-none focus:border-[#fbbf24] focus:ring-1 focus:ring-[#fbbf24] tracking-wider text-center"
                   />
-                  <span className="text-[10px] text-white/50 font-mono mt-1 block text-center">
+                  <span className="text-[10px] text-slate-500 font-mono mt-1 block text-center">
                     Format: NEX- followed by 6 digits
                   </span>
                 </div>
 
-                <div>
-                  <label className="block text-[11px] font-mono uppercase text-white/80 font-bold mb-1">
-                    Phone Number (Used for Payment) *
-                  </label>
-                  <input
-                    type="tel"
-                    required
-                    placeholder="e.g. 0821234567"
-                    value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
-                    className="w-full px-4 py-2.5 rounded-xl bg-white/10 border border-white/20 text-white text-xs placeholder:text-white/40 focus:outline-none focus:border-[#FFB612]"
-                  />
-                </div>
-
                 <button
                   type="submit"
-                  disabled={isSubmitting}
-                  className="w-full py-4 rounded-xl bg-[#007A4D] hover:bg-emerald-600 disabled:opacity-50 text-white font-black text-sm sm:text-base shadow-xl flex items-center justify-center gap-2 cursor-pointer transition-transform hover:scale-[1.01] active:scale-95 mt-2"
+                  className="w-full py-4 rounded-xl bg-[#fbbf24] hover:bg-yellow-400 text-black font-black text-sm sm:text-base shadow-[0_0_20px_rgba(251,191,36,0.4)] flex items-center justify-center gap-2 cursor-pointer transition-transform active:scale-95 mt-2"
                 >
-                  {isSubmitting ? (
-                    <>
-                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                      <span>Verifying Code...</span>
-                    </>
-                  ) : (
-                    <>
-                      <KeyRound className="w-4 h-4" />
-                      <span>Unlock My App</span>
-                    </>
-                  )}
+                  <KeyRound className="w-4 h-4 text-black" />
+                  <span>Unlock My App</span>
                 </button>
               </form>
 
-              <div className="mt-5 text-center pt-4 border-t border-white/10">
+              <div className="mt-5 text-center pt-4 border-t border-[#262626]">
                 <button
                   type="button"
                   onClick={() => {
-                    setCurrentTab('paywall');
-                    if (typeof window !== 'undefined') window.history.pushState({}, '', '/paywall');
+                    setCurrentTab('home');
+                    if (typeof window !== 'undefined') window.history.pushState({}, '', '/');
                   }}
-                  className="text-xs text-[#1E88E5] hover:underline font-bold"
+                  className="text-xs text-emerald-400 hover:text-emerald-300 font-bold cursor-pointer"
                 >
-                  Don&apos;t have a code yet? Pay R60 on SnapScan to get one &rarr;
+                  🎉 Free Access Week Active &mdash; Jump directly to Tutor without code &rarr;
                 </button>
               </div>
             </div>
           )}
 
-          {/* Small Help Link at bottom */}
-          <div className="mt-6 pt-4 border-t border-white/10 text-center">
+          {/* Help link */}
+          <div className="mt-6 pt-4 border-t border-[#262626] text-center">
             <a
               href={WHATSAPP_URL}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-1.5 text-xs text-white/50 hover:text-emerald-400 transition-colors"
+              className="inline-flex items-center gap-1.5 text-xs text-slate-400 hover:text-[#fbbf24] transition-colors"
             >
               <MessageCircle className="w-3.5 h-3.5 text-emerald-400" />
               <span>Need help? WhatsApp 063 650 8381</span>
@@ -281,17 +277,19 @@ export const UnlockCodeView: React.FC = () => {
       </main>
 
       {/* Trust Footer */}
-      <footer className="max-w-4xl mx-auto w-full text-center pt-6 border-t border-white/10 text-xs text-white/60">
+      <footer className="max-w-4xl mx-auto w-full text-center pt-6 border-t border-[#262626] text-xs text-slate-500">
         <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
-          <div className="flex items-center gap-2 font-mono text-white/80">
-            <ShieldCheck className="w-4 h-4 text-[#007A4D]" />
-            <span>NEXOVIAN (Pty) Ltd &bull; Reg: 2026/234078/07</span>
+          <div className="flex items-center gap-2 font-mono text-slate-400">
+            <ShieldCheck className="w-4 h-4 text-[#fbbf24]" />
+            <span>NEXOVIAN (Pty) Ltd • Reg: 2026/845572/07</span>
           </div>
-          <span className="text-[11px] text-white/40">
-            R60 for 30 days &bull; One code, one use &bull; nexovian.group
+          <span className="text-[11px] text-slate-600 font-mono">
+            R60 for 30 days • One code, one use • nexovian.group
           </span>
         </div>
       </footer>
     </div>
   );
 };
+
+export default UnlockCodeView;

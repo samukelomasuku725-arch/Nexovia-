@@ -80,7 +80,7 @@ const MainLayout: React.FC = () => {
   const { isAuthenticated, isLoading, user, logout } = useAuth();
   const { t } = useTranslation();
 
-  // Protected Route Subscription / 30-Day Auto-Lock Guard (unconditional hook execution)
+  // Protected Route Subscription / 30-Day Auto-Lock & 2-Day Trial Guard
   useEffect(() => {
     if (isLoading) return;
 
@@ -90,15 +90,44 @@ const MainLayout: React.FC = () => {
 
     if (isAdminUser(user)) return;
 
-    // Route guard: checkAccess(user):
-    // IF subscription_status == 'active' AND now <= subscription_end -> allow access
-    // IF now > subscription_end -> set subscription_status = 'expired', DENY access, redirect to /paywall with message "Your 30-day access has expired. Renew for R60 to continue."
-    const access = checkAccess(user);
-    if (!access.allow) {
-      if (typeof window !== 'undefined') {
-        window.history.pushState({}, '', '/paywall?reason=subscription_expired');
+    // Rule 3: If current date < FREE_TILL_DATE, set isPremium = true automatically for everyone
+    const FREE_TILL_DATE = new Date("2026-11-12T21:59:59Z");
+    const isFreePromotionActive = Date.now() < FREE_TILL_DATE.getTime();
+
+    // 2-Day Free Trial Logic: trial_start in localStorage, after 2 days redirect to /unlock
+    const isUnlocked = isFreePromotionActive || (typeof window !== 'undefined' && (
+      localStorage.getItem('nexovian_premium') === 'active' || 
+      localStorage.getItem('nexovian_paid') === 'true' || 
+      localStorage.getItem('isPremium') === 'true'
+    ));
+
+    if (isFreePromotionActive && typeof window !== 'undefined') {
+      localStorage.setItem('isPremium', 'true');
+    }
+
+    if (!isUnlocked) {
+      let trialStart = localStorage.getItem('trial_start');
+      if (!trialStart) {
+        trialStart = String(Date.now());
+        localStorage.setItem('trial_start', trialStart);
       }
-      setCurrentTab('paywall');
+      const twoDaysMs = 2 * 24 * 60 * 60 * 1000;
+      if (Date.now() - Number(trialStart) > twoDaysMs) {
+        if (typeof window !== 'undefined') {
+          window.history.pushState({}, '', '/unlock');
+        }
+        setCurrentTab('unlock');
+        return;
+      }
+    }
+
+    // 30-Day Auto-lock check for active subscribers
+    const access = checkAccess(user);
+    if (!access.allow && !isUnlocked) {
+      if (typeof window !== 'undefined') {
+        window.history.pushState({}, '', '/unlock');
+      }
+      setCurrentTab('unlock');
       return;
     }
 
@@ -107,13 +136,13 @@ const MainLayout: React.FC = () => {
     }
   }, [currentTab, user, isLoading, setCurrentTab]);
 
-  // If initial auth session is being checked, show quick splash
+  // If initial auth session is being checked, show dark gold splash
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-[#F6F5EF] flex items-center justify-center p-4">
+      <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center p-4">
         <div className="text-center">
           <LogoIcon size={48} className="animate-pulse mx-auto" />
-          <p className="mt-4 font-mono text-xs font-bold text-slate-700">Connecting to NEXOVIAN...</p>
+          <p className="mt-4 font-mono text-xs font-bold text-[#fbbf24]">Connecting to NEXOVIAN...</p>
         </div>
       </div>
     );

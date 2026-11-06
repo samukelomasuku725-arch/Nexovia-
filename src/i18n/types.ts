@@ -4,17 +4,18 @@
  */
 
 export type SALanguageCode =
-  | 'en'  // English
-  | 'af'  // Afrikaans
-  | 'zu'  // isiZulu
-  | 'xh'  // isiXhosa
-  | 'nr'  // isiNdebele
-  | 'ss'  // siSwati
-  | 'nso' // Sepedi
-  | 'st'  // Sesotho
-  | 'tn'  // Setswana
-  | 've'  // Tshivenda
-  | 'ts'; // Xitsonga / itsonga
+  | 'en'   // English
+  | 'af'   // Afrikaans
+  | 'zu'   // isiZulu
+  | 'xh'   // isiXhosa
+  | 'nr'   // isiNdebele
+  | 'ss'   // siSwati
+  | 'nso'  // Sepedi
+  | 'st'   // Sesotho
+  | 'tn'   // Setswana
+  | 've'   // Tshivenda
+  | 'ts'   // Xitsonga / itsonga
+  | 'sasl'; // South African Sign Language (SASL)
 
 export interface LanguageInfo {
   code: SALanguageCode;

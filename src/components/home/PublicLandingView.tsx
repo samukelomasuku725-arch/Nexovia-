@@ -68,6 +68,7 @@ export const ALL_11_LANGUAGES: LanguageOption[] = [
   { code: 'en', name: 'English', native: 'English' },
   { code: 'af', name: 'Afrikaans', native: 'Afrikaans' },
   { code: 'zu', name: 'isiZulu', native: 'isiZulu' },
+  { code: 'sasl', name: 'SASL 🤟 (Sign Language)', native: 'SASL 🤟', isNativeSpecial: true },
   { code: 'xh', name: 'isiXhosa', native: 'isiXhosa' },
   { code: 'nso', name: 'Sepedi', native: 'Sesotho sa Leboa' },
   { code: 'st', name: 'Sesotho', native: 'Sesotho' },
@@ -321,7 +322,7 @@ export const PublicLandingView: React.FC = () => {
             {/* Top Badge */}
             <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-[#0A1F44] border border-[#FFB612]/50 text-[#FFB612] text-xs font-mono font-bold uppercase tracking-wider mb-6">
               <Sparkles className="w-3.5 h-3.5 text-[#FFB612]" />
-              <span>South Africa&apos;s 11 Official Languages Education Platform</span>
+              <span>SOUTH AFRICA&apos;S 12 OFFICIAL LANGUAGES (incl SASL 🤟) EDUCATION PLATFORM</span>
             </div>
 
             {/* Headline */}
@@ -350,141 +351,167 @@ export const PublicLandingView: React.FC = () => {
             {/* ========================================================
                 AUTOMATIC INSTANT ACCESS BOX (STEP 1 & STEP 2)
                ======================================================== */}
-            <div id="instant-unlock" className="mt-10 max-w-3xl mx-auto bg-[#0A1F44] border-2 border-[#FFB612] rounded-3xl p-6 sm:p-8 text-left shadow-2xl relative overflow-hidden">
-              
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-5 border-b border-white/10">
-                <div>
-                  <div className="flex items-center gap-2 text-xs font-mono font-bold uppercase text-[#FFB612]">
-                    <Sparkles className="w-4 h-4 text-[#FFB612]" />
-                    <span>Instant Auto Access &bull; R60 for 30 Days</span>
-                  </div>
-                  <h3 className="font-display font-black text-xl sm:text-2xl text-white mt-1">
-                    Choose Your Language &amp; Grade &mdash; Unlock for R60
-                  </h3>
-                </div>
-                <div className="text-right sm:text-right shrink-0">
-                  <div className="text-2xl font-black text-[#FFB612]">R60</div>
-                  <div className="text-[11px] text-white/60">30 Days Full Access</div>
-                </div>
-              </div>
-
-              {/* 1. CHOOSE LANGUAGE (11 LANGUAGES) */}
-              <div className="mt-5">
-                <div className="flex items-center justify-between mb-2.5">
-                  <span className="text-xs font-mono font-bold uppercase tracking-wider text-white/80 flex items-center gap-1.5">
-                    <Languages className="w-4 h-4 text-[#FFB612]" />
-                    <span>1. Select Your Language (All 11 Official):</span>
-                  </span>
-                  <span className="text-xs text-[#FFB612] font-bold">
-                    {selectedLangObj.name} ({selectedLangObj.native})
-                  </span>
+            {/* Rule 2: If Premium Active / Free Week, HIDE R60 CARD and SHOW FREE WEEK ACCESS CARD */}
+            {isFullPaidAccess || access.allow ? (
+              <div id="instant-unlock" className="mt-10 max-w-3xl mx-auto bg-gradient-to-r from-emerald-950/90 via-[#0A1F44] to-black border-2 border-emerald-400 rounded-3xl p-6 sm:p-8 text-center shadow-2xl relative overflow-hidden">
+                <div className="inline-flex items-center gap-2 px-4 py-1 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 text-xs font-mono font-bold uppercase mb-3">
+                  <Sparkles className="w-3.5 h-3.5 text-[#FFB612]" />
+                  <span>Free Week Active &bull; No Payment Needed</span>
                 </div>
 
-                <div className="flex flex-wrap gap-2">
-                  {ALL_11_LANGUAGES.map((lang) => {
-                    const isSelected = selectedLang === lang.code;
-                    return (
-                      <button
-                        key={lang.code}
-                        type="button"
-                        onClick={() => setSelectedLang(lang.code)}
-                        className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
-                          isSelected
-                            ? 'bg-[#FFB612] text-black font-black shadow-md shadow-yellow-500/20 scale-105'
-                            : 'bg-white/10 hover:bg-white/20 text-white/90 border border-white/10'
-                        }`}
-                      >
-                        <span>{lang.name}</span>
-                        {lang.isNativeSpecial && <span className="ml-1 text-[10px]">⭐</span>}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
+                <h3 className="font-display font-black text-2xl sm:text-3xl text-white tracking-tight">
+                  🎉 FREE WEEK ACTIVE &mdash; You Have Premium Access
+                </h3>
 
-              {/* 2. CHOOSE GRADE (GRADE 4 TO UNIVERSITY) */}
-              <div className="mt-6">
-                <div className="flex items-center justify-between mb-2.5">
-                  <span className="text-xs font-mono font-bold uppercase tracking-wider text-white/80 flex items-center gap-1.5">
-                    <GraduationCap className="w-4 h-4 text-[#FFB612]" />
-                    <span>2. Select Grade (Grade 4 to University):</span>
-                  </span>
-                  <span className="text-xs text-[#FFB612] font-bold">
-                    {selectedGradeObj.name} &bull; {selectedGradeObj.level}
-                  </span>
-                </div>
+                <p className="mt-2 text-sm sm:text-base text-emerald-200 font-bold">
+                  {access.daysRemaining} Days Left Till Wed 12 Nov 23:59 SAST
+                </p>
 
-                <div className="flex flex-wrap gap-2">
-                  {ALL_GRADES.map((grade) => {
-                    const isSelected = selectedGradeId === grade.id;
-                    return (
-                      <button
-                        key={grade.id}
-                        type="button"
-                        onClick={() => setSelectedGradeId(grade.id)}
-                        className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
-                          isSelected
-                            ? 'bg-[#FFB612] text-black font-black shadow-md shadow-yellow-500/20 scale-105'
-                            : 'bg-white/10 hover:bg-white/20 text-white/90 border border-white/10'
-                        }`}
-                      >
-                        <span>{grade.name}</span>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
+                <p className="mt-2 text-xs sm:text-sm text-slate-300 max-w-xl mx-auto leading-relaxed">
+                  No Payment Needed &mdash; Enjoy All Subjects from Grade 4 to University, all 12 Official Languages (including SASL 🤟), DBE past papers, and the Socratic AI tutor.
+                </p>
 
-              {/* 3. BUTTONS: GREEN UNLOCK + PAST PAPERS PREVIEW */}
-              <div className="mt-8 pt-6 border-t border-white/10 space-y-3">
-                <div className="flex flex-col sm:flex-row items-stretch gap-3">
-                  
-                  {/* Green Button: Pay R60 with SnapScan */}
+                <div className="mt-6 flex flex-col sm:flex-row items-center justify-center gap-3">
                   <button
                     type="button"
-                    onClick={navigateToPaywall}
-                    className="flex-1 py-4 px-5 rounded-2xl bg-[#007A4D] hover:bg-emerald-600 text-white font-black text-sm sm:text-base shadow-xl shadow-emerald-950/40 transition-all transform hover:-translate-y-0.5 active:translate-y-0 flex items-center justify-center gap-2.5 text-center cursor-pointer"
+                    onClick={handleStartLearning}
+                    className="w-full sm:w-auto px-8 py-4 rounded-2xl bg-[#FFB612] hover:bg-yellow-400 text-black font-black text-base shadow-[0_0_25px_rgba(255,182,18,0.4)] flex items-center justify-center gap-2.5 cursor-pointer transition-transform active:scale-95"
                   >
-                    <QrCode className="w-5 h-5 shrink-0" />
-                    <span>Pay R60 with SnapScan</span>
-                    <ArrowRight className="w-4 h-4 shrink-0 ml-0.5" />
+                    <Sparkles className="w-5 h-5 text-black" />
+                    <span>Go to Tutor &mdash; Start Learning</span>
+                    <ArrowRight className="w-4 h-4 text-black" />
                   </button>
 
-                  {/* Button 2: Enter Code to Unlock */}
-                  <button
-                    type="button"
-                    onClick={navigateToUnlock}
-                    className="flex-1 py-4 px-5 rounded-2xl bg-[#FFB612] hover:bg-yellow-400 text-black font-black text-sm sm:text-base shadow-xl shadow-yellow-500/30 transition-all transform hover:-translate-y-0.5 active:translate-y-0 flex items-center justify-center gap-2.5 text-center cursor-pointer"
-                  >
-                    <KeyRound className="w-5 h-5 text-black shrink-0" />
-                    <span>Enter Code to Unlock</span>
-                  </button>
-                </div>
-
-                {/* Second Button Below Green Button: Past Papers & Memos - FREE Preview */}
-                <div>
                   <button
                     type="button"
                     onClick={() => navigateToPastPapers(selectedGradeId)}
-                    className="w-full py-3.5 px-6 rounded-full bg-white hover:bg-slate-100 border-2 border-[#0A1F44] text-[#0A1F44] font-bold text-sm shadow-md transition-all cursor-pointer flex items-center justify-center gap-2"
+                    className="w-full sm:w-auto px-6 py-4 rounded-2xl bg-white/10 hover:bg-white/20 text-white font-bold text-sm border border-white/20 transition-all cursor-pointer flex items-center justify-center gap-2"
                   >
-                    <span>📚 Past Papers &amp; Memos &mdash; FREE Preview</span>
-                    <ArrowRight className="w-4 h-4" />
+                    <span>📚 Browse All Past Papers</span>
                   </button>
                 </div>
+              </div>
+            ) : (
+              <div id="instant-unlock" className="mt-10 max-w-3xl mx-auto bg-[#0A1F44] border-2 border-[#FFB612] rounded-3xl p-6 sm:p-8 text-left shadow-2xl relative overflow-hidden">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-5 border-b border-white/10">
+                  <div>
+                    <div className="flex items-center gap-2 text-xs font-mono font-bold uppercase text-[#FFB612]">
+                      <Sparkles className="w-4 h-4 text-[#FFB612]" />
+                      <span>Instant Auto Access &bull; R60 for 30 Days</span>
+                    </div>
+                    <h3 className="font-display font-black text-xl sm:text-2xl text-white mt-1">
+                      Choose Your Language &amp; Grade &mdash; Unlock for R60
+                    </h3>
+                  </div>
+                  <div className="text-right sm:text-right shrink-0">
+                    <div className="text-2xl font-black text-[#FFB612]">R60</div>
+                    <div className="text-[11px] text-white/60">30 Days Full Access</div>
+                  </div>
+                </div>
 
-                {/* Trust Line */}
-                <div className="mt-3.5 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-white/60">
-                  <p className="flex items-center gap-1.5 text-white/80 font-medium">
-                    <ShieldCheck className="w-4 h-4 text-[#007A4D] shrink-0" />
-                    <span>Payment verified by SnapScan to NEXOVIAN PTY LTD &bull; Instant Auto Unlock</span>
-                  </p>
-                  <p className="text-[11px] text-white/40">
-                    No waiting for admin &bull; 30 Days Access
-                  </p>
+                {/* 1. CHOOSE LANGUAGE (12 LANGUAGES INCL SASL) */}
+                <div className="mt-5">
+                  <div className="flex items-center justify-between mb-2.5">
+                    <span className="text-xs font-mono font-bold uppercase tracking-wider text-white/80 flex items-center gap-1.5">
+                      <Languages className="w-4 h-4 text-[#FFB612]" />
+                      <span>1. SELECT YOUR LANGUAGE (ALL 12 incl SASL 🤟):</span>
+                    </span>
+                    <span className="text-xs text-[#FFB612] font-bold">
+                      {selectedLangObj.name} ({selectedLangObj.native})
+                    </span>
+                  </div>
+
+                  <div className="flex flex-wrap gap-2">
+                    {ALL_11_LANGUAGES.map((lang) => {
+                      const isSelected = selectedLang === lang.code;
+                      return (
+                        <button
+                          key={lang.code}
+                          type="button"
+                          onClick={() => setSelectedLang(lang.code)}
+                          className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
+                            isSelected
+                              ? 'bg-[#FFB612] text-black font-black shadow-md shadow-yellow-500/20 scale-105'
+                              : 'bg-white/10 hover:bg-white/20 text-white/90 border border-white/10'
+                          }`}
+                        >
+                          <span>{lang.name}</span>
+                          {lang.isNativeSpecial && <span className="ml-1 text-[10px]">⭐</span>}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* 2. CHOOSE GRADE (GRADE 4 TO UNIVERSITY) */}
+                <div className="mt-6">
+                  <div className="flex items-center justify-between mb-2.5">
+                    <span className="text-xs font-mono font-bold uppercase tracking-wider text-white/80 flex items-center gap-1.5">
+                      <GraduationCap className="w-4 h-4 text-[#FFB612]" />
+                      <span>2. Select Grade (Grade 4 to University):</span>
+                    </span>
+                    <span className="text-xs text-[#FFB612] font-bold">
+                      {selectedGradeObj.name} &bull; {selectedGradeObj.level}
+                    </span>
+                  </div>
+
+                  <div className="flex flex-wrap gap-2">
+                    {ALL_GRADES.map((grade) => {
+                      const isSelected = selectedGradeId === grade.id;
+                      return (
+                        <button
+                          key={grade.id}
+                          type="button"
+                          onClick={() => setSelectedGradeId(grade.id)}
+                          className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
+                            isSelected
+                              ? 'bg-[#FFB612] text-black font-black shadow-md shadow-yellow-500/20 scale-105'
+                              : 'bg-white/10 hover:bg-white/20 text-white/90 border border-white/10'
+                          }`}
+                        >
+                          <span>{grade.name}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* 3. BUTTONS */}
+                <div className="mt-8 pt-6 border-t border-white/10 space-y-3">
+                  <div className="flex flex-col sm:flex-row items-stretch gap-3">
+                    <button
+                      type="button"
+                      onClick={handleStartLearning}
+                      className="flex-1 py-4 px-5 rounded-2xl bg-[#007A4D] hover:bg-emerald-600 text-white font-black text-sm sm:text-base shadow-xl shadow-emerald-950/40 transition-all transform hover:-translate-y-0.5 active:translate-y-0 flex items-center justify-center gap-2.5 text-center cursor-pointer"
+                    >
+                      <Sparkles className="w-5 h-5 text-[#FFB612] shrink-0" />
+                      <span>Free Access Week &mdash; Start Learning Now</span>
+                      <ArrowRight className="w-4 h-4 shrink-0 ml-0.5" />
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={navigateToUnlock}
+                      className="flex-1 py-4 px-5 rounded-2xl bg-[#FFB612] hover:bg-yellow-400 text-black font-black text-sm sm:text-base shadow-xl shadow-yellow-500/30 transition-all transform hover:-translate-y-0.5 active:translate-y-0 flex items-center justify-center gap-2.5 text-center cursor-pointer"
+                    >
+                      <KeyRound className="w-5 h-5 text-black shrink-0" />
+                      <span>Free Promotion Status</span>
+                    </button>
+                  </div>
+
+                  <div>
+                    <button
+                      type="button"
+                      onClick={() => navigateToPastPapers(selectedGradeId)}
+                      className="w-full py-3.5 px-6 rounded-full bg-white hover:bg-slate-100 border-2 border-[#0A1F44] text-[#0A1F44] font-bold text-sm shadow-md transition-all cursor-pointer flex items-center justify-center gap-2"
+                    >
+                      <span>📚 Past Papers &amp; Memos &mdash; FREE Preview</span>
+                      <ArrowRight className="w-4 h-4" />
+                    </button>
+                  </div>
                 </div>
               </div>
-            </div>
+            )}
 
             {/* Quick Demo CTA */}
             <div className="mt-6 flex items-center justify-center">

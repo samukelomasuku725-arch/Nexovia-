@@ -114,7 +114,8 @@ export type SALanguageCode =
   | 'st'
   | 'tn'
   | 've'
-  | 'ts';
+  | 'ts'
+  | 'sasl';
 
 export interface SALanguage {
   code: SALanguageCode;

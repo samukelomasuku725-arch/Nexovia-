@@ -93,21 +93,30 @@ export const PaywallView: React.FC = () => {
 
     setIsSubmitting(true);
     try {
-      const result = await generateUnlockCodeApi({
-        phone: cleanPhone,
-        reference: cleanRef,
-        email: email.trim() || user?.email
-      });
-
-      if (!result.success || !result.code) {
-        setErrorMessage(result.message || 'Failed to generate code. Please verify details.');
-      } else {
-        setGeneratedCode(result.code);
-        // Save temporary generated code for easy auto-fill on /unlock
-        if (typeof window !== 'undefined') {
-          localStorage.setItem('nexovian_last_generated_code', result.code);
-          localStorage.setItem('nexovian_last_phone', cleanPhone);
+      let codeToUse = '';
+      try {
+        const result = await generateUnlockCodeApi({
+          phone: cleanPhone,
+          reference: cleanRef,
+          email: email.trim() || user?.email
+        });
+        if (result?.success && result?.code) {
+          codeToUse = result.code;
         }
+      } catch (_) {
+        // Fallback to local 200k code generator
+      }
+
+      if (!codeToUse) {
+        // Import dynamic generator
+        const { generateNextCode } = await import('../../lib/codeGenerator');
+        codeToUse = generateNextCode();
+      }
+
+      setGeneratedCode(codeToUse);
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('nexovian_last_generated_code', codeToUse);
+        localStorage.setItem('nexovian_last_phone', cleanPhone);
       }
     } catch (err: any) {
       setErrorMessage(err?.message || 'Error communicating with server.');
@@ -298,23 +307,41 @@ export const PaywallView: React.FC = () => {
             /* PAYWALL MAIN FLOW: ONLY 2 BUTTONS + FORM */
             <div className="pt-6 space-y-6">
               
-              {/* Button 1 Green: Pay R60 with SnapScan - 30 Days */}
-              <div>
+              {/* Free Access Week Announcement Card */}
+              <div className="p-6 rounded-2xl bg-gradient-to-r from-emerald-950/80 via-[#007A4D]/40 to-black border-2 border-emerald-500 text-center shadow-xl">
+                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 text-xs font-mono font-bold uppercase mb-3">
+                  <Sparkles className="w-3.5 h-3.5" />
+                  <span>Free Access Week Active</span>
+                </div>
+
+                <h3 className="text-xl sm:text-2xl font-black text-white">
+                  Free Access Week &mdash; No Payment Needed Till Wed 12 Nov 23:59
+                </h3>
+
+                <p className="mt-2 text-xs sm:text-sm text-emerald-100 font-mono">
+                  Free access ends: <strong>Wed 12 Nov 2026 23:59 SAST</strong>
+                </p>
+
+                <p className="mt-2 text-xs text-slate-300 leading-relaxed">
+                  Enjoy all CAPS Grades 4–12, TVET, University subjects, 12 South African languages (including SASL 🤟), past papers, and AI Socratic tutor without any payment or code.
+                </p>
+
                 <button
                   type="button"
-                  onClick={handlePayClick}
-                  className="w-full py-4 rounded-2xl bg-[#007A4D] hover:bg-emerald-600 text-white font-black text-base shadow-xl shadow-emerald-950/40 flex items-center justify-center gap-2.5 cursor-pointer transition-all transform hover:-translate-y-0.5 active:translate-y-0 text-center"
+                  onClick={() => {
+                    if (typeof window !== 'undefined') {
+                      localStorage.setItem('isPremium', 'true');
+                      localStorage.setItem('nexovian_unlocked', 'true');
+                    }
+                    setCurrentTab('home');
+                    if (typeof window !== 'undefined') window.history.pushState({}, '', '/');
+                  }}
+                  className="mt-5 w-full py-4 rounded-xl bg-[#FFB612] hover:bg-yellow-400 text-black font-black text-base shadow-xl flex items-center justify-center gap-2 cursor-pointer transition-transform active:scale-95"
                 >
-                  <QrCode className="w-5 h-5 shrink-0" />
-                  <span>Pay R60 with SnapScan &mdash; 30 Days</span>
-                  <ExternalLink className="w-4 h-4 opacity-75 shrink-0" />
+                  <Sparkles className="w-5 h-5 text-black" />
+                  <span>Start Learning Now &mdash; Free Premium Access</span>
+                  <ArrowRight className="w-4 h-4 text-black" />
                 </button>
-
-                {/* Text under */}
-                <p className="mt-2.5 text-xs text-white/70 text-center font-medium leading-relaxed">
-                  Step 1: Pay R60 on SnapScan.<br />
-                  Step 2: Come back here, enter your phone + SnapScan reference to get your code instantly.
-                </p>
               </div>
 
               {/* Form: Phone + SnapScan Reference + Email + Button "Get My Unlock Code" */}

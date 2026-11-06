@@ -136,6 +136,17 @@ export const SA_LANGUAGE_CAPABILITIES: LanguageCapabilityMap = {
     sttDialect: 'ts-ZA',
     ttsVoiceAvailable: false,
     notes: 'Speech recognition supported via Gemini AI transcription. Audio playback unavailable on standard OS engines; text explanations are shown.'
+  },
+  sasl: {
+    code: 'sasl',
+    name: 'SASL 🤟 (Sign Language)',
+    nativeName: 'SASL 🤟',
+    text: true,
+    speechToText: false,
+    textToSpeech: false,
+    sttDialect: 'en-ZA',
+    ttsVoiceAvailable: false,
+    notes: 'South African Sign Language visual learning resources, videos, and dictionary supported.'
   }
 };
 
