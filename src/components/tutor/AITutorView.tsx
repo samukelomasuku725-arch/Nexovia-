@@ -274,6 +274,7 @@ export function AITutorView() {
     activeConversation,
     sendMessageToTutor,
     isTutorLoading,
+    tutorError,
     generateQuiz,
     activeGeneratedQuiz,
     setActiveGeneratedQuiz
@@ -438,97 +439,24 @@ Bala leswi: $x^2 - 7x + 10 = 0$
     return null;
   };
 
+  const [tutorErrorBanner, setTutorErrorBanner] = useState<string | null>(null);
+  const [lastQuery, setLastQuery] = useState<string>('');
+
   const handleSend = async (textToSend?: string) => {
     const query = (textToSend || inputMessage).trim();
     if (!query) return;
 
+    // Clear input immediately upon submit
     setInputMessage('');
+    setTutorErrorBanner(null);
+    setLastQuery(query);
 
-    // Check Database First!
-    const verifiedDbMatch = findInVerifiedDatabase(query);
-
-    if (activeConversation) {
-      try {
-        await sendMessageToTutor(query, selectedMode, selectedLang);
-      } catch (e) {
-        console.error('Tutor error:', e);
-      }
-    } else {
-      // Local Socratic interaction with strict "DO NOT invent translations" prompt
-      const userMsg: Message = {
-        id: `user-${Date.now()}`,
-        role: 'user',
-        content: query,
-        timestamp: new Date().toISOString(),
-        mode: selectedMode
-      };
-
-      setFallbackMessages((prev) => [...prev, userMsg]);
-
-      setTimeout(() => {
-        let aiContent = '';
-
-        if (verifiedDbMatch) {
-          aiContent = verifiedDbMatch;
-        } else if (query.toLowerCase().includes('isizulu') || selectedLang === 'zu') {
-          aiContent = `Sawubona! Ake sibheke i-**Quadratic Equation**: **$ax^2 + bx + c = 0$**.
-
-1. **Ukuhlukanisa (Factorization)**: Sifuna izinombolo ezimbili eziphindaphindwa zisinike $c$, futhi zihlanganiswe zisinike $b$.
-2. **Ifomula**: $x = \\frac{-b \\pm \\sqrt{b^2 - 4ac}}{2a}$
-
-*Strictly no invented translations • Native verified vocabulary prioritized.*
-
-Ufuna sizame isibonelo se-$x^2 + 5x + 6 = 0$?`;
-        } else if (query.toLowerCase().includes('real-world') || query.includes('example')) {
-          aiContent = `Here is a **real-world example** of Quadratic Equations:
-
-### Projectile Motion (Sports & Engineering)
-When a soccer ball is kicked in a game, its height $h$ (in meters) over time $t$ (in seconds) is given by:
-$$h(t) = -5t^2 + 20t$$
-
-1. **When does the ball hit the ground?**
-   Set $h(t) = 0$:
-   $$-5t(t - 4) = 0$$
-   Roots are $t = 0$ (kick-off) and $t = 4\\text{ s}$ (ball lands on the pitch!).
-
-Would you like to calculate the peak height or solve another problem?`;
-        } else if (query.includes('Mundyondisi') || query.includes('uhlamisela') || selectedLang === 'ts') {
-          aiContent = `Ahee! A hi sunguleni hi **Xivhutiso 1**: $x^2 + 5x + 6 = 0$.
-
-### A hi swi tlhantlheni hi magoza:
-1. Kuma tinomboro leti loko u ti **phinda** ti endlaka 6, naswona loko u ti **yengetela** ti endla 5:
-   * $2 \\times 3 = 6$ na $2 + 3 = 5$
-2. Mabhege: $(x + 2)(x + 3) = 0$
-3. Nhlamulo: $x = -2$ kumbe $x = -3$
-
-**Kombisa ntirho wa wena**: Ringeta $x^2 - 7x + 10 = 0$!`;
-        } else {
-          aiContent = `Socratic Step for **"${query}"** in **${activeLangConfig.name}**:
-
-1. **Identify the Core Principle**: What formula or theorem governs this question?
-2. **Step-by-Step Logic**: Write out the values before substituting.
-3. **Verified Knowledge**: Strict native vocabulary enforced — zero invented words.
-
-Shall we work through this question together, or would you like a practice assessment?`;
-        }
-
-        const aiMsg: Message = {
-          id: `ai-${Date.now()}`,
-          role: 'assistant',
-          content: aiContent,
-          timestamp: new Date().toISOString(),
-          mode: selectedMode,
-          disclaimer: `${activeLangConfig.name} Language Engine Active • Controlled native vocabulary prioritized • Strictly no invented translations`,
-          verifiedSource: activeLangConfig.badge,
-          followUps: [
-            'Can you give a real-world example of this topic?',
-            'Walk me through the step-by-step solution.',
-            'Give me another practice question.'
-          ]
-        };
-
-        setFallbackMessages((prev) => [...prev, aiMsg]);
-      }, 700);
+    // Call Socratic Tutor
+    try {
+      await sendMessageToTutor(query, selectedMode, selectedLang);
+    } catch (e: any) {
+      console.warn('Tutor error:', e);
+      setTutorErrorBanner(e?.message || 'Could not load response. Tap to Retry.');
     }
   };
 
@@ -768,11 +696,30 @@ Shall we work through this question together, or would you like a practice asses
         })}
 
         {isTutorLoading && (
-          <div className="flex items-center gap-3 p-4 bg-[#1a1a1a] border border-[#2e2e32] rounded-2xl max-w-sm">
-            <div className="w-3 h-3 rounded-full bg-[#fbbf24] animate-ping" />
-            <span className="text-xs font-mono text-[#fbbf24]">
-              Consulting {activeLangConfig.name} database first...
+          <div className="flex items-center gap-3 p-4 bg-[#1a1a1a] border border-[#fbbf24]/30 rounded-2xl max-w-sm shadow-[0_0_20px_rgba(251,191,36,0.15)] animate-pulse">
+            <div className="flex items-center gap-1.5">
+              <span className="w-2.5 h-2.5 rounded-full bg-[#fbbf24] animate-bounce" style={{ animationDelay: '0ms' }} />
+              <span className="w-2.5 h-2.5 rounded-full bg-[#fbbf24] animate-bounce" style={{ animationDelay: '150ms' }} />
+              <span className="w-2.5 h-2.5 rounded-full bg-[#fbbf24] animate-bounce" style={{ animationDelay: '300ms' }} />
+            </div>
+            <span className="text-xs font-mono text-[#fbbf24] font-bold">
+              Tisha is typing in {activeLangConfig.name}...
             </span>
+          </div>
+        )}
+
+        {(tutorErrorBanner || tutorError) && (
+          <div className="flex items-center justify-between gap-3 p-4 bg-red-950/40 border border-red-500/50 rounded-2xl text-red-200 text-xs shadow-lg">
+            <div className="flex items-center gap-2">
+              <HelpCircle className="w-4 h-4 text-red-400 shrink-0" />
+              <span>{tutorErrorBanner || tutorError}</span>
+            </div>
+            <button
+              onClick={() => handleSend(lastQuery)}
+              className="px-3.5 py-1.5 bg-[#fbbf24] hover:bg-yellow-400 text-black font-black rounded-xl text-xs cursor-pointer shadow-md transition-all active:scale-95"
+            >
+              Retry
+            </button>
           </div>
         )}
 

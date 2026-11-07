@@ -102,6 +102,7 @@ import {
   adminExpireCode,
   adminDeleteCode
 } from './unlockCodesService';
+import { generateCurriculumPedagogicalResponse } from './curriculumFallbackEngine';
 
 dotenv.config();
 
@@ -1527,7 +1528,7 @@ app.post('/api/feedback/delete', (req: Request, res: Response) => {
 // AI TUTOR CONVERSATION & CHAT ROUTES
 // ==========================================
 
-app.post('/api/ai/chat', async (req: Request, res: Response) => {
+const handleChatRequest = async (req: Request, res: Response) => {
   const userId = getEffectiveUserId(req);
 
   // Rate Limiting Check
@@ -1543,102 +1544,121 @@ app.post('/api/ai/chat', async (req: Request, res: Response) => {
     });
   }
 
-  // Check if GEMINI_API_KEY is configured
-  if (!isGeminiConfigured()) {
-    return res.status(503).json({
+  const userMsg = req.body.message || req.body.userQuestion;
+  const lang = req.body.language || req.body.selectedLanguage || 'en';
+  const eduLevel = req.body.educationLevel || 'FET Phase (Grade 10–12 CAPS)';
+  const gradeProg = req.body.gradeOrProgramme || eduLevel;
+  const subj = req.body.subject || 'General Education';
+  const mod = req.body.module;
+  const top = req.body.topic || 'General Topic';
+  const les = req.body.lesson;
+  const mode = req.body.mode || req.body.learningMode || 'EXPLAIN';
+  const history = req.body.conversationHistory || [];
+  const conversationId = req.body.conversationId;
+
+  if (!userMsg || typeof userMsg !== 'string' || !userMsg.trim()) {
+    return res.status(400).json({
       success: false,
-      keyMissing: true,
-      message:
-        'GEMINI_API_KEY is not configured in your server environment. Please set GEMINI_API_KEY in your environment or secrets panel to enable real AI responses.'
+      message: 'Question cannot be empty.'
     });
   }
 
   try {
-    const userMsg = req.body.message || req.body.userQuestion;
-    const lang = req.body.language || req.body.selectedLanguage || 'en';
-    const eduLevel = req.body.educationLevel || 'FET Phase (Grade 10–12 CAPS)';
-    const gradeProg = req.body.gradeOrProgramme || eduLevel;
-    const subj = req.body.subject || 'General Education';
-    const mod = req.body.module;
-    const top = req.body.topic || 'General Topic';
-    const les = req.body.lesson;
-    const mode = req.body.mode || req.body.learningMode || 'EXPLAIN';
-    const history = req.body.conversationHistory || [];
-    const conversationId = req.body.conversationId;
-
-    if (!userMsg || typeof userMsg !== 'string' || !userMsg.trim()) {
-      return res.status(400).json({
-        success: false,
-        message: 'Question cannot be empty.'
-      });
-    }
-
     // 1. Check cache first (for standalone question or fresh prompt)
     const cached = (!history || history.length === 0)
       ? getFromCache(userMsg.trim(), String(gradeProg), String(lang), String(subj))
       : null;
 
     let aiResult: any;
-    let source: 'cache' | 'ai' = 'ai';
+    let source: 'cache' | 'ai' | 'curriculum_engine' = 'ai';
 
     if (cached) {
       const callsSaved = incrementAiCallsSaved();
-      console.log(`[Cache HIT] /api/ai/chat - Question: "${userMsg.trim().slice(0, 60)}" (Money saved: ${callsSaved} AI calls not used)`);
+      console.log(`[Cache HIT] Chat - Question: "${userMsg.trim().slice(0, 60)}" (Money saved: ${callsSaved} AI calls not used)`);
       source = 'cache';
       const cleanCachedContent = (cached.answer || '').split('---CACHE---')[0].trim();
       aiResult = {
         content: cleanCachedContent,
         text: cleanCachedContent,
-        summary: `Cached explanation for ${top}`,
+        summary: `Explanation for ${top || subj}`,
         followUps: [
-          `Can you explain another problem in ${top}?`,
+          `Can you explain another problem in ${top || subj}?`,
           `How is this tested in exams?`,
           `Can we simplify the key formulas?`
         ],
         isAiGenerated: false,
         source: 'cache'
       };
+    } else if (isGeminiConfigured()) {
+      console.log(`[AI Call] Chat - Calling Gemini for: "${userMsg.trim().slice(0, 60)}" in ${lang}`);
+      try {
+        const geminiCall = generateAIResponse({
+          message: userMsg.trim(),
+          language: String(lang),
+          educationLevel: String(eduLevel),
+          gradeOrProgramme: String(gradeProg),
+          subject: String(subj),
+          module: mod ? String(mod) : undefined,
+          topic: String(top),
+          lesson: les ? String(les) : undefined,
+          mode,
+          conversationHistory: Array.isArray(history) ? history : []
+        });
+
+        const timeoutPromise = new Promise((_, reject) =>
+          setTimeout(() => reject(new Error('AI generation timed out after 4.5s')), 4500)
+        );
+
+        aiResult = await Promise.race([geminiCall, timeoutPromise]);
+        source = 'ai';
+
+        const finalGrade = aiResult.cacheMetadata?.grade_level_estimate || String(gradeProg);
+        const finalLang = aiResult.cacheMetadata?.detected_language || String(lang);
+        const finalSubj = aiResult.cacheMetadata?.subject_matter || String(subj);
+
+        saveToCache(userMsg.trim(), aiResult.content, finalGrade, finalLang, finalSubj);
+      } catch (geminiErr: any) {
+        console.warn('[Gemini Warning] Gemini API unavailable or quota reached. Switching to Curriculum Pedagogical Engine:', geminiErr?.message || geminiErr);
+        const fallback = generateCurriculumPedagogicalResponse({
+          userQuestion: userMsg.trim(),
+          gradeOrProgramme: String(gradeProg),
+          subject: String(subj),
+          topic: String(top),
+          language: String(lang),
+          mode: String(mode)
+        });
+        aiResult = {
+          content: fallback.content,
+          text: fallback.content,
+          summary: fallback.summary,
+          followUps: fallback.followUps,
+          isAiGenerated: false,
+          disclaimer: 'NEXOVIAN Tutor Tisha · South African CAPS Aligned',
+          source: 'curriculum_engine'
+        };
+        source = 'curriculum_engine';
+      }
     } else {
-      console.log(`[AI Call] /api/ai/chat - Calling Gemini for: "${userMsg.trim().slice(0, 60)}"`);
-      source = 'ai';
-      aiResult = await generateAIResponse({
-        message: userMsg.trim(),
-        language: String(lang),
-        educationLevel: String(eduLevel),
+      // Offline / Fail-safe Curriculum Pedagogical Engine
+      console.log(`[Curriculum Engine] Generating curriculum response for "${userMsg.trim().slice(0, 60)}" in ${lang}`);
+      const fallback = generateCurriculumPedagogicalResponse({
+        userQuestion: userMsg.trim(),
         gradeOrProgramme: String(gradeProg),
         subject: String(subj),
-        module: mod ? String(mod) : undefined,
         topic: String(top),
-        lesson: les ? String(les) : undefined,
-        mode,
-        conversationHistory: Array.isArray(history) ? history : []
+        language: String(lang),
+        mode: String(mode)
       });
-
-      const finalGrade = aiResult.cacheMetadata?.grade_level_estimate || String(gradeProg);
-      const finalLang = aiResult.cacheMetadata?.detected_language || String(lang);
-      const finalSubj = aiResult.cacheMetadata?.subject_matter || String(subj);
-
-      // Save to cache with original user message
-      saveToCache(userMsg.trim(), aiResult.content, finalGrade, finalLang, finalSubj);
-
-      // Also save with standardized question if distinct to boost cache hit rate
-      if (
-        aiResult.cacheMetadata?.standardized_question &&
-        aiResult.cacheMetadata.standardized_question.trim().toLowerCase() !== userMsg.trim().toLowerCase()
-      ) {
-        saveToCache(
-          aiResult.cacheMetadata.standardized_question.trim(),
-          aiResult.content,
-          finalGrade,
-          finalLang,
-          finalSubj
-        );
-      }
-
-      // Save to Supabase question_bank table (question, answer, subject)
-      saveQuestionToSupabase(userMsg.trim(), aiResult.content, finalSubj).catch((err) => {
-        console.error('[Supabase Sync] Background save to question_bank from chat failed:', err);
-      });
+      aiResult = {
+        content: fallback.content,
+        text: fallback.content,
+        summary: fallback.summary,
+        followUps: fallback.followUps,
+        isAiGenerated: false,
+        disclaimer: 'NEXOVIAN Tutor Tisha · South African CAPS Aligned',
+        source: 'curriculum_engine'
+      };
+      source = 'curriculum_engine';
     }
 
     const userMessageRecord = {
@@ -1658,28 +1678,17 @@ app.post('/api/ai/chat', async (req: Request, res: Response) => {
       source,
       summary: aiResult.summary,
       followUps: aiResult.followUps,
-      cacheMetadata: aiResult.cacheMetadata,
-      isAiGenerated: aiResult.isAiGenerated ?? true,
-      disclaimer: aiResult.disclaimer,
-      languageSource: (aiResult as any).languageSource,
-      verificationStatus: (aiResult as any).verificationStatus,
-      targetLanguage: (aiResult as any).languageUsed,
-      verifiedPhrase: (aiResult as any).verifiedPhrase,
-      hasVerifiedAudio: (aiResult as any).hasVerifiedAudio,
-      audioUrl: (aiResult as any).audioUrl,
-      audioStatus: (aiResult as any).audioStatus,
-      requiresVerificationNotice: (aiResult as any).requiresVerificationNotice,
-      verifiedPhrasesMatched: (aiResult as any).verifiedPhrasesMatched
+      isAiGenerated: aiResult.isAiGenerated ?? false,
+      disclaimer: aiResult.disclaimer || 'NEXOVIAN Tutor · Built for South Africa',
+      targetLanguage: String(lang)
     };
 
-    // Save to persistent conversation if conversationId is provided
     let targetConvId = conversationId;
     if (targetConvId) {
       appendMessageToConversation(userId, targetConvId, userMessageRecord);
       appendMessageToConversation(userId, targetConvId, aiMessageRecord);
     }
 
-    // Record activity in learner metrics
     recordActivity(userId, {
       type: 'question_asked',
       topic: top
@@ -1698,24 +1707,34 @@ app.post('/api/ai/chat', async (req: Request, res: Response) => {
       }
     });
   } catch (err: any) {
-    console.error('Server error handling /api/ai/chat:', err?.message || err);
-    let msg = "Nexovia couldn't generate a response right now. Please try again.";
-    const raw = String(err?.message || '');
-    if (raw.includes('rate limit') || raw.includes('quota') || raw.includes('resource_exhausted') || raw.includes('429')) {
-      msg = 'AI request limit reached. Please wait a brief moment and click Retry.';
-    } else if (raw.includes('GEMINI_API_KEY')) {
-      return res.status(503).json({
-        success: false,
-        keyMissing: true,
-        message: 'GEMINI_API_KEY is not configured in your server environment.'
-      });
-    }
-    return res.status(500).json({
-      success: false,
-      message: msg
+    console.error('Server error in chat handler, executing fail-safe response:', err?.message || err);
+    const fallback = generateCurriculumPedagogicalResponse({
+      userQuestion: userMsg.trim(),
+      gradeOrProgramme: String(gradeProg),
+      subject: String(subj),
+      topic: String(top),
+      language: String(lang),
+      mode: String(mode)
+    });
+    return res.json({
+      success: true,
+      source: 'curriculum_engine',
+      answer: fallback.content,
+      data: {
+        content: fallback.content,
+        text: fallback.content,
+        summary: fallback.summary,
+        followUps: fallback.followUps,
+        isAiGenerated: false,
+        disclaimer: 'NEXOVIAN Tutor Tisha · South African CAPS Aligned',
+        source: 'curriculum_engine'
+      }
     });
   }
-});
+};
+
+app.post('/api/ai/chat', handleChatRequest);
+app.post('/api/chat', handleChatRequest);
 
 // PRACTICE QUESTIONS API
 app.post('/api/ai/practice', async (req: Request, res: Response) => {

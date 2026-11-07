@@ -40,6 +40,7 @@ import { useAuth } from '../../context/AuthContext';
 import { checkAccess, verifyAndUnlockPayment } from '../../services/snapscanSubscriptionService';
 import { ALL_11_LANGUAGES } from '../home/PublicLandingView';
 import { EXPANDED_PAST_PAPERS_CATALOG, BASE_GRADE_SUBJECT_MAP } from '../../data/expandedPastPapersCatalog';
+import { generatePaperExplanation } from '../../services/language/paperExplanationGenerator';
 
 interface PastPaperQuestion {
   id: string;
@@ -310,7 +311,7 @@ export const ALL_SUBJECT_FILTERS = [
 ];
 
 export const PastPapersView: React.FC = () => {
-  const { setCurrentTab } = useLearning();
+  const { setCurrentTab, updateLearningContext, setActiveLearningLanguage, sendMessageToTutor } = useLearning();
   const { user } = useAuth();
 
   const [selectedGrade, setSelectedGrade] = useState<string>('grade-12');
@@ -380,6 +381,23 @@ export const PastPapersView: React.FC = () => {
 
   const activePaper =
     filteredPapers.find((p) => p.id === activePaperId) || filteredPapers[0] || PAST_PAPERS_DATABASE[0];
+
+  const handleAskTishaToExplain = (q: PastPaperQuestion) => {
+    const langObj = ALL_11_LANGUAGES.find((l) => l.name === selectedLanguage) || ALL_11_LANGUAGES[0];
+    updateLearningContext({
+      gradeOrProgramme: activePaper.gradeName,
+      subject: activePaper.subject,
+      topic: `${activePaper.title} - ${q.questionNumber}`
+    });
+    if (setActiveLearningLanguage) {
+      setActiveLearningLanguage(langObj.code);
+    }
+    const prompt = `Please explain ${activePaper.gradeName} ${activePaper.subject} ${activePaper.title} (${q.questionNumber}) in ${selectedLanguage} step-by-step: "${q.questionText}"`;
+    sendMessageToTutor(prompt, 'explain', langObj.code).catch((err) => {
+      console.warn('Auto send to tutor error:', err);
+    });
+    setCurrentTab('home');
+  };
 
   return (
     <div className="min-h-screen bg-[#000000] text-white font-sans antialiased selection:bg-[#FFD700] selection:text-black pb-24">
@@ -674,10 +692,16 @@ export const PastPapersView: React.FC = () => {
               <div className="mt-6 space-y-6">
                 {activePaper.questions.map((q, idx) => {
                   const isFree = idx < 2 || accessState.allow;
-                  const explanation =
-                    q.explanationsInLanguages[selectedLanguage] ||
-                    q.explanationsInLanguages['English'] ||
-                    'Step-by-step breakdown available in premium version.';
+                  const structuredExp = generatePaperExplanation({
+                    questionNumber: q.questionNumber,
+                    questionText: q.questionText,
+                    officialMemoEn: q.officialMemoEn,
+                    marks: q.marks,
+                    gradeName: activePaper.gradeName,
+                    subject: activePaper.subject,
+                    language: selectedLanguage,
+                    topic: activePaper.title
+                  });
 
                   return (
                     <div
@@ -712,27 +736,98 @@ export const PastPapersView: React.FC = () => {
 
                       {/* Memo Content: Unlocked or Blurred + Lock */}
                       {isFree ? (
-                        <div className="space-y-3">
+                        <div className="space-y-4">
                           {/* Official English Memo */}
-                          <div className="p-3.5 rounded-2xl bg-white/5 border border-white/10 text-xs font-mono text-white/70">
-                            <span className="text-[#FFB612] font-bold block mb-1">
-                              Official DBE Memo (Examiner&apos;s Solution):
+                          <div className="p-4 rounded-2xl bg-white/5 border border-white/10 text-xs font-mono text-white/80">
+                            <span className="text-[#FFB612] font-bold block mb-1.5 flex items-center gap-2">
+                              <FileText className="w-3.5 h-3.5 text-[#FFB612]" />
+                              Official DBE Memo (Examiner&apos;s Solution &mdash; English):
                             </span>
-                            <pre className="whitespace-pre-wrap font-mono text-[11px]">
+                            <pre className="whitespace-pre-wrap font-mono text-xs text-white/90 leading-relaxed">
                               {q.officialMemoEn}
                             </pre>
                           </div>
 
                           {/* Mother Tongue Step-by-Step Breakdown */}
-                          <div className="p-4 rounded-2xl bg-[#007A4D]/15 border border-[#007A4D]/50 text-white">
-                            <div className="flex items-center gap-2 text-xs font-mono font-bold text-emerald-300 uppercase mb-1.5">
-                              <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-                              <span>Step-by-Step Explanation in {selectedLanguage}</span>
+                          <div className="p-5 rounded-2xl bg-[#007A4D]/15 border border-[#007A4D]/50 text-white space-y-3">
+                            <div className="flex items-center justify-between gap-2 border-b border-[#007A4D]/30 pb-2">
+                              <div className="flex items-center gap-2 text-xs font-mono font-bold text-emerald-300 uppercase">
+                                <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                                <span>Step-by-Step Explanation in {selectedLanguage}</span>
+                              </div>
+                              <span className="text-[10px] font-mono text-emerald-200/80 bg-emerald-950/60 px-2 py-0.5 rounded-full border border-emerald-500/30">
+                                REAL DBE TEACHING
+                              </span>
                             </div>
-                            <p className="text-xs sm:text-sm text-white/90 leading-relaxed font-sans font-medium">
-                              {explanation}
-                            </p>
+
+                            {/* What is asked */}
+                            <div className="text-xs sm:text-sm text-white/90 leading-relaxed font-sans font-medium">
+                              <span className="text-amber-300 font-bold block mb-1">🎯 Umnyombo Wombuzo (What Question Asks):</span>
+                              <p>{structuredExp.whatIsAsked}</p>
+                            </div>
+
+                            {/* Keywords */}
+                            {structuredExp.keywords.length > 0 && (
+                              <div className="pt-2 border-t border-[#007A4D]/20">
+                                <span className="text-emerald-300 font-bold text-xs block mb-1.5 font-mono">🔑 Amagama Abalulekile (Keywords in {selectedLanguage}):</span>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                  {structuredExp.keywords.map((kw, kIdx) => (
+                                    <div key={kIdx} className="p-2.5 rounded-xl bg-black/40 border border-white/10 text-xs">
+                                      <span className="text-[#FFB612] font-bold block">{kw.term}</span>
+                                      <span className="text-white/70 text-[11px]">{kw.explanation}</span>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Step by step breakdown */}
+                            <div className="pt-2 border-t border-[#007A4D]/20 space-y-2">
+                              <span className="text-emerald-300 font-bold text-xs block font-mono">📝 Izinyathelo zokuxazulula (Steps 1, 2, 3):</span>
+                              {structuredExp.steps.map((st) => (
+                                <div key={st.stepNumber} className="flex items-start gap-2.5 text-xs text-white/90 bg-black/30 p-2.5 rounded-xl border border-white/5">
+                                  <span className="w-5 h-5 rounded-full bg-[#FFB612] text-black font-black flex items-center justify-center shrink-0 text-[10px]">
+                                    {st.stepNumber}
+                                  </span>
+                                  <div className="flex-1">
+                                    <div className="flex items-center justify-between gap-2 mb-0.5">
+                                      <span className="font-bold text-white">{st.title}</span>
+                                      <span className="text-[#FFB612] font-mono text-[10px]">{st.markAllocation}</span>
+                                    </div>
+                                    <p className="text-white/80 text-[11px] leading-relaxed">{st.detail}</p>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+
+                            {/* Common mistakes */}
+                            {structuredExp.commonMistakes.length > 0 && (
+                              <div className="pt-2 border-t border-[#007A4D]/20 text-xs">
+                                <span className="text-amber-400 font-bold block mb-1 font-mono">⚠️ Amaphutha avamile (Examiner Traps to Avoid):</span>
+                                <ul className="list-disc list-inside space-y-0.5 text-white/80 text-[11px]">
+                                  {structuredExp.commonMistakes.map((cm, cIdx) => (
+                                    <li key={cIdx}>{cm}</li>
+                                  ))}
+                                </ul>
+                              </div>
+                            )}
+
+                            {/* Exam tip */}
+                            <div className="p-2.5 rounded-xl bg-black/40 border border-[#FFB612]/30 text-[11px] text-[#FFB612] flex items-center gap-2">
+                              <Sparkles className="w-4 h-4 shrink-0 text-[#FFB612]" />
+                              <span><strong>Isu Lokuhlola:</strong> {structuredExp.examTip}</span>
+                            </div>
                           </div>
+
+                          {/* Action Button: Ask NEXOVIAN to Explain This Question in [selectedLanguage] */}
+                          <button
+                            onClick={() => handleAskTishaToExplain(q)}
+                            className="w-full py-3 px-4 rounded-2xl bg-[#0A1F44] hover:bg-[#122e66] border-2 border-[#FFB612] text-[#FFB612] hover:text-white font-black text-xs sm:text-sm flex items-center justify-center gap-2.5 transition-all cursor-pointer shadow-xl hover:shadow-[0_0_20px_rgba(255,182,18,0.3)] active:scale-[0.99]"
+                          >
+                            <Sparkles className="w-4 h-4 text-[#FFB612]" />
+                            <span>🤖 Ask NEXOVIAN to Explain This Question in {selectedLanguage}</span>
+                            <ArrowRight className="w-4 h-4" />
+                          </button>
                         </div>
                       ) : (
                         <div className="relative rounded-2xl overflow-hidden mt-3">

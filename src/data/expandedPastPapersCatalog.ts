@@ -14,6 +14,8 @@
  * with label "Original English/Afrikaans + Explain in YOUR language [selectedLanguage]"
  */
 
+import { getExamQuestionForSubject } from './realExamTopicsCatalog';
+
 export interface PastPaperQuestion {
   id: string;
   questionNumber: string;
@@ -153,6 +155,14 @@ function createPapersForSubject(
 ): PastPaper[] {
   const cleanId = `${gradeId}-${subject.toLowerCase().replace(/[^a-z0-9]/g, '-')}`;
 
+  const p1q1 = getExamQuestionForSubject(gradeId, gradeName, subject, 'Paper 1', 1);
+  const p1q2 = getExamQuestionForSubject(gradeId, gradeName, subject, 'Paper 1', 2);
+  const p2q1 = getExamQuestionForSubject(gradeId, gradeName, subject, 'Paper 2', 1);
+  const p2q2 = getExamQuestionForSubject(gradeId, gradeName, subject, 'Paper 2', 2);
+
+  const duration = gradeId.startsWith('grade-4') || gradeId.startsWith('grade-5') || gradeId.startsWith('grade-6') ? '1.5 Hours' : '3 Hours';
+  const totalMarks = gradeId.startsWith('grade-4') || gradeId.startsWith('grade-5') ? 50 : 150;
+
   return [
     {
       id: `${cleanId}-2024-p1`,
@@ -162,40 +172,32 @@ function createPapersForSubject(
       gradeId,
       gradeName,
       subject,
-      duration: gradeId.startsWith('grade-4') || gradeId.startsWith('grade-5') || gradeId.startsWith('grade-6') ? '1.5 Hours' : '3 Hours',
-      totalMarks: gradeId.startsWith('grade-4') || gradeId.startsWith('grade-5') ? 50 : 150,
+      duration,
+      totalMarks,
       paperType: 'Paper 1',
       languageNote: 'Original English/Afrikaans + Explain in YOUR language',
       questions: [
         {
           id: `${cleanId}-2024-q1`,
           questionNumber: 'Question 1.1',
-          marks: 4,
-          questionText: `Solve the foundational problem for ${subject} (${gradeName} curriculum standards).`,
-          officialMemoEn: `Examiner Memo Solution: Complete working guideline following DBE national assessment framework for ${subject}.`,
+          marks: p1q1.marks,
+          questionText: p1q1.questionText,
+          officialMemoEn: p1q1.officialMemoEn,
           explanationsInLanguages: {
-            'English': `Step-by-step breakdown for ${subject} (${gradeName}): Focus on key principles, standard units, and systematic solution layout.`,
-            'isiZulu': `Isinyathelo ngesinyathelo sesifundo se-${subject} (${gradeName}): Landela umthetho wememo ukuze uthole amamaki aphelele.`,
-            'Afrikaans': `Stap-vir-stap verduideliking vir ${subject} (${gradeName}): Volg die amptelike nasienriglyne vir maksimum punte.`,
-            'Sepedi': `Mogato ka mogato wa ${subject} (${gradeName}): Šomiša mekgwa ya maleba go hwetša dintlha tša maleba.`,
-            'Sesotho': `Mohato ka mohato bakeng sa ${subject} (${gradeName}): Sebelisa mehlala e nepahetseng bakeng sa tlhahlobo.`,
-            'isiXhosa': `Inyathelo ngenyathelo le-${subject} (${gradeName}): Sebenzisa isikhokelo sememo ukufumana amanqaku apheleleyo.`,
-            'Setswana': `Kgato ka kgato ya ${subject} (${gradeName}): Latela dikaelo tsa go tshwaya tsa bosetšhaba.`,
-            'Xitsonga': `Goza hi goza eka dyondzo ya ${subject} (${gradeName}): Landzelerisa swiletelo swa memo ku kuma timaraka hinkwato.`,
-            'siSwati': `Sinhatselo ngesinhatselo se-${subject} (${gradeName}): Landzela inchazelo yekumaka kutfola emamaki lagcwele.`,
-            'Tshivenda': 'Maga nga maga a ngudo: Tevhedzani ndaela dza u vhala dza pfunzo ya lushaka.',
-            'isiNdebele': 'Igadango ngegadango lesifundo: Sebenzisa amagadango wokumaka ukuthola amamaki apheleleko.'
+            'English': `CAPS Step-by-Step Breakdown (${subject}): Focus on question keywords and full algebraic/conceptual working.`,
+            'isiZulu': `Incazelo ye-CAPS Yesinyathelo ngesinyathelo: Landela imithetho ye-DBE ukuze uthole amamaki aphelele.`,
+            'Afrikaans': `Stap-vir-stap verduideliking vir ${subject}: Volg die amptelike nasienriglyne vir maksimum punte.`
           }
         },
         {
           id: `${cleanId}-2024-q2`,
           questionNumber: 'Question 1.2',
-          marks: 6,
-          questionText: `Detailed analysis and calculation question for ${subject} (${gradeName}).`,
-          officialMemoEn: `Complete scoring breakdown: Concept application (2 marks), intermediate calculation (2 marks), final conclusion with correct units (2 marks).`,
+          marks: p1q2.marks,
+          questionText: p1q2.questionText,
+          officialMemoEn: p1q2.officialMemoEn,
           explanationsInLanguages: {
-            'English': `Model explanation: Breaking down the core reasoning and avoiding examiner traps for ${subject}.`,
-            'isiZulu': `Incazelo eyisibonelo: Ukuqonda kahle umnyombo walo mbuzo ukuze ungaweli ezithiyweni zikamaki.`
+            'English': `Model DBE analysis: Detailed scoring breakdown and avoiding common traps for ${subject}.`,
+            'isiZulu': `Ukuhlaziya kwe-DBE: Ukuqonda kahle umnyombo walo mbuzo ukuze ungaweli ezithiyweni zikamaki.`
           }
         }
       ]
@@ -208,30 +210,31 @@ function createPapersForSubject(
       gradeId,
       gradeName,
       subject,
-      duration: gradeId.startsWith('grade-4') || gradeId.startsWith('grade-5') || gradeId.startsWith('grade-6') ? '1.5 Hours' : '3 Hours',
-      totalMarks: gradeId.startsWith('grade-4') || gradeId.startsWith('grade-5') ? 50 : 150,
+      duration,
+      totalMarks,
       paperType: 'Paper 2',
       languageNote: 'Original English/Afrikaans + Explain in YOUR language',
       questions: [
         {
           id: `${cleanId}-2023-q1`,
           questionNumber: 'Question 1.1',
-          marks: 5,
-          questionText: `Paper 2 section A exam question covering ${subject} application and interpretation.`,
-          officialMemoEn: `Official marking memo: Apply definitions, identify relationships, and compute result.`,
+          marks: p2q1.marks,
+          questionText: p2q1.questionText,
+          officialMemoEn: p2q1.officialMemoEn,
           explanationsInLanguages: {
-            'English': `Paper 2 strategy: Highlight keywords in the question and show all intermediate working clearly.`,
+            'English': `Paper 2 core analysis: Systematically break down the curriculum criteria and provide accurate reasoning.`,
             'isiZulu': `Isu le-Paper 2: Gxila emagameni abalulekile bese ukhombisa wonke amanyathelo akho ngokucacile.`
           }
         },
         {
           id: `${cleanId}-2023-q2`,
           questionNumber: 'Question 2.1',
-          marks: 5,
-          questionText: `Critical reasoning and data interpretation problem for ${subject}.`,
-          officialMemoEn: `Marking criteria: Interpretation (2 marks), methodology (2 marks), final deduction (1 mark).`,
+          marks: p2q2.marks,
+          questionText: p2q2.questionText,
+          officialMemoEn: p2q2.officialMemoEn,
           explanationsInLanguages: {
-            'English': `Conceptual breakdown: Translating the question into concrete mathematical or logical steps.`
+            'English': `Comprehensive evaluation: Connecting definitions with concrete applications for ${subject}.`,
+            'isiZulu': `Incazelo ejulile: Ukuxhumanisa izincazelo nezibonelo zangempela.`
           }
         }
       ]
@@ -245,16 +248,16 @@ function createPapersForSubject(
       gradeName,
       subject,
       duration: 'Marking Guideline',
-      totalMarks: gradeId.startsWith('grade-4') || gradeId.startsWith('grade-5') ? 50 : 150,
+      totalMarks,
       paperType: 'Memo 2024',
       languageNote: 'Original English/Afrikaans + Explain in YOUR language',
       questions: [
         {
           id: `${cleanId}-memo24-q1`,
           questionNumber: 'Memo Section 1',
-          marks: 10,
-          questionText: `Complete 2024 Official Examiner Marking Guideline with Step-by-Step Marking Rubric.`,
-          officialMemoEn: `Full Memo Solutions: Every tick mark (✓) aligned with DBE national standards and diagnostic reports.`,
+          marks: p1q1.marks + p1q2.marks,
+          questionText: `Complete 2024 Official Examiner Marking Guideline for: ${p1q1.questionText.slice(0, 120)}...`,
+          officialMemoEn: `Full Official Marking Guideline:\n1.1 Solution: ${p1q1.officialMemoEn}\n\n1.2 Solution: ${p1q2.officialMemoEn}`,
           explanationsInLanguages: {
             'English': `Examiner diagnostic advice: How marks are awarded, where learners lose easy marks, and how to write clean solutions.`,
             'isiZulu': `Iseluleko sikamaki: Lapho abafundi bavame ukulahlekelwa khona amamaki nokuthi ungayibhala kanjani impendulo yakho kahle.`
@@ -271,18 +274,18 @@ function createPapersForSubject(
       gradeName,
       subject,
       duration: 'Marking Guideline',
-      totalMarks: gradeId.startsWith('grade-4') || gradeId.startsWith('grade-5') ? 50 : 150,
+      totalMarks,
       paperType: 'Memo 2023',
       languageNote: 'Original English/Afrikaans + Explain in YOUR language',
       questions: [
         {
           id: `${cleanId}-memo23-q1`,
           questionNumber: 'Memo Section 1',
-          marks: 10,
-          questionText: `Complete 2023 Official Examiner Marking Guideline and Diagnostic Solutions.`,
-          officialMemoEn: `Comprehensive 2023 National Marking Guidelines and Alternative Accepted Methods.`,
+          marks: p2q1.marks + p2q2.marks,
+          questionText: `Complete 2023 Official Examiner Marking Guideline for: ${p2q1.questionText.slice(0, 120)}...`,
+          officialMemoEn: `Full Official Marking Guideline:\n1.1 Solution: ${p2q1.officialMemoEn}\n\n2.1 Solution: ${p2q2.officialMemoEn}`,
           explanationsInLanguages: {
-            'English': `2023 Memo Analysis: Reviewing alternative acceptable mathematical and scientific methods.`,
+            'English': `2023 Memo Analysis: Reviewing alternative acceptable mathematical, scientific, and humanities methods.`,
             'isiZulu': `Ukuhlaziywa kwe-Memo ka-2023: Ukubuyekeza ezinye izindlela zokuphendula ezivumelekile emhlanganweni wabaHloli.`
           }
         }

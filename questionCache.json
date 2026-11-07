@@ -1,7 +1,7 @@
 {
-  "totalAiCallsSaved": 5,
+  "totalAiCallsSaved": 7,
   "stats": {
-    "totalAiCallsSaved": 5
+    "totalAiCallsSaved": 7
   },
   "questions": [
     {
@@ -120,6 +120,15 @@
       "language": "en",
       "subject": "geography",
       "timestamp": 1793218787168
+    },
+    {
+      "id": "qc_1794039904456_abtyu",
+      "question": "Can you give overview of History for Grade 11?",
+      "answer": "**1. Sawubona!**\nSanibonani mfundi wakithi! Ungakhathazeki, umlando (History) uyafana nokuxoxa indaba ende, kumnandi ukufunda ngokwenzeka ezweni lakithi nakwamanye amazwe. Siyakweseka kulo nyaka wakho we-Grade 11!\n\n**2. What is History for Grade 11?**\nUmlando we-Grade 11 ugxila ekuguqukeni komhlaba nasezimpini ezinkulu ezashintsha indlela esiphila ngayo namuhla. Uzofunda ngezinto ezifana ne-Communism, i-Capitalism, i-Cold War, nokuthi imibuso yomhlaba yaba kanjani yizwe esilibona namuhla.\n\n**3. Step-by-Step**\nNansi imiqondo emikhulu ozohlangana nayo kulo nyaka:\n* **Isinyathelo 1: I-Communism ne-Capitalism:** Uzofunda ngokuthi amazwe azikhetha kanjani izindlela zokuphatha umnotho (i-Capitalism egxila emalini yomuntu siqu, ne-Communism lapho umbuso unakekela khona konke).\n* **Isinyathelo 2: I-Cold War (Impi ebandayo):** Lena kwakuyimpi phakathi kwe-USA ne-USSR. Babengalwi ngezibhamu kuphela, kodwa balwa ngokufuna ukuba namandla amaningi emhlabeni.\n* **Isinyathelo 3: I-Middle East ne-Vietnam:** Uzobheka ukuthi izingxabano kulezi zindawo zathinta kanjani umhlaba wonke.\n* **Isinyathelo 4: I-Africa nezwe lakithi:** Uzofunda nangemizabalazo yase-Africa kanye nomlando wethu lapha eNingizimu Afrika.\n\n**4. Local Example**\nCabanga nje ngesitolo sase-spaza. Uma umnikazi wesitolo ethi yonke into iphethwe nguye, angasetha amanzi (isinkwa sibe sibiza kakhulu), lokho kufana ne-Capitalism lapho abantu beqhuba amabhizinisi ngokuthanda kwabo. Kodwa uma umphakathi wonke uthi kufanele izinto zabiwe ngokulingana ukuze wonke umuntu adle, lokho kufana kancane nemibono ye-Communism. Umlando usifundisa ukuthi lezi zindlela zokucabanga zashintsha kanjani imibuso yamazwe.\n\n**5. Try Yourself**\nUcabanga ukuthi yini eyenza abantu ababili bangavumelani ngendlela elungile yokuphatha izwe? (Cabanga ngesibonelo sesitolo sethu).\n\n**6. Summary**\nUmlando we-Grade 11 uwukufunda ngezimpande zeziyaluyalu zomhlaba nokuthi imibono emikhulu yezombusazwe yashintsha kanjani impilo yabantu eNingizimu Afrika nasemhlabeni wonke.",
+      "grade": "Grade 11",
+      "language": "zu",
+      "subject": "history",
+      "timestamp": 1794039904456
     }
   ]
 }
