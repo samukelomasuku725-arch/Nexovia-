@@ -12,7 +12,7 @@
  * - Color Palette: Deep Navy #0A1F44, Green #007A4D, Gold #FFB612, Sky Blue #1E88E5, Orange #FF6B35
  */
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import {
   Play,
   Sparkles,
@@ -37,8 +37,10 @@ import {
   School,
   Briefcase,
   AlertCircle,
-  KeyRound
+  KeyRound,
+  Search
 } from 'lucide-react';
+import { FULL_PAPERS } from '../papers/PastPapersView';
 import { useLearning } from '../../context/LearningContext';
 import { useAuth } from '../../context/AuthContext';
 import { SALanguageCode } from '../../types';
@@ -68,7 +70,6 @@ export const ALL_11_LANGUAGES: LanguageOption[] = [
   { code: 'en', name: 'English', native: 'English' },
   { code: 'af', name: 'Afrikaans', native: 'Afrikaans' },
   { code: 'zu', name: 'isiZulu', native: 'isiZulu' },
-  { code: 'sasl', name: 'SASL 🤟 (Sign Language)', native: 'SASL 🤟', isNativeSpecial: true },
   { code: 'xh', name: 'isiXhosa', native: 'isiXhosa' },
   { code: 'nso', name: 'Sepedi', native: 'Sesotho sa Leboa' },
   { code: 'st', name: 'Sesotho', native: 'Sesotho' },
@@ -76,7 +77,8 @@ export const ALL_11_LANGUAGES: LanguageOption[] = [
   { code: 'ss', name: 'siSwati', native: 'siSwati', isNativeSpecial: true },
   { code: 'ts', name: 'Xitsonga', native: 'Xitsonga', isNativeSpecial: true },
   { code: 've', name: 'Tshivenda', native: 'Tshivenḓa' },
-  { code: 'nr', name: 'isiNdebele', native: 'isiNdebele' }
+  { code: 'nr', name: 'isiNdebele', native: 'isiNdebele' },
+  { code: 'sasl', name: 'SASL 🤟', native: 'SASL 🤟', isNativeSpecial: true }
 ];
 
 export interface GradeOption {
@@ -159,6 +161,35 @@ export const PublicLandingView: React.FC = () => {
   const [demoLang, setDemoLang] = useState('isiZulu');
   const [isDemoDropdownOpen, setIsDemoDropdownOpen] = useState(false);
   const [isDemoModalOpen, setIsDemoModalOpen] = useState(false);
+
+  // Global Search state
+  const [globalSearchQuery, setGlobalSearchQuery] = useState('');
+  const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);
+
+  // Global Search filter across FULL_PAPERS, module codes, subjects, and grades
+  const globalSearchResults = useMemo(() => {
+    const q = globalSearchQuery.trim().toLowerCase();
+    if (!q) return [];
+    return FULL_PAPERS.filter((paper) => {
+      const matchTitle = paper.title.toLowerCase().includes(q);
+      const matchSubject = paper.subject.toLowerCase().includes(q);
+      const matchGrade = paper.gradeName.toLowerCase().includes(q) || paper.gradeId.toLowerCase().includes(q);
+      const matchSession = paper.session.toLowerCase().includes(q);
+      const matchQuestions = paper.questions.some(
+        (question) =>
+          question.questionText.toLowerCase().includes(q) ||
+          question.officialMemoEn.toLowerCase().includes(q)
+      );
+      return matchTitle || matchSubject || matchGrade || matchSession || matchQuestions;
+    }).slice(0, 30);
+  }, [globalSearchQuery]);
+
+  const handleOpenGlobalSearch = (presetQuery?: string) => {
+    if (presetQuery) {
+      setGlobalSearchQuery(presetQuery);
+    }
+    setIsSearchModalOpen(true);
+  };
 
   const navigateToPaywall = () => {
     try {
@@ -247,6 +278,31 @@ export const PublicLandingView: React.FC = () => {
 
           {/* Nav Links & Action Buttons */}
           <div className="flex items-center gap-3">
+            {/* Global Search Input in Header */}
+            <div className="hidden lg:flex items-center relative">
+              <Search className="w-4 h-4 text-[#FFB612] absolute left-3 pointer-events-none" />
+              <input
+                type="text"
+                placeholder="🔍 Search: INF1505, N4 Management, Grade 6 Social Sciences..."
+                value={globalSearchQuery}
+                onChange={(e) => {
+                  setGlobalSearchQuery(e.target.value);
+                  setIsSearchModalOpen(true);
+                }}
+                onFocus={() => setIsSearchModalOpen(true)}
+                className="w-72 pl-9 pr-3 py-1.5 rounded-full bg-[#1a1a1a] border border-[#d4af37] text-white text-xs placeholder:text-white/40 focus:outline-none focus:ring-1 focus:ring-[#FFB612]"
+              />
+            </div>
+
+            {/* Mobile Search Button */}
+            <button
+              onClick={() => setIsSearchModalOpen(true)}
+              className="lg:hidden p-2 rounded-full bg-[#1a1a1a] border border-[#d4af37] text-[#FFB612] hover:bg-white/10"
+              title="Search"
+            >
+              <Search className="w-4 h-4" />
+            </button>
+
             {/* Past Papers & Memos Navbar Link */}
             <button
               onClick={() => navigateToPastPapers()}
@@ -264,12 +320,18 @@ export const PublicLandingView: React.FC = () => {
             </button>
 
             {/* Header Action Buttons */}
-            {isFullPaidAccess ? (
+            {isFullPaidAccess || access.allow ? (
               <div className="flex items-center gap-2">
                 <div className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-xs font-semibold">
                   <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
-                  <span>30-Day Pass Active</span>
+                  <span>Free Week Active &bull; {access.daysRemaining}d Left</span>
                 </div>
+                <button
+                  onClick={handleStartLearning}
+                  className="px-4 py-2 rounded-full bg-[#FFB612] hover:bg-yellow-400 text-black font-black text-xs sm:text-sm shadow-md transition-all cursor-pointer transform hover:scale-105 active:scale-95"
+                >
+                  Go to Tutor
+                </button>
               </div>
             ) : (
               <>
@@ -339,6 +401,31 @@ export const PublicLandingView: React.FC = () => {
             <p className="mt-2 text-sm sm:text-base text-white/70 max-w-xl mx-auto font-medium">
               Original DBE Past Paper (English/Afrikaans) + Explain memo step-by-step in YOUR language
             </p>
+
+            {/* Popular Search Chips */}
+            <div className="mt-4 flex flex-wrap items-center justify-center gap-2 text-xs">
+              <span className="text-[#FFB612] font-mono font-bold flex items-center gap-1">
+                <Search className="w-3.5 h-3.5" />
+                <span>Popular:</span>
+              </span>
+              {[
+                { label: 'INF1505', q: 'INF1505' },
+                { label: 'N4 Management', q: 'N4 Management Communication' },
+                { label: 'Grade 12 Maths', q: 'Grade 12 Mathematics' },
+                { label: 'FAC1502', q: 'FAC1502' },
+                { label: 'Grade 6 Social Sciences', q: 'Grade 6 Social Sciences' },
+                { label: 'N4 Computer Practice', q: 'Computer Practice' }
+              ].map((chip) => (
+                <button
+                  key={chip.label}
+                  type="button"
+                  onClick={() => handleOpenGlobalSearch(chip.q)}
+                  className="px-3 py-1 rounded-full bg-[#1a1a1a] hover:bg-[#262626] border border-[#d4af37]/60 hover:border-[#FFB612] text-white/90 hover:text-[#FFB612] font-semibold text-[11px] transition-all cursor-pointer shadow-xs active:scale-95"
+                >
+                  {chip.label}
+                </button>
+              ))}
+            </div>
 
             {/* SECURITY FIX: Active Unlocked Status Banner ONLY if verified & paid */}
             {isFullPaidAccess && (
@@ -753,64 +840,105 @@ export const PublicLandingView: React.FC = () => {
             </h2>
           </div>
 
-          <div className="max-w-md mx-auto bg-[#0A1F44] border-2 border-[#007A4D] rounded-3xl p-8 sm:p-10 text-center shadow-2xl relative overflow-hidden">
-            <div className="inline-block px-3 py-1 rounded-full bg-[#007A4D] text-white text-xs font-mono font-bold uppercase mb-4">
-              R60 FOR 30 DAYS ACCESS &bull; AUTO-UNLOCK
-            </div>
-
-            <div className="flex items-baseline justify-center gap-1.5 mb-2">
-              <span className="text-5xl font-display font-black text-[#FFB612]">R60</span>
-              <span className="text-sm font-bold text-white/60">/ 30 days</span>
-            </div>
-
-            <p className="text-xs text-white/70 mb-6">
-              Instant Auto-Unlock via SnapScan &bull; No admin wait time
-            </p>
-
-            <ul className="text-left text-xs sm:text-sm space-y-3 mb-8 text-white/90">
-              <li className="flex items-center gap-2.5">
-                <Check className="w-4 h-4 text-[#007A4D] shrink-0" />
-                <span>All grades (Grade 4 to University)</span>
-              </li>
-              <li className="flex items-center gap-2.5">
-                <Check className="w-4 h-4 text-[#007A4D] shrink-0" />
-                <span>All 11 official South African languages</span>
-              </li>
-              <li className="flex items-center gap-2.5">
-                <Check className="w-4 h-4 text-[#007A4D] shrink-0" />
-                <span>4000+ DBE Past Papers with step-by-step memos</span>
-              </li>
-              <li className="flex items-center gap-2.5">
-                <Check className="w-4 h-4 text-[#007A4D] shrink-0" />
-                <span>Cancel anytime &bull; No lock-in contracts</span>
-              </li>
-            </ul>
-
-            {/* Side-by-Side Payment Buttons on Pricing Card */}
-            <div className="space-y-3">
+          {isFullPaidAccess || access.allow ? (
+            <div className="max-w-xl mx-auto bg-gradient-to-r from-emerald-950/90 via-[#0A1F44] to-black border-2 border-emerald-400 rounded-3xl p-8 sm:p-10 text-center shadow-2xl relative overflow-hidden">
+              <div className="inline-block px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 text-xs font-mono font-bold uppercase mb-4">
+                🎉 FREE WEEK ACTIVE &bull; 7 DAYS LEFT &bull; GO TO TUTOR
+              </div>
+              <h3 className="font-display font-black text-2xl sm:text-3xl text-white mb-2">
+                🎉 FREE WEEK ACTIVE &mdash; 7 Days Left
+              </h3>
+              <p className="text-sm text-emerald-200 font-bold mb-6">
+                Free Access Ends: Wed 12 Nov 2026 23:59 SAST &bull; No Payment Needed
+              </p>
+              <ul className="text-left text-xs sm:text-sm space-y-3 mb-8 text-white/90">
+                <li className="flex items-center gap-2.5">
+                  <Check className="w-4 h-4 text-emerald-400 shrink-0" />
+                  <span>All grades (Grade 4 to University) 100% Unlocked</span>
+                </li>
+                <li className="flex items-center gap-2.5">
+                  <Check className="w-4 h-4 text-emerald-400 shrink-0" />
+                  <span>All 12 official South African languages (incl SASL 🤟)</span>
+                </li>
+                <li className="flex items-center gap-2.5">
+                  <Check className="w-4 h-4 text-emerald-400 shrink-0" />
+                  <span>4000+ DBE Past Papers with step-by-step memos</span>
+                </li>
+                <li className="flex items-center gap-2.5">
+                  <Check className="w-4 h-4 text-emerald-400 shrink-0" />
+                  <span>Socratic AI Tutor Tisha active in all subjects</span>
+                </li>
+              </ul>
               <button
                 type="button"
-                onClick={navigateToPaywall}
-                className="w-full py-4 rounded-xl bg-[#007A4D] hover:bg-emerald-600 text-white font-black text-base shadow-xl shadow-emerald-950/40 transition-all transform hover:-translate-y-0.5 active:translate-y-0 cursor-pointer flex items-center justify-center gap-2"
-              >
-                <QrCode className="w-5 h-5 shrink-0" />
-                <span>Pay R60 with SnapScan &mdash; 30 Days</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={navigateToUnlock}
+                onClick={handleStartLearning}
                 className="w-full py-4 rounded-xl bg-[#FFB612] hover:bg-yellow-400 text-black font-black text-base shadow-xl shadow-yellow-500/20 transition-all transform hover:-translate-y-0.5 active:translate-y-0 cursor-pointer flex items-center justify-center gap-2"
               >
-                <KeyRound className="w-5 h-5 text-black shrink-0" />
-                <span>Enter Code to Unlock</span>
+                <Sparkles className="w-5 h-5 text-black" />
+                <span>Go to Tutor &mdash; Start Learning</span>
+                <ArrowRight className="w-4 h-4 text-black" />
               </button>
             </div>
+          ) : (
+            <div className="max-w-md mx-auto bg-[#0A1F44] border-2 border-[#007A4D] rounded-3xl p-8 sm:p-10 text-center shadow-2xl relative overflow-hidden">
+              <div className="inline-block px-3 py-1 rounded-full bg-[#007A4D] text-white text-xs font-mono font-bold uppercase mb-4">
+                R60 FOR 30 DAYS ACCESS &bull; AUTO-UNLOCK
+              </div>
 
-            <p className="mt-4 text-[11px] text-white/50 font-mono">
-              Auto-generate your code on /paywall &bull; Unlock instantly on /unlock
-            </p>
-          </div>
+              <div className="flex items-baseline justify-center gap-1.5 mb-2">
+                <span className="text-5xl font-display font-black text-[#FFB612]">R60</span>
+                <span className="text-sm font-bold text-white/60">/ 30 days</span>
+              </div>
+
+              <p className="text-xs text-white/70 mb-6">
+                Instant Auto-Unlock via SnapScan &bull; No admin wait time
+              </p>
+
+              <ul className="text-left text-xs sm:text-sm space-y-3 mb-8 text-white/90">
+                <li className="flex items-center gap-2.5">
+                  <Check className="w-4 h-4 text-[#007A4D] shrink-0" />
+                  <span>All grades (Grade 4 to University)</span>
+                </li>
+                <li className="flex items-center gap-2.5">
+                  <Check className="w-4 h-4 text-[#007A4D] shrink-0" />
+                  <span>All 12 official South African languages (incl SASL 🤟)</span>
+                </li>
+                <li className="flex items-center gap-2.5">
+                  <Check className="w-4 h-4 text-[#007A4D] shrink-0" />
+                  <span>4000+ DBE Past Papers with step-by-step memos</span>
+                </li>
+                <li className="flex items-center gap-2.5">
+                  <Check className="w-4 h-4 text-[#007A4D] shrink-0" />
+                  <span>Cancel anytime &bull; No lock-in contracts</span>
+                </li>
+              </ul>
+
+              {/* Side-by-Side Payment Buttons on Pricing Card */}
+              <div className="space-y-3">
+                <button
+                  type="button"
+                  onClick={navigateToPaywall}
+                  className="w-full py-4 rounded-xl bg-[#007A4D] hover:bg-emerald-600 text-white font-black text-base shadow-xl shadow-emerald-950/40 transition-all transform hover:-translate-y-0.5 active:translate-y-0 cursor-pointer flex items-center justify-center gap-2"
+                >
+                  <QrCode className="w-5 h-5 shrink-0" />
+                  <span>Pay R60 with SnapScan &mdash; 30 Days</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={navigateToUnlock}
+                  className="w-full py-4 rounded-xl bg-[#FFB612] hover:bg-yellow-400 text-black font-black text-base shadow-xl shadow-yellow-500/20 transition-all transform hover:-translate-y-0.5 active:translate-y-0 cursor-pointer flex items-center justify-center gap-2"
+                >
+                  <KeyRound className="w-5 h-5 text-black shrink-0" />
+                  <span>Enter Code to Unlock</span>
+                </button>
+              </div>
+
+              <p className="mt-4 text-[11px] text-white/50 font-mono">
+                Auto-generate your code on /paywall &bull; Unlock instantly on /unlock
+              </p>
+            </div>
+          )}
         </section>
       </main>
 
@@ -886,6 +1014,151 @@ export const PublicLandingView: React.FC = () => {
                 <QrCode className="w-4 h-4" />
                 <span>Pay R60 with SnapScan &bull; 30 Days</span>
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* Global Search Modal */}
+      {isSearchModalOpen && (
+        <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-start justify-center p-4 sm:p-6 overflow-y-auto">
+          <div className="bg-[#0c0c0c] border border-[#d4af37]/60 rounded-3xl max-w-3xl w-full p-6 text-left shadow-2xl relative my-8">
+            <button
+              onClick={() => setIsSearchModalOpen(false)}
+              className="absolute top-5 right-5 p-2 text-white/60 hover:text-white rounded-full bg-white/5 hover:bg-white/10"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            {/* Modal Search Input */}
+            <div className="flex items-center gap-2 mb-4">
+              <Search className="w-5 h-5 text-[#FFB612] shrink-0" />
+              <h3 className="font-display font-black text-xl text-white">
+                Global Curriculum &amp; Past Paper Search
+              </h3>
+            </div>
+
+            <div className="relative mb-5">
+              <Search className="w-4 h-4 text-[#FFB612] absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+              <input
+                type="text"
+                autoFocus
+                placeholder="Search anything: INF1505, N4 Management, Grade 6 Social Sciences, Photosynthesis..."
+                value={globalSearchQuery}
+                onChange={(e) => setGlobalSearchQuery(e.target.value)}
+                className="w-full pl-10 pr-10 py-3 rounded-2xl bg-[#1a1a1a] border border-[#d4af37] text-white text-sm placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-[#FFB612]"
+              />
+              {globalSearchQuery && (
+                <button
+                  onClick={() => setGlobalSearchQuery('')}
+                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-white/40 hover:text-white"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              )}
+            </div>
+
+            {/* Quick search chips */}
+            <div className="flex flex-wrap items-center gap-1.5 mb-5 pb-4 border-b border-white/10">
+              <span className="text-[11px] font-mono text-[#FFB612] font-bold mr-1">Popular:</span>
+              {['INF1505', 'N4 Management', 'Grade 12 Maths', 'FAC1502', 'Grade 6 Social Sciences', 'N4 Computer Practice'].map((tag) => (
+                <button
+                  key={tag}
+                  onClick={() => setGlobalSearchQuery(tag)}
+                  className="px-2.5 py-1 rounded-full bg-white/5 hover:bg-white/15 border border-white/10 text-[11px] text-white/80 hover:text-[#FFB612] transition-colors"
+                >
+                  {tag}
+                </button>
+              ))}
+            </div>
+
+            {/* Results counter */}
+            <div className="flex items-center justify-between text-xs text-white/60 mb-3 font-mono">
+              <span>
+                {globalSearchQuery ? `Found ${globalSearchResults.length} matching paper(s)` : 'Type to search all grades, TVET & university modules'}
+              </span>
+              <span className="text-[#FFB612]">Grade 4 to University</span>
+            </div>
+
+            {/* Results list */}
+            <div className="space-y-3 max-h-[60vh] overflow-y-auto pr-1">
+              {globalSearchQuery && globalSearchResults.length === 0 && (
+                <div className="p-8 text-center text-white/60 text-xs">
+                  No direct exam paper matches for &ldquo;{globalSearchQuery}&rdquo;. Try searching by course code (e.g. INF1505, N4) or subject.
+                </div>
+              )}
+
+              {globalSearchResults.map((paper) => (
+                <div
+                  key={paper.id}
+                  className="p-4 rounded-2xl bg-[#141414] border border-white/10 hover:border-[#FFB612]/60 transition-all space-y-3"
+                >
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                    <div>
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="px-2 py-0.5 rounded-md bg-[#0A1F44] border border-[#FFB612]/40 text-[#FFB612] font-mono text-[10px] font-bold">
+                          {paper.gradeName}
+                        </span>
+                        <span className="text-white/60 text-xs font-mono">&bull; {paper.subject}</span>
+                      </div>
+                      <h4 className="font-display font-black text-sm sm:text-base text-white">
+                        {paper.title}
+                      </h4>
+                    </div>
+                    <span className="text-xs font-mono text-[#FFB612] shrink-0 font-bold">
+                      {paper.totalMarks} Marks &bull; {paper.duration}
+                    </span>
+                  </div>
+
+                  <p className="text-xs text-white/70 line-clamp-2 font-mono">
+                    {paper.questions[0]?.questionText || 'Official National Examination paper with step-by-step marking guidelines.'}
+                  </p>
+
+                  <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-white/10">
+                    <button
+                      onClick={() => {
+                        setIsSearchModalOpen(false);
+                        navigateToPastPapers(paper.gradeId);
+                      }}
+                      className="px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-white font-bold text-xs flex items-center gap-1.5 transition-colors cursor-pointer"
+                    >
+                      <FileText className="w-3.5 h-3.5 text-[#FFB612]" />
+                      <span>{paper.year} {paper.paperType || 'Paper 1'}</span>
+                    </button>
+
+                    <button
+                      onClick={() => {
+                        setIsSearchModalOpen(false);
+                        navigateToPastPapers(paper.gradeId);
+                      }}
+                      className="px-3 py-1.5 rounded-xl bg-[#007A4D]/30 hover:bg-[#007A4D]/50 border border-[#007A4D] text-emerald-300 font-bold text-xs flex items-center gap-1.5 transition-colors cursor-pointer"
+                    >
+                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+                      <span>Memo</span>
+                    </button>
+
+                    <button
+                      onClick={() => {
+                        setIsSearchModalOpen(false);
+                        navigateToPastPapers(paper.gradeId);
+                      }}
+                      className="px-3 py-1.5 rounded-xl bg-[#0A1F44] hover:bg-[#122e66] border border-[#FFB612]/50 text-[#FFB612] font-bold text-xs flex items-center gap-1.5 transition-colors cursor-pointer"
+                    >
+                      <Sparkles className="w-3.5 h-3.5" />
+                      <span>Explain in YOUR language</span>
+                    </button>
+
+                    <button
+                      onClick={() => {
+                        setIsSearchModalOpen(false);
+                        handleStartLearning();
+                      }}
+                      className="ml-auto px-3 py-1.5 rounded-xl bg-[#FFB612] hover:bg-yellow-400 text-black font-black text-xs flex items-center gap-1 transition-colors cursor-pointer"
+                    >
+                      <span>Ask Tisha 🤖</span>
+                    </button>
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
         </div>

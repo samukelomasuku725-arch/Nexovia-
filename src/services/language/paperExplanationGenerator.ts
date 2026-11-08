@@ -39,6 +39,8 @@ export interface StructuredExplanation {
   };
 }
 
+export const getRealExplanation = (params: ExplanationParams) => generatePaperExplanation(params);
+
 export function generatePaperExplanation(params: ExplanationParams): StructuredExplanation {
   const { questionNumber, questionText, officialMemoEn, marks, gradeName, subject, language, topic } = params;
   const langLower = (language || 'English').toLowerCase();

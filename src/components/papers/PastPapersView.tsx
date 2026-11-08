@@ -51,7 +51,7 @@ interface PastPaperQuestion {
   explanationsInLanguages: Record<string, string>;
 }
 
-interface PastPaper {
+export interface PastPaper {
   id: string;
   title: string;
   year: number;
@@ -61,6 +61,8 @@ interface PastPaper {
   subject: string;
   duration: string;
   totalMarks: number;
+  paperType?: string;
+  languageNote?: string;
   questions: PastPaperQuestion[];
 }
 
@@ -276,11 +278,12 @@ const ORIGINAL_BASE_PAPERS: PastPaper[] = [
   }
 ];
 
-// Combine existing Grade 12 Math/Physics papers + FULL catalog for all Grades 4 to University
-export const PAST_PAPERS_DATABASE: PastPaper[] = [
+// Combine existing Grade 12 Math/Physics papers + FULL catalog for all Grades 4 to University using spread operator
+export const FULL_PAPERS: PastPaper[] = [
   ...ORIGINAL_BASE_PAPERS,
   ...EXPANDED_PAST_PAPERS_CATALOG
 ];
+export const PAST_PAPERS_DATABASE: PastPaper[] = FULL_PAPERS;
 
 export const ALL_GRADE_FILTERS = [
   { id: 'all', name: 'All Grades' },
@@ -465,7 +468,7 @@ export const PastPapersView: React.FC = () => {
             <div>
               <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#FFB612]/20 border border-[#FFB612]/40 text-[#FFB612] text-xs font-mono font-bold uppercase mb-2">
                 <Sparkles className="w-3.5 h-3.5" />
-                <span>Free Preview: Questions 1 &amp; 2 Full Memo Unlocked</span>
+                <span>{accessState.allow ? '🎉 Free Week Active: All Questions & Full Step-by-Step Memos 100% Unlocked' : 'Free Preview: Questions 1 & 2 Full Memo Unlocked'}</span>
               </div>
               <h2 className="font-display font-black text-2xl sm:text-3xl text-white">
                 Original DBE Past Papers &amp; Mother-Tongue Memos
@@ -606,49 +609,78 @@ export const PastPapersView: React.FC = () => {
               })
             )}
 
-            {/* Sticky Pricing / Unlock Card */}
-            <div className="p-6 rounded-3xl bg-[#0A1F44] border-2 border-[#007A4D] shadow-2xl space-y-4">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-mono font-bold uppercase text-[#FFB612]">
-                  NEXOVIAN PREMIUM
-                </span>
-                <span className="text-2xl font-black text-white">R60</span>
+            {/* Sticky Pricing / Unlock Card or Free Week Active Card */}
+            {accessState.allow ? (
+              <div className="p-6 rounded-3xl bg-[#007A4D]/20 border-2 border-[#007A4D] shadow-2xl space-y-4">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-mono font-bold uppercase text-emerald-300 flex items-center gap-1.5">
+                    <Sparkles className="w-4 h-4 text-[#FFB612]" />
+                    <span>NEXOVIAN PREMIUM ACTIVE</span>
+                  </span>
+                  <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 text-[10px] font-mono font-bold border border-emerald-500/40">
+                    {accessState.daysRemaining}d Left
+                  </span>
+                </div>
+                <div className="text-lg font-black text-white">
+                  🎉 FREE WEEK ACTIVE &mdash; 7 Days Left
+                </div>
+                <p className="text-xs text-white/80 leading-relaxed">
+                  Full access is active! All 4,000+ past exam papers across Grade 4 to University with step-by-step memos in all 12 official languages (incl SASL 🤟) are completely unlocked.
+                </p>
+                <div className="pt-2">
+                  <button
+                    onClick={() => setCurrentTab('home')}
+                    className="w-full py-3 rounded-2xl bg-[#FFB612] hover:bg-yellow-400 text-black font-black text-xs sm:text-sm flex items-center justify-center gap-2 shadow-lg cursor-pointer transition-transform active:scale-95"
+                  >
+                    <Sparkles className="w-4 h-4 text-black" />
+                    <span>Go to Tutor &mdash; Ask Anything</span>
+                  </button>
+                </div>
               </div>
-              <p className="text-xs text-white/80 leading-relaxed">
-                Unlock full step-by-step memos for all 4,000+ past exam papers across Grade 4 to University in 11 official languages.
-              </p>
-              <div className="space-y-2 text-xs text-white/90">
-                <div className="flex items-center gap-2">
-                  <Check className="w-3.5 h-3.5 text-[#007A4D]" />
-                  <span>30 Days Full Access</span>
+            ) : (
+              <div className="p-6 rounded-3xl bg-[#0A1F44] border-2 border-[#007A4D] shadow-2xl space-y-4">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-mono font-bold uppercase text-[#FFB612]">
+                    NEXOVIAN PREMIUM
+                  </span>
+                  <span className="text-2xl font-black text-white">R60</span>
                 </div>
-                <div className="flex items-center gap-2">
-                  <Check className="w-3.5 h-3.5 text-[#007A4D]" />
-                  <span>Instant Auto-Unlock via SnapScan</span>
+                <p className="text-xs text-white/80 leading-relaxed">
+                  Unlock full step-by-step memos for all 4,000+ past exam papers across Grade 4 to University in 12 official languages (incl SASL 🤟).
+                </p>
+                <div className="space-y-2 text-xs text-white/90">
+                  <div className="flex items-center gap-2">
+                    <Check className="w-3.5 h-3.5 text-[#007A4D]" />
+                    <span>30 Days Full Access</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Check className="w-3.5 h-3.5 text-[#007A4D]" />
+                    <span>Instant Auto-Unlock via SnapScan</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Check className="w-3.5 h-3.5 text-[#007A4D]" />
+                    <span>Zero Admin Waiting</span>
+                  </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <Check className="w-3.5 h-3.5 text-[#007A4D]" />
-                  <span>Zero Admin Waiting</span>
-                </div>
-              </div>
 
-              <div className="pt-2 space-y-2">
-                <button
-                  onClick={navigateToPaywall}
-                  className="w-full py-3 rounded-2xl bg-[#007A4D] hover:bg-emerald-600 text-white font-black text-xs sm:text-sm flex items-center justify-center gap-2 shadow-lg cursor-pointer"
-                >
-                  <QrCode className="w-4 h-4" />
-                  <span>Pay R60 with SnapScan &mdash; 30 Days</span>
-                </button>
-                <button
-                  onClick={navigateToUnlock}
-                  className="w-full py-3 rounded-2xl bg-[#FFB612] hover:bg-yellow-400 text-black font-black text-xs sm:text-sm flex items-center justify-center gap-2 shadow-lg cursor-pointer"
-                >
-                  <KeyRound className="w-4 h-4 text-black" />
-                  <span>Enter Code to Unlock</span>
-                </button>
+                <div className="pt-2 space-y-2">
+                  <button
+                    onClick={navigateToPaywall}
+                    className="w-full py-3 rounded-2xl bg-[#007A4D] hover:bg-emerald-600 text-white font-black text-xs sm:text-sm flex items-center justify-center gap-2 shadow-lg cursor-pointer"
+                  >
+                    <QrCode className="w-4 h-4" />
+                    <span>Pay R60 with SnapScan &mdash; 30 Days</span>
+                  </button>
+                  <button
+                    onClick={navigateToUnlock}
+                    className="w-full py-3 rounded-2xl bg-[#FFB612] hover:bg-yellow-400 text-black font-black text-xs sm:text-sm flex items-center justify-center gap-2 shadow-lg cursor-pointer"
+                  >
+                    <KeyRound className="w-4 h-4 text-black" />
+                    <span>Enter Code to Unlock</span>
+                  </button>
+                </div>
               </div>
-            </div>
+            )}
           </div>
 
           {/* Right Column: Paper Questions & Memo Viewer */}

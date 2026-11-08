@@ -637,6 +637,53 @@ Bala leswi: $x^2 - 7x + 10 = 0$
         </div>
       </div>
 
+      {/* 3.1 SASL SPECIAL TUTOR BANNER (WHEN SASL 🤟 IS SELECTED) */}
+      {selectedLang === 'sasl' && (
+        <div className="w-full bg-[#1e1b12] border-b border-[#fbbf24]/30 px-4 py-3 sm:px-6">
+          <div className="max-w-4xl mx-auto space-y-2">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              <div className="flex items-center gap-2">
+                <span className="text-xl">🤟</span>
+                <div>
+                  <h4 className="text-xs sm:text-sm font-bold text-[#fbbf24] flex items-center gap-1.5">
+                    <span>SASL 🤟 Tutor Active &mdash; Simple English + Video Signs &bull; NID &amp; DeafTV Free</span>
+                  </h4>
+                  <p className="text-[11px] text-slate-300">
+                    South African Sign Language (12th Official Language). Using simple English syntax, [Sign: CONCEPT] notations, and open educational sign resources.
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 shrink-0">
+                <a
+                  href="https://www.deaftv.co.za"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="px-2.5 py-1 rounded-lg bg-black/50 border border-[#fbbf24]/40 text-[#fbbf24] text-[11px] font-bold hover:bg-[#fbbf24] hover:text-black transition-colors"
+                >
+                  DeafTV Videos ↗
+                </a>
+                <a
+                  href="https://nid.org.za"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="px-2.5 py-1 rounded-lg bg-black/50 border border-white/20 text-white text-[11px] font-bold hover:bg-white/20 transition-colors"
+                >
+                  NID Signs ↗
+                </a>
+              </div>
+            </div>
+            {/* Embedded DeafTV Video Preview Container */}
+            <div className="p-2.5 rounded-xl bg-black/60 border border-[#fbbf24]/20 flex items-center justify-between text-[11px] text-slate-300">
+              <span className="flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                <span><strong>Visual Sign Learning:</strong> Ask Tisha any concept to see visual step breakdowns and SASL sign references.</span>
+              </span>
+              <span className="text-[#fbbf24] font-mono text-[10px] hidden md:inline">100% Free Open Educational Resource</span>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* 4. CHAT MESSAGE STREAM */}
       <div className="flex-1 max-w-4xl w-full mx-auto p-4 sm:p-6 space-y-6 overflow-y-auto">
         {currentMessages.map((msg) => {
