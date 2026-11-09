@@ -41,6 +41,11 @@ import { PastPapersView } from './components/papers/PastPapersView';
 import { AdminPaymentsView } from './components/admin/AdminPaymentsView';
 import { UnlockCodeView } from './components/payment/UnlockCodeView';
 import { AdminCodesView } from './components/admin/AdminCodesView';
+import { TermsPage } from './components/legal/TermsPage';
+import { RefundPolicyPage } from './components/legal/RefundPolicyPage';
+import { PrivacyPolicyPage } from './components/legal/PrivacyPolicyPage';
+import { ContactPage } from './components/legal/ContactPage';
+import { AboutPage } from './components/legal/AboutPage';
 import { checkAccess } from './services/snapscanSubscriptionService';
 import { LessonPlayerModal } from './components/player/LessonPlayerModal';
 import { CertificateModal } from './components/certificate/CertificateModal';
@@ -84,8 +89,8 @@ const MainLayout: React.FC = () => {
   useEffect(() => {
     if (isLoading) return;
 
-    // Free routes (no lock): / (homepage), /papers, /learn, /login, /signup, /trial, /calculator, /about, /paywall, /unlock
-    const isPublicTab = ['landing', 'login', 'signup', 'calculator', 'learn', 'about', 'success', 'cancel', 'trial', 'paywall', 'papers', 'adminPayments', 'unlock', 'adminCodes'].includes(currentTab);
+    // Free routes (no lock): / (homepage), /papers, /learn, /login, /signup, /trial, /calculator, /about, /paywall, /unlock, /terms, /refund-policy, /privacy-policy, /contact
+    const isPublicTab = ['landing', 'login', 'signup', 'calculator', 'learn', 'about', 'success', 'cancel', 'trial', 'paywall', 'papers', 'adminPayments', 'unlock', 'adminCodes', 'terms', 'refundPolicy', 'privacyPolicy', 'contact'].includes(currentTab);
     if (isPublicTab) return;
 
     if (isAdminUser(user)) return;
@@ -655,10 +660,14 @@ const MainLayout: React.FC = () => {
         {currentTab === 'smartNotes' && <SmartNotesView />}
         {currentTab === 'myStruggles' && <LearnerStrugglesView />}
         {currentTab === 'adminBank' && <AdminQuestionBankView />}
-        {currentTab === 'about' && <AboutUsView />}
+        {currentTab === 'about' && <AboutPage />}
         {currentTab === 'success' && <SuccessView />}
         {currentTab === 'cancel' && <CancelView />}
         {currentTab === 'calculator' && <MathCalculatorView />}
+        {currentTab === 'terms' && <TermsPage />}
+        {currentTab === 'refundPolicy' && <RefundPolicyPage />}
+        {currentTab === 'privacyPolicy' && <PrivacyPolicyPage />}
+        {currentTab === 'contact' && <ContactPage />}
       </main>
 
       {/* Global Footer (shown on all tabs except immersive tutor chat and scan view) */}

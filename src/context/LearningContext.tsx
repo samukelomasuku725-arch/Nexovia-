@@ -38,7 +38,7 @@ import { isTtsSupportedForLanguage } from '../services/voice/languageCapabilitie
 
 import { learnerStrugglesService } from '../services/struggles/learnerStrugglesService';
 
-export type AppTab = 'landing' | 'login' | 'signup' | 'calculator' | 'home' | 'dashboard' | 'explore' | 'learn' | 'school' | 'tvet' | 'higherEd' | 'tracks' | 'tutor' | 'scan' | 'practice' | 'saved' | 'profile' | 'adaptive' | 'assessments' | 'academicVoice' | 'progress' | 'adminBank' | 'about' | 'smartNotes' | 'myStruggles' | 'success' | 'cancel' | 'trial' | 'paywall' | 'papers' | 'adminPayments' | 'unlock' | 'adminCodes';
+export type AppTab = 'landing' | 'login' | 'signup' | 'calculator' | 'home' | 'dashboard' | 'explore' | 'learn' | 'school' | 'tvet' | 'higherEd' | 'tracks' | 'tutor' | 'scan' | 'practice' | 'saved' | 'profile' | 'adaptive' | 'assessments' | 'academicVoice' | 'progress' | 'adminBank' | 'about' | 'smartNotes' | 'myStruggles' | 'success' | 'cancel' | 'trial' | 'paywall' | 'papers' | 'adminPayments' | 'unlock' | 'adminCodes' | 'terms' | 'refundPolicy' | 'privacyPolicy' | 'contact';
 
 export interface GeminiStatusInfo {
   checked: boolean;
@@ -271,6 +271,10 @@ export const pathToTab = (cleanPath: string, search = ''): AppTab => {
   if (cleanPath === '/my-struggles' || cleanPath === '/struggles') return 'myStruggles';
   if (cleanPath === '/admin' || cleanPath === '/admin/bank') return 'adminBank';
   if (cleanPath === '/about') return 'about';
+  if (cleanPath === '/terms') return 'terms';
+  if (cleanPath === '/refund-policy' || cleanPath === '/refund') return 'refundPolicy';
+  if (cleanPath === '/privacy-policy' || cleanPath === '/privacy') return 'privacyPolicy';
+  if (cleanPath === '/contact') return 'contact';
   return 'landing';
 };
 
@@ -294,6 +298,10 @@ export const tabToPath = (tab: AppTab): string => {
     case 'myStruggles': return '/my-struggles';
     case 'adminBank': return '/admin';
     case 'about': return '/about';
+    case 'terms': return '/terms';
+    case 'refundPolicy': return '/refund-policy';
+    case 'privacyPolicy': return '/privacy-policy';
+    case 'contact': return '/contact';
     default: return '/';
   }
 };
