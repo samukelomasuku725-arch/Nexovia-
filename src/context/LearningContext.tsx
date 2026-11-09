@@ -1345,11 +1345,15 @@ export const LearningProvider: React.FC<{ children: React.ReactNode }> = ({ chil
           content: m.content
         }));
 
-      const res = await fetch('/api/ai/chat', {
+      const res = await fetch('/api/tutor', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
         body: JSON.stringify({
           userQuestion: userQuestion.trim(),
+          message: userQuestion.trim(),
           conversationId: targetConv.id,
           selectedLanguage: effectiveLang,
           language: effectiveLang,
@@ -1365,17 +1369,30 @@ export const LearningProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         })
       });
 
-      const json = await res.json();
-
-      if (!res.ok || !json.success) {
-        if (json.keyMissing) {
-          throw new Error('Gemini API key is not configured. Please set the GEMINI_API_KEY environment variable in your server environment.');
-        }
-        throw new Error(json.message || "NEXOVIAN couldn't generate a response right now.");
+      if (!res.ok) {
+        const errorText = await res.text().catch(() => '');
+        console.error('Tutor API error response:', res.status, errorText);
+        throw new Error(`Server returned status ${res.status}: ${errorText.slice(0, 120) || res.statusText}`);
       }
 
-      const aiData = json.data;
-      const rawContent = aiData.content || aiData.text || '';
+      const text = await res.text();
+      let data: any;
+      try {
+        data = JSON.parse(text);
+      } catch (parseError) {
+        console.error('Tutor response is not valid JSON:', text);
+        throw parseError;
+      }
+
+      if (!data.success && !data.answer) {
+        if (data.keyMissing) {
+          throw new Error('Gemini API key is not configured. Please set the GEMINI_API_KEY environment variable in your server environment.');
+        }
+        throw new Error(data.message || "NEXOVIAN couldn't generate a response right now.");
+      }
+
+      const aiData = data.data || {};
+      const rawContent = data.answer || aiData.content || aiData.text || '';
       const cleanContent = rawContent.split('---CACHE---')[0].trim();
 
       const aiMsg: AIMessage = {

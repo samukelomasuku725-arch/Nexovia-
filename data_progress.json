@@ -1,7 +1,7 @@
 {
   "guest_learner": {
     "userId": "guest_learner",
-    "questionsAskedCount": 31,
+    "questionsAskedCount": 32,
     "practiceSessionsCount": 1,
     "quizAttempts": [],
     "topicsStudied": [
@@ -154,7 +154,7 @@
         "createdAt": "2026-09-30T07:58:01.276Z"
       }
     ],
-    "lastActiveDate": "2026-11-07",
+    "lastActiveDate": "2026-11-09",
     "scanSessions": [
       {
         "id": "scan_1791050922110_h0x1y",

@@ -1109,7 +1109,7 @@ export const PublicLandingView: React.FC = () => {
                     </span>
                   </div>
 
-                  <p className="text-xs text-white/70 line-clamp-2 font-mono">
+                  <p className="text-xs text-white/70 whitespace-pre-wrap font-mono">
                     {paper.questions[0]?.questionText || 'Official National Examination paper with step-by-step marking guidelines.'}
                   </p>
 

@@ -1735,6 +1735,11 @@ const handleChatRequest = async (req: Request, res: Response) => {
 
 app.post('/api/ai/chat', handleChatRequest);
 app.post('/api/chat', handleChatRequest);
+app.post('/api/tutor', handleChatRequest);
+app.get('/api/tutor', (_req: Request, res: Response) => {
+  return res.json({ success: true, answer: 'MindMatch AI Tutor is online and ready.' });
+});
+app.all('/api/tutor', handleChatRequest);
 
 // PRACTICE QUESTIONS API
 app.post('/api/ai/practice', async (req: Request, res: Response) => {
@@ -3145,6 +3150,15 @@ app.get('/api/dashboard', (req: Request, res: Response) => {
       studyPlansCount: studyPlans.length,
       timestamp: new Date().toISOString()
     }
+  });
+});
+
+// Ensure all unhandled /api/* routes always return JSON (never HTML pages)
+app.all('/api/*', (req: Request, res: Response) => {
+  return res.status(404).json({
+    success: false,
+    message: `API endpoint ${req.method} ${req.path} not found`,
+    answer: 'API endpoint not found.'
   });
 });
 

@@ -247,9 +247,9 @@ export const PastPapersTab: React.FC<PastPapersTabProps> = ({
                   <span className="text-[11px] font-bold text-slate-700 dark:text-slate-300 block">
                     Core Topics Covered:
                   </span>
-                  <div className="text-[11px] text-slate-500 dark:text-slate-400 space-y-0.5 line-clamp-2">
+                  <div className="text-[11px] text-slate-500 dark:text-slate-400 space-y-0.5 whitespace-pre-wrap">
                     {item.questionPaperSummary.map((sum, sIdx) => (
-                      <div key={sIdx} className="truncate">
+                      <div key={sIdx}>
                         • {sum}
                       </div>
                     ))}

@@ -292,7 +292,7 @@ export function generatePaperExplanation(params: ExplanationParams): StructuredE
   };
 
   return {
-    whatIsAsked: `${localized.whatIsAskedTitle} ${questionText.slice(0, 160)}... This question carries ${marks} marks and tests core conceptual mastery according to national DBE examination standards.`,
+    whatIsAsked: `${localized.whatIsAskedTitle}\n${questionText}\nThis question carries ${marks} marks and tests core conceptual mastery according to national DBE examination standards.`,
     keywords: [
       { term: topic || `${subject} Core Principle`, explanation: `Foundational learning objective tested in the ${gradeName} curriculum.` },
       { term: 'DBE Marking Standard', explanation: 'Marks are distributed between method, accuracy, and clear structured reasoning.' }
@@ -307,7 +307,7 @@ export function generatePaperExplanation(params: ExplanationParams): StructuredE
       {
         stepNumber: 2,
         title: localized.step2Title,
-        detail: `Show all intermediate working clearly: "${officialMemoEn.slice(0, 120)}..." Ensure each logical step is clearly written out for the examiner.`,
+        detail: `Show all intermediate working clearly:\n${officialMemoEn}\nEnsure each logical step is clearly written out for the examiner.`,
         markAllocation: `${Math.floor(marks / 3)} Marks`
       },
       {

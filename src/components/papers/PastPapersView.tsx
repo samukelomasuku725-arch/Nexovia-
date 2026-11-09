@@ -33,7 +33,8 @@ import {
   Eye,
   Check,
   AlertCircle,
-  KeyRound
+  KeyRound,
+  X
 } from 'lucide-react';
 import { useLearning } from '../../context/LearningContext';
 import { useAuth } from '../../context/AuthContext';
@@ -322,6 +323,8 @@ export const PastPapersView: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [selectedLanguage, setSelectedLanguage] = useState<string>('English');
   const [activePaperId, setActivePaperId] = useState<string>(PAST_PAPERS_DATABASE[0].id);
+  const [selectedPaper, setSelectedPaper] = useState<PastPaper | null>(null);
+  const [showModal, setShowModal] = useState<boolean>(false);
 
   // Dynamic subjects based on selectedGrade
   const availableSubjectsForGrade = useMemo(() => {
@@ -575,7 +578,11 @@ export const PastPapersView: React.FC = () => {
                 return (
                   <div
                     key={paper.id}
-                    onClick={() => setActivePaperId(paper.id)}
+                    onClick={() => {
+                      setActivePaperId(paper.id);
+                      setSelectedPaper(paper);
+                      setShowModal(true);
+                    }}
                     className={`p-5 rounded-3xl border transition-all cursor-pointer text-left ${
                       isSelected
                         ? 'bg-[#0A1F44] border-[#FFB612] shadow-xl'
@@ -604,6 +611,20 @@ export const PastPapersView: React.FC = () => {
                       <span>{paper.gradeName} &bull; {paper.subject}</span>
                       <span className="text-[#FFB612] font-mono font-bold">{paper.totalMarks} Marks</span>
                     </div>
+
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setActivePaperId(paper.id);
+                        setSelectedPaper(paper);
+                        setShowModal(true);
+                      }}
+                      className="mt-3 w-full py-2.5 px-3 rounded-2xl bg-[#FFB612] hover:bg-yellow-400 text-black font-black text-xs flex items-center justify-center gap-1.5 shadow-md transition-transform active:scale-95 cursor-pointer"
+                    >
+                      <Eye className="w-3.5 h-3.5" />
+                      <span>Open Exam Paper &amp; Full Memo</span>
+                    </button>
                   </div>
                 );
               })
@@ -795,7 +816,7 @@ export const PastPapersView: React.FC = () => {
                             {/* What is asked */}
                             <div className="text-xs sm:text-sm text-white/90 leading-relaxed font-sans font-medium">
                               <span className="text-amber-300 font-bold block mb-1">🎯 Umnyombo Wombuzo (What Question Asks):</span>
-                              <p>{structuredExp.whatIsAsked}</p>
+                              <p className="whitespace-pre-wrap">{structuredExp.whatIsAsked}</p>
                             </div>
 
                             {/* Keywords */}
@@ -826,7 +847,7 @@ export const PastPapersView: React.FC = () => {
                                       <span className="font-bold text-white">{st.title}</span>
                                       <span className="text-[#FFB612] font-mono text-[10px]">{st.markAllocation}</span>
                                     </div>
-                                    <p className="text-white/80 text-[11px] leading-relaxed">{st.detail}</p>
+                                    <p className="text-white/80 text-[11px] leading-relaxed whitespace-pre-wrap">{st.detail}</p>
                                   </div>
                                 </div>
                               ))}
@@ -928,6 +949,327 @@ export const PastPapersView: React.FC = () => {
           </p>
         </footer>
       </main>
+
+      {/* PAPER DETAIL MODAL (Opens immediately on clicking any paper card) */}
+      {showModal && selectedPaper && (
+        <div className="fixed inset-0 z-[9999] bg-[#0a0a0a] overflow-y-auto">
+          {/* Modal Header Bar */}
+          <div className="sticky top-0 z-20 bg-[#0A1F44]/95 backdrop-blur-md border-b border-white/10 px-4 sm:px-6 py-4 flex items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowModal(false);
+                  setSelectedPaper(null);
+                }}
+                className="p-2 rounded-xl bg-white/10 hover:bg-white/20 text-white transition-colors cursor-pointer flex items-center gap-1.5 text-xs font-bold"
+                aria-label="Close modal"
+              >
+                <ArrowLeft className="w-4 h-4" />
+                <span>Close Paper</span>
+              </button>
+              <div className="h-6 w-px bg-white/20 hidden sm:block" />
+              <div>
+                <div className="flex items-center gap-2 text-xs font-mono font-bold text-[#FFB612] uppercase">
+                  <span>{selectedPaper.gradeName}</span>
+                  <span>&bull;</span>
+                  <span>{selectedPaper.subject}</span>
+                  <span>&bull;</span>
+                  <span>{selectedPaper.year}</span>
+                </div>
+                <h2 className="font-display font-black text-sm sm:text-lg text-white whitespace-pre-wrap max-w-[280px] sm:max-w-xl">
+                  {selectedPaper.title}
+                </h2>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-3">
+              {/* Memo Language Switcher inside Modal */}
+              <div className="flex items-center gap-1.5 bg-black/60 p-1.5 rounded-xl border border-white/10">
+                <Languages className="w-3.5 h-3.5 text-[#FFB612] shrink-0 ml-1" />
+                <select
+                  value={selectedLanguage}
+                  onChange={(e) => setSelectedLanguage(e.target.value)}
+                  className="bg-[#1a1a1a] text-white text-xs font-bold rounded-lg px-2.5 py-1 border border-white/20 focus:outline-none focus:border-[#FFB612] cursor-pointer"
+                >
+                  {ALL_11_LANGUAGES.map((lang) => (
+                    <option key={lang.name} value={lang.name}>
+                      {lang.name} ({lang.native})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Close X Button */}
+              <button
+                type="button"
+                onClick={() => {
+                  setShowModal(false);
+                  setSelectedPaper(null);
+                }}
+                className="p-2 rounded-xl bg-white/10 hover:bg-red-500/20 hover:text-red-400 text-white transition-colors cursor-pointer"
+                title="Close"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+          </div>
+
+          {/* Modal Paper Content Body */}
+          <div className="max-w-5xl mx-auto px-4 sm:px-6 py-8 space-y-6">
+            {/* Paper Overview Badge Banner */}
+            <div className="p-6 rounded-3xl bg-[#0c0c0c] border border-white/15 shadow-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div>
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="px-3 py-1 rounded-full bg-[#007A4D]/30 border border-[#007A4D] text-emerald-300 text-xs font-mono font-bold">
+                    {accessState.allow ? '100% UNLOCKED' : 'FREE PREVIEW: QUESTIONS 1 & 2'}
+                  </span>
+                  <span className="px-3 py-1 rounded-full bg-[#FFB612]/20 border border-[#FFB612]/40 text-[#FFB612] text-xs font-mono font-bold">
+                    {selectedPaper.totalMarks} Total Marks
+                  </span>
+                </div>
+                <h1 className="font-display font-black text-2xl sm:text-3xl text-white">
+                  {selectedPaper.title}
+                </h1>
+                <p className="text-xs sm:text-sm text-white/70 mt-1 font-mono">
+                  {selectedPaper.session} &bull; Duration: {selectedPaper.duration}
+                </p>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const q1 = selectedPaper.questions[0];
+                    if (q1) handleAskTishaToExplain(q1);
+                  }}
+                  className="px-4 py-2.5 rounded-xl bg-[#FFB612] hover:bg-yellow-400 text-black font-black text-xs sm:text-sm shadow-md transition-all flex items-center gap-2 cursor-pointer active:scale-95"
+                >
+                  <Sparkles className="w-4 h-4 text-black" />
+                  <span>Ask Tisha to Explain</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Questions List inside Modal with Scroll Container */}
+            <div className="flex items-center justify-between pb-2 border-b border-white/10 text-xs font-mono text-white/70">
+              <span className="font-bold text-[#FFB612]">
+                Complete National Paper &bull; {selectedPaper.questions.length} Questions
+              </span>
+              <span>Showing All Questions (Q1 to Q{selectedPaper.questions.length})</span>
+            </div>
+
+            <div className="space-y-6 overflow-y-auto max-h-[80vh] pr-1 scrollbar-thin">
+              {selectedPaper.questions.map((q, idx) => {
+                const isFree = idx < 2 || accessState.allow;
+                const structuredExp = generatePaperExplanation({
+                  questionNumber: q.questionNumber,
+                  questionText: q.questionText,
+                  officialMemoEn: q.officialMemoEn,
+                  marks: q.marks,
+                  gradeName: selectedPaper.gradeName,
+                  subject: selectedPaper.subject,
+                  language: selectedLanguage,
+                  topic: selectedPaper.title
+                });
+
+                return (
+                  <div
+                    key={q.id}
+                    className="p-5 sm:p-7 rounded-3xl bg-[#141414] border border-white/10 shadow-xl relative overflow-hidden"
+                  >
+                    {/* Question Header */}
+                    <div className="flex items-center justify-between gap-2 mb-4">
+                      <div className="flex items-center gap-2.5">
+                        <span className="px-3 py-1.5 rounded-xl bg-white/10 font-mono font-bold text-xs sm:text-sm text-[#FFB612]">
+                          {q.questionNumber} ({idx + 1} of {selectedPaper.questions.length})
+                        </span>
+                        <span className="text-xs sm:text-sm text-white/60 font-mono">
+                          [{q.marks} Marks]
+                        </span>
+                      </div>
+
+                      {isFree ? (
+                        <span className="px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-400 text-[11px] font-mono font-bold border border-emerald-500/40">
+                          FREE MEMO
+                        </span>
+                      ) : (
+                        <span className="px-3 py-1 rounded-full bg-amber-500/20 text-amber-300 text-[11px] font-mono font-bold border border-amber-500/40 flex items-center gap-1.5">
+                          <Lock className="w-3.5 h-3.5" />
+                          <span>PREMIUM ONLY</span>
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Question Text */}
+                    <div className="p-5 rounded-2xl bg-black/60 border border-white/10 mb-5 font-mono text-xs sm:text-sm text-white/95 leading-relaxed">
+                      {q.questionText}
+                    </div>
+
+                    {/* Memo Content: Unlocked or Locked */}
+                    {isFree ? (
+                      <div className="space-y-5">
+                        {/* Official English Memo */}
+                        <div className="p-4 sm:p-5 rounded-2xl bg-white/5 border border-white/10 text-xs sm:text-sm font-mono text-white/85">
+                          <span className="text-[#FFB612] font-bold block mb-2 flex items-center gap-2">
+                            <FileText className="w-4 h-4 text-[#FFB612]" />
+                            Official DBE Memo (Examiner&apos;s Solution &mdash; English):
+                          </span>
+                          <pre className="whitespace-pre-wrap font-mono text-xs sm:text-sm text-white/95 leading-relaxed">
+                            {q.officialMemoEn}
+                          </pre>
+                        </div>
+
+                        {/* Mother Tongue Step-by-Step Breakdown */}
+                        <div className="p-5 sm:p-6 rounded-2xl bg-[#007A4D]/15 border border-[#007A4D]/50 text-white space-y-3.5">
+                          <div className="flex items-center justify-between gap-2 border-b border-[#007A4D]/30 pb-2.5">
+                            <div className="flex items-center gap-2 text-xs sm:text-sm font-mono font-bold text-emerald-300 uppercase">
+                              <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                              <span>Step-by-Step Explanation in {selectedLanguage}</span>
+                            </div>
+                            <span className="text-[10px] font-mono text-emerald-200/90 bg-emerald-950/70 px-2.5 py-0.5 rounded-full border border-emerald-500/30">
+                              REAL DBE TEACHING
+                            </span>
+                          </div>
+
+                          {/* What is asked */}
+                          <div className="text-xs sm:text-sm text-white/90 leading-relaxed font-sans font-medium">
+                            <span className="text-amber-300 font-bold block mb-1">🎯 Umnyombo Wombuzo (What Question Asks):</span>
+                            <p className="whitespace-pre-wrap">{structuredExp.whatIsAsked}</p>
+                          </div>
+
+                          {/* Keywords */}
+                          {structuredExp.keywords.length > 0 && (
+                            <div className="pt-2 border-t border-[#007A4D]/20">
+                              <span className="text-emerald-300 font-bold text-xs block mb-1.5 font-mono">
+                                🔑 Amagama Abalulekile (Keywords in {selectedLanguage}):
+                              </span>
+                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                {structuredExp.keywords.map((kw, kIdx) => (
+                                  <div key={kIdx} className="p-2.5 rounded-xl bg-black/40 border border-white/10 text-xs">
+                                    <span className="text-[#FFB612] font-bold block">{kw.term}</span>
+                                    <span className="text-white/70 text-[11px]">{kw.explanation}</span>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Step-by-step breakdown */}
+                          <div className="pt-2 border-t border-[#007A4D]/20 space-y-2">
+                            <span className="text-emerald-300 font-bold text-xs block mb-1 font-mono">
+                              📝 Izinyathelo Zokuphendula (Step-by-Step Solution):
+                            </span>
+                            {structuredExp.steps.map((st, sIdx) => (
+                              <div key={sIdx} className="p-3 rounded-xl bg-black/30 border border-white/5 flex items-start gap-2.5 text-xs">
+                                <span className="w-5 h-5 rounded-full bg-[#FFB612]/20 text-[#FFB612] font-mono font-bold flex items-center justify-center shrink-0 text-[11px] mt-0.5">
+                                  {st.stepNumber}
+                                </span>
+                                <div className="flex-1">
+                                  <div className="flex items-center justify-between gap-2 mb-0.5">
+                                    <span className="font-bold text-white">{st.title}</span>
+                                    <span className="text-[#FFB612] font-mono text-[10px]">{st.markAllocation}</span>
+                                  </div>
+                                  <p className="text-white/80 text-[11px] leading-relaxed whitespace-pre-wrap">{st.detail}</p>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+
+                          {/* Common mistakes */}
+                          {structuredExp.commonMistakes.length > 0 && (
+                            <div className="pt-2 border-t border-[#007A4D]/20 text-xs">
+                              <span className="text-amber-400 font-bold block mb-1 font-mono">
+                                ⚠️ Amaphutha avamile (Examiner Traps to Avoid):
+                              </span>
+                              <ul className="list-disc list-inside space-y-0.5 text-white/80 text-[11px]">
+                                {structuredExp.commonMistakes.map((cm, cIdx) => (
+                                  <li key={cIdx}>{cm}</li>
+                                ))}
+                              </ul>
+                            </div>
+                          )}
+
+                          {/* Exam tip */}
+                          <div className="p-3 rounded-xl bg-black/40 border border-[#FFB612]/30 text-xs text-[#FFB612] flex items-center gap-2">
+                            <Sparkles className="w-4 h-4 shrink-0 text-[#FFB612]" />
+                            <span><strong>Isu Lokuhlola:</strong> {structuredExp.examTip}</span>
+                          </div>
+                        </div>
+
+                        {/* Action Button: Ask NEXOVIAN to Explain This Question */}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setShowModal(false);
+                            handleAskTishaToExplain(q);
+                          }}
+                          className="w-full py-3 px-4 rounded-2xl bg-[#0A1F44] hover:bg-[#122e66] border-2 border-[#FFB612] text-[#FFB612] hover:text-white font-black text-xs sm:text-sm flex items-center justify-center gap-2.5 transition-all cursor-pointer shadow-xl active:scale-[0.99]"
+                        >
+                          <Sparkles className="w-4 h-4 text-[#FFB612]" />
+                          <span>🤖 Ask NEXOVIAN to Explain This Question in {selectedLanguage}</span>
+                          <ArrowRight className="w-4 h-4" />
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="relative rounded-2xl overflow-hidden mt-3">
+                        {/* Blurred Fake Memo Content */}
+                        <div className="filter blur-md select-none pointer-events-none p-6 bg-white/5 border border-white/10 text-xs font-mono opacity-40">
+                          <p className="text-[#FFB612] font-bold mb-2">
+                            Official DBE Memo (Examiner&apos;s Solution):
+                          </p>
+                          <p>f&apos;(x) = lim[h-&gt;0] [3(x+h)² - 5(x+h) - (3x² - 5x)]/h = 6x - 5</p>
+                          <p className="mt-3">
+                            Step-by-Step in {selectedLanguage}: Ngokusho komthetho wezibalo...
+                          </p>
+                        </div>
+
+                        {/* Lock Overlay with CTA */}
+                        <div className="absolute inset-0 z-10 bg-black/75 backdrop-blur-xs flex flex-col items-center justify-center p-6 text-center">
+                          <div className="w-12 h-12 rounded-full bg-[#FFB612] text-black flex items-center justify-center mb-3 shadow-lg">
+                            <Lock className="w-6 h-6 text-black" />
+                          </div>
+                          <h4 className="font-display font-black text-base sm:text-lg text-white mb-1">
+                            Locked Question Memo
+                          </h4>
+                          <p className="text-xs text-white/70 max-w-sm mb-4 leading-relaxed">
+                            First 2 questions are 100% free. Unlock the full step-by-step memo for all questions in this paper for R60.
+                          </p>
+
+                          <div className="flex flex-col sm:flex-row items-center gap-2.5">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setShowModal(false);
+                                navigateToPaywall();
+                              }}
+                              className="px-5 py-2.5 rounded-xl bg-[#007A4D] hover:bg-emerald-600 text-white font-black text-xs sm:text-sm flex items-center gap-2 shadow-lg cursor-pointer transform hover:scale-105"
+                            >
+                              <QrCode className="w-4 h-4" />
+                              <span>Unlock Full Memo &mdash; R60</span>
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setShowModal(false);
+                                navigateToUnlock();
+                              }}
+                              className="px-4 py-2.5 rounded-xl bg-[#FFB612] hover:bg-yellow-400 text-black font-black text-xs border border-white/20 cursor-pointer flex items-center gap-1.5"
+                            >
+                              <KeyRound className="w-3.5 h-3.5 text-black" />
+                              <span>Enter Code to Unlock</span>
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

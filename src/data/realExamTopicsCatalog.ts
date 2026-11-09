@@ -63,6 +63,34 @@ export const REAL_EXAM_TOPICS_CATALOG: Record<string, RealSubjectExamSpec> = {
     }
   },
 
+  // 1.5 Grade 11 Mathematical Literacy
+  'grade-11_mathematical-literacy': {
+    q11: {
+      topic: 'Finance - Personal Income Tax, UIF & Net Salary Calculation',
+      marks: 5,
+      questionText: 'Thabo earns a gross monthly salary of R24 500. (a) Calculate his annual gross salary. (b) South African Unemployment Insurance Fund (UIF) is calculated at 1% of gross salary with a monthly salary threshold of R17 712. Calculate Thabo\'s monthly UIF deduction. (c) If his monthly pension contribution is 7.5% of gross salary, determine the pension deduction.',
+      officialMemoEn: '(a) Annual Gross = R24 500 × 12 = R294 000 [1 mark].\n(b) Since R24 500 exceeds maximum threshold of R17 712, UIF = 1% × R17 712 = R177.12 [2 marks].\n(c) Pension = 7.5% × R24 500 = 0.075 × 24 500 = R1 837.50 [2 marks].'
+    },
+    q12: {
+      topic: 'Measurement - Packaging, Volume & Unit Conversions',
+      marks: 5,
+      questionText: 'A paint company packages roof sealant in cylindrical metal drums of diameter 40 cm and height 60 cm. (a) Calculate the radius of the drum in meters. (b) Calculate the volume of the drum in m³ using formula V = π × r² × h (use π = 3.142). (c) Convert this volume to liters (1 m³ = 1 000 liters).',
+      officialMemoEn: '(a) Radius = 40 cm / 2 = 20 cm = 0.20 m [1 mark].\n(b) Volume = 3.142 × (0.2)² × 0.6 = 3.142 × 0.04 × 0.6 = 0.0754 m³ [3 marks].\n(c) Liters = 0.0754 × 1 000 = 75.4 liters [1 mark].'
+    },
+    p2_q1: {
+      topic: 'Maps and Plans - Scale, Distance & Travel Budgeting',
+      marks: 5,
+      questionText: 'On a national road map with a scale of 1:1 500 000, the distance between Mbombela and Johannesburg measures 23 cm. (a) Calculate the actual distance between the two cities in kilometers. (b) If a bakkie has a fuel consumption rate of 8.5 liters per 100 km and petrol costs R22.80 per liter, calculate the fuel cost for a one-way trip.',
+      officialMemoEn: '(a) Actual distance = 23 cm × 1 500 000 = 34 500 000 cm = 345 000 m = 345 km [2 marks].\n(b) Total fuel needed = (345 / 100) × 8.5 = 3.45 × 8.5 = 29.325 liters [1.5 marks].\nFuel cost = 29.325 liters × R22.80 = R668.61 [1.5 marks].'
+    },
+    p2_q2: {
+      topic: 'Data Handling - Mean, Median and Percentile Analysis',
+      marks: 5,
+      questionText: 'A clinic recorded the systolic blood pressure (in mmHg) of 9 patients: 118, 122, 126, 128, 132, 136, 140, 144, 158. (a) Determine the median blood pressure. (b) Calculate the interquartile range (IQR = Q3 - Q1). (c) State ONE reason why a clinic nurse would monitor blood pressure trends in rural communities.',
+      officialMemoEn: '(a) Array is already ordered. Middle value (5th value) = 132 mmHg [1 mark].\n(b) Q1 = (122 + 126)/2 = 124 [1 mark]; Q3 = (140 + 144)/2 = 142 [1 mark]; IQR = 142 - 124 = 18 mmHg [1 mark].\n(c) Early detection of hypertension and prevention of strokes/cardiovascular disease [1 mark].'
+    }
+  },
+
   // 2. Grade 11 History
   'grade-11_history': {
     q11: {
