@@ -84,8 +84,8 @@ const MainLayout: React.FC = () => {
   useEffect(() => {
     if (isLoading) return;
 
-    // Free routes (no lock): / (homepage), /papers (first 2 preview questions only), /login, /register, /paywall, /unlock, /admin/codes, /admin/payments
-    const isPublicTab = ['landing', 'login', 'signup', 'calculator', 'about', 'success', 'cancel', 'trial', 'paywall', 'papers', 'adminPayments', 'unlock', 'adminCodes'].includes(currentTab);
+    // Free routes (no lock): / (homepage), /papers, /learn, /login, /signup, /trial, /calculator, /about, /paywall, /unlock
+    const isPublicTab = ['landing', 'login', 'signup', 'calculator', 'learn', 'about', 'success', 'cancel', 'trial', 'paywall', 'papers', 'adminPayments', 'unlock', 'adminCodes'].includes(currentTab);
     if (isPublicTab) return;
 
     if (isAdminUser(user)) return;

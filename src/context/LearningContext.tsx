@@ -247,67 +247,65 @@ const DEFAULT_PROGRESS: UserProgress = {
   activeConversationId: INITIAL_CONVERSATION.id
 };
 
+export const normalizePath = (rawPath?: string): string => {
+  if (!rawPath) return '/';
+  const clean = rawPath.toLowerCase().split('?')[0].split('#')[0].replace(/\/+$/, '') || '/';
+  return clean;
+};
+
+export const pathToTab = (cleanPath: string, search = ''): AppTab => {
+  if (cleanPath === '/signup' || cleanPath === '/register') return 'signup';
+  if (cleanPath === '/login') return 'login';
+  if (cleanPath === '/trial' || cleanPath === '/pricing') return 'trial';
+  if (cleanPath === '/learn' || search.includes('lang=')) return 'learn';
+  if (cleanPath === '/calculator' || cleanPath === '/calc') return 'calculator';
+  if (cleanPath === '/papers') return 'papers';
+  if (cleanPath === '/paywall') return 'paywall';
+  if (cleanPath === '/unlock') return 'unlock';
+  if (cleanPath === '/admin/payments') return 'adminPayments';
+  if (cleanPath === '/admin/codes') return 'adminCodes';
+  if (cleanPath === '/app' || cleanPath === '/dashboard' || cleanPath === '/subjects' || cleanPath === '/quiz') return 'home';
+  if (cleanPath === '/success') return 'success';
+  if (cleanPath === '/cancel') return 'cancel';
+  if (cleanPath === '/smart-notes' || cleanPath === '/notes') return 'smartNotes';
+  if (cleanPath === '/my-struggles' || cleanPath === '/struggles') return 'myStruggles';
+  if (cleanPath === '/admin' || cleanPath === '/admin/bank') return 'adminBank';
+  if (cleanPath === '/about') return 'about';
+  return 'landing';
+};
+
+export const tabToPath = (tab: AppTab): string => {
+  switch (tab) {
+    case 'landing': return '/';
+    case 'signup': return '/signup';
+    case 'login': return '/login';
+    case 'trial': return '/trial';
+    case 'learn': return '/learn';
+    case 'calculator': return '/calculator';
+    case 'papers': return '/papers';
+    case 'paywall': return '/paywall';
+    case 'unlock': return '/unlock';
+    case 'adminPayments': return '/admin/payments';
+    case 'adminCodes': return '/admin/codes';
+    case 'home': return '/app';
+    case 'success': return '/success';
+    case 'cancel': return '/cancel';
+    case 'smartNotes': return '/smart-notes';
+    case 'myStruggles': return '/my-struggles';
+    case 'adminBank': return '/admin';
+    case 'about': return '/about';
+    default: return '/';
+  }
+};
+
 const LearningContext = createContext<LearningContextType | undefined>(undefined);
 
 export const LearningProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [tracks] = useState<Track[]>(TRACKS);
   const [currentTab, setCurrentTabState] = useState<AppTab>(() => {
     if (typeof window !== 'undefined') {
-      const path = window.location.pathname;
-      if (path === '/unlock') {
-        return 'unlock';
-      }
-      if (path === '/admin/codes') {
-        return 'adminCodes';
-      }
-      if (path === '/papers') {
-        return 'papers';
-      }
-      if (path === '/admin/payments') {
-        return 'adminPayments';
-      }
-      if (path === '/paywall') {
-        return 'paywall';
-      }
-      if (path === '/login') {
-        return 'login';
-      }
-      if (path === '/signup' || path === '/register') {
-        return 'signup';
-      }
-      if (path === '/calculator') {
-        return 'calculator';
-      }
-      if (path === '/success') {
-        return 'success';
-      }
-      if (path === '/cancel') {
-        return 'cancel';
-      }
-      if (path === '/trial' || path === '/pricing') {
-        return 'trial';
-      }
-      if (path === '/admin' || path === '/admin/bank') {
-        return 'adminBank';
-      }
-      if (path === '/about') {
-        return 'about';
-      }
-      if (path === '/smart-notes' || path === '/notes') {
-        return 'smartNotes';
-      }
-      if (path === '/my-struggles' || path === '/struggles') {
-        return 'myStruggles';
-      }
-      if (path === '/learn' || window.location.search.includes('lang=')) {
-        return 'learn';
-      }
-      if (path === '/app' || path === '/dashboard' || path === '/subjects' || path === '/quiz') {
-        return 'home';
-      }
-      if (path === '/') {
-        return 'landing';
-      }
+      const clean = normalizePath(window.location.pathname);
+      return pathToTab(clean, window.location.search);
     }
     return 'landing';
   });
@@ -315,25 +313,9 @@ export const LearningProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const setCurrentTab = (tab: AppTab) => {
     setCurrentTabState(tab);
     if (typeof window !== 'undefined') {
-      let targetPath = '';
-      if (tab === 'landing') targetPath = '/';
-      else if (tab === 'login') targetPath = '/login';
-      else if (tab === 'signup') targetPath = '/signup';
-      else if (tab === 'paywall') targetPath = '/paywall';
-      else if (tab === 'calculator') targetPath = '/calculator';
-      else if (tab === 'home') targetPath = '/app';
-      else if (tab === 'about') targetPath = '/about';
-      else if (tab === 'success') targetPath = '/success';
-      else if (tab === 'cancel') targetPath = '/cancel';
-      else if (tab === 'trial') targetPath = '/trial';
-      else if (tab === 'adminBank') targetPath = '/admin';
-      else if (tab === 'smartNotes') targetPath = '/smart-notes';
-      else if (tab === 'myStruggles') targetPath = '/my-struggles';
-      else if (tab === 'learn') targetPath = '/learn';
-      else if (tab === 'papers') targetPath = '/papers';
-      else if (tab === 'adminPayments') targetPath = '/admin/payments';
-
-      if (targetPath && window.location.pathname !== targetPath) {
+      const targetPath = tabToPath(tab);
+      const currentClean = normalizePath(window.location.pathname);
+      if (targetPath && currentClean !== targetPath) {
         window.history.pushState({}, '', targetPath);
       }
     }
@@ -341,40 +323,44 @@ export const LearningProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
+
     const handlePopState = () => {
-      const path = window.location.pathname;
-      if (path === '/') {
-        setCurrentTabState('landing');
-      } else if (path === '/paywall') {
-        setCurrentTabState('paywall');
-      } else if (path === '/app' || path === '/dashboard' || path === '/subjects' || path === '/papers' || path === '/quiz') {
-        setCurrentTabState('home');
-      } else if (path === '/login') {
-        setCurrentTabState('login');
-      } else if (path === '/signup' || path === '/register') {
-        setCurrentTabState('signup');
-      } else if (path === '/calculator') {
-        setCurrentTabState('calculator');
-      } else if (path === '/success') {
-        setCurrentTabState('success');
-      } else if (path === '/cancel') {
-        setCurrentTabState('cancel');
-      } else if (path === '/trial' || path === '/pricing') {
-        setCurrentTabState('trial');
-      } else if (path === '/smart-notes' || path === '/notes') {
-        setCurrentTabState('smartNotes');
-      } else if (path === '/my-struggles' || path === '/struggles') {
-        setCurrentTabState('myStruggles');
-      } else if (path === '/admin' || path === '/admin/bank') {
-        setCurrentTabState('adminBank');
-      } else if (path === '/about') {
-        setCurrentTabState('about');
-      } else if (path === '/learn') {
-        setCurrentTabState('learn');
+      const clean = normalizePath(window.location.pathname);
+      const tab = pathToTab(clean, window.location.search);
+      setCurrentTabState(tab);
+    };
+
+    // Global interceptor for standard internal anchor links
+    const handleGlobalLinkClick = (e: MouseEvent) => {
+      const anchor = (e.target as HTMLElement)?.closest('a');
+      if (!anchor) return;
+      const href = anchor.getAttribute('href');
+      if (
+        href &&
+        href.startsWith('/') &&
+        !href.startsWith('//') &&
+        !anchor.getAttribute('target') &&
+        !anchor.getAttribute('download')
+      ) {
+        try {
+          const url = new URL(anchor.href, window.location.origin);
+          const clean = normalizePath(url.pathname);
+          const tab = pathToTab(clean, url.search);
+          e.preventDefault();
+          setCurrentTab(tab);
+        } catch {
+          // fallback to default navigation if URL parsing fails
+        }
       }
     };
+
     window.addEventListener('popstate', handlePopState);
-    return () => window.removeEventListener('popstate', handlePopState);
+    document.addEventListener('click', handleGlobalLinkClick);
+
+    return () => {
+      window.removeEventListener('popstate', handlePopState);
+      document.removeEventListener('click', handleGlobalLinkClick);
+    };
   }, []);
   const [activeLessonId, setActiveLessonId] = useState<string | null>(null);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
