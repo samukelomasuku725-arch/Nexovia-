@@ -48,6 +48,7 @@ import { ContactPage } from './components/legal/ContactPage';
 import { AboutPage } from './components/legal/AboutPage';
 import { checkAccess } from './services/snapscanSubscriptionService';
 import { LessonPlayerModal } from './components/player/LessonPlayerModal';
+import { Analytics } from '@vercel/analytics/react';
 import { CertificateModal } from './components/certificate/CertificateModal';
 import { SearchModal } from './components/search/SearchModal';
 import { PwaInstallBanner } from './components/pwa/PwaInstallBanner';
@@ -694,10 +695,10 @@ export default function App() {
         <ToastProvider>
           <LearningProvider>
             <MainLayout />
+            <Analytics />
           </LearningProvider>
         </ToastProvider>
       </I18nProvider>
     </AuthProvider>
   );
 }
-
