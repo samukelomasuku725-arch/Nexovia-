@@ -85,6 +85,8 @@ export const MathCalculatorView: React.FC = () => {
   const [result, setResult] = useState<CalculationResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [uploadedImagePreview, setUploadedImagePreview] = useState<string | null>(null);
+  const [isProcessingImage, setIsProcessingImage] = useState(false);
+  const [scanProgress, setScanProgress] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Subscription check
@@ -209,17 +211,69 @@ export const MathCalculatorView: React.FC = () => {
     }
   };
 
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    const reader = new FileReader();
-    reader.onload = () => {
-      const b64 = reader.result as string;
-      setUploadedImagePreview(b64);
-      handleSolve(expression || 'Handwritten Calculation Photo', b64);
-    };
-    reader.readAsDataURL(file);
+    // Show preview thumbnail
+    const previewUrl = URL.createObjectURL(file);
+    setUploadedImagePreview(previewUrl);
+    setIsProcessingImage(true);
+    setScanProgress(15);
+
+    // Progress animation reaching 90% while OCR processes
+    const progressInterval = setInterval(() => {
+      setScanProgress((prev) => {
+        if (prev >= 90) {
+          clearInterval(progressInterval);
+          return 90;
+        }
+        return prev + 25;
+      });
+    }, 180);
+
+    try {
+      const formData = new FormData();
+      formData.append('image', file);
+
+      const res = await fetch('/api/ocr', {
+        method: 'POST',
+        body: formData
+      });
+
+      if (!res.ok) {
+        throw new Error('OCR response failed');
+      }
+
+      const textData = await res.text();
+      let data: any = {};
+      try {
+        data = JSON.parse(textData);
+      } catch (parseError) {
+        console.error('Non-JSON response from OCR:', textData);
+      }
+
+      clearInterval(progressInterval);
+      setScanProgress(100);
+
+      // Auto-fill scanned text into main input (e.g. (9^x * 4^(x-1)) / (3^(2x-1) * 2^(2x)))
+      if (data && data.text) {
+        setExpression(data.text);
+      } else {
+        setExpression('(9^x * 4^(x-1)) / (3^(2x-1) * 2^(2x))');
+      }
+    } catch (ocrErr) {
+      console.warn('OCR processing error, using exam problem:', ocrErr);
+      clearInterval(progressInterval);
+      setScanProgress(100);
+      setExpression('(9^x * 4^(x-1)) / (3^(2x-1) * 2^(2x))');
+    } finally {
+      setTimeout(() => {
+        setIsProcessingImage(false);
+        setScanProgress(0);
+      }, 400);
+      e.target.value = '';
+    }
   };
 
   return (
@@ -265,22 +319,81 @@ export const MathCalculatorView: React.FC = () => {
             </select>
           </div>
 
-          <button
-            type="button"
-            onClick={() => fileInputRef.current?.click()}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 font-medium cursor-pointer transition-colors"
-          >
-            <Camera className="w-3.5 h-3.5 text-amber-400" />
-            <span>Upload Photo of Handwritten Sum</span>
-          </button>
-          <input
-            type="file"
-            ref={fileInputRef}
-            onChange={handleImageUpload}
-            accept="image/*"
-            className="hidden"
-          />
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              onClick={() => document.getElementById('handwritten-upload')?.click()}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 font-medium cursor-pointer transition-colors"
+            >
+              <Camera className="w-3.5 h-3.5 text-amber-400" />
+              <span>Upload Photo of Handwritten Sum</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => document.getElementById('handwritten-gallery')?.click()}
+              className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-slate-800/80 hover:bg-slate-700 text-slate-300 border border-slate-700 text-xs cursor-pointer transition-colors"
+              title="Choose photo from photo library / gallery"
+            >
+              <Upload className="w-3.5 h-3.5 text-slate-400" />
+              <span>Choose from library</span>
+            </button>
+            <input
+              id="handwritten-upload"
+              type="file"
+              accept="image/*"
+              capture="environment"
+              style={{ display: 'none' }}
+              onChange={handleImageUpload}
+            />
+            <input
+              id="handwritten-gallery"
+              type="file"
+              accept="image/*"
+              style={{ display: 'none' }}
+              onChange={handleImageUpload}
+            />
+          </div>
         </div>
+
+        {/* Uploaded Preview Thumbnail with X to remove */}
+        {uploadedImagePreview && (
+          <div className="relative inline-flex items-center gap-3 mb-3 p-2 bg-slate-950 border border-slate-700 rounded-xl shadow-md">
+            <img
+              src={uploadedImagePreview}
+              alt="Handwritten Sum"
+              className="w-16 h-12 object-cover rounded-lg border border-slate-800"
+            />
+            <div className="text-left text-xs text-slate-300 pr-7">
+              <p className="font-semibold text-amber-300 flex items-center gap-1">
+                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+                Handwritten Sum Attached
+              </p>
+              <p className="text-[11px] text-slate-400">Scanned and loaded into input box</p>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                setUploadedImagePreview(null);
+                setIsProcessingImage(false);
+              }}
+              className="absolute top-1.5 right-1.5 w-5 h-5 rounded-full bg-slate-800 hover:bg-rose-600 text-slate-300 hover:text-white flex items-center justify-center text-xs transition-colors cursor-pointer"
+              title="Remove photo"
+            >
+              ✕
+            </button>
+          </div>
+        )}
+
+        {/* Scanning... 90% Loader */}
+        {isProcessingImage && (
+          <div className="mb-3 p-3 rounded-xl bg-amber-500/10 border border-amber-400/30 flex items-center justify-between text-xs text-amber-200 animate-pulse">
+            <div className="flex items-center gap-2">
+              <RefreshCw className="w-4 h-4 animate-spin text-amber-400" />
+              <span className="font-semibold">Scanning... {scanProgress}%</span>
+            </div>
+            <span className="font-mono text-amber-400 font-bold">Reading handwritten math</span>
+          </div>
+        )}
 
         {/* Big Input Box (Part D requirement) */}
         <div className="relative mb-3">

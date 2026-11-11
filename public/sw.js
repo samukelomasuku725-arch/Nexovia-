@@ -3,7 +3,7 @@
  * Grade 4 to University in 11 South African Languages
  */
 
-const CACHE_NAME = 'nexovian-cache-v2';
+const CACHE_NAME = 'nexovian-cache-v4';
 const STATIC_ASSETS = [
   '/',
   '/manifest.json',
@@ -37,9 +37,20 @@ self.addEventListener('activate', (event) => {
 
 self.addEventListener('fetch', (event) => {
   const { request } = event;
+  const url = new URL(request.url);
   
-  // Do not intercept non-GET requests or API requests with cache
-  if (request.method !== 'GET' || request.url.includes('/api/')) {
+  // Do not intercept non-GET requests, API requests, Vite dev bundles, node_modules, or versioned queries
+  if (
+    request.method !== 'GET' ||
+    url.pathname.includes('/api/') ||
+    url.pathname.includes('/node_modules/') ||
+    url.pathname.includes('/@vite/') ||
+    url.pathname.includes('/@fs/') ||
+    url.pathname.includes('/@id/') ||
+    url.pathname.includes('/src/') ||
+    url.search.includes('v=') ||
+    url.pathname.includes('hot-update')
+  ) {
     return;
   }
 

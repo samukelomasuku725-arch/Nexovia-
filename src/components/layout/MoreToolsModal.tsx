@@ -172,7 +172,7 @@ export const MoreToolsModal: React.FC<Props> = ({
         {
           id: 'about',
           title: 'About Us (/about)',
-          subtitle: 'NEXOVIAN story, Mkhuhlu roots & compliance',
+          subtitle: 'NEXOVIAN story, Oakley roots & compliance',
           icon: ShieldCheck,
           color: 'bg-emerald-600 text-white',
           onClick: () => {

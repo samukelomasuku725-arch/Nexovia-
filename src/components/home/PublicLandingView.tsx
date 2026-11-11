@@ -319,6 +319,22 @@ export const PublicLandingView: React.FC = () => {
               <span>Step-by-Step Calculator</span>
             </button>
 
+            {/* Nexovian Study Guide Yellow Header Button */}
+            <a
+              href="/study-guide"
+              onClick={(e) => {
+                e.preventDefault();
+                setCurrentTab('studyGuide');
+                if (typeof window !== 'undefined') {
+                  window.history.pushState({}, '', '/study-guide');
+                }
+              }}
+              className="flex items-center gap-1.5 px-3.5 py-2 rounded-full bg-[#FFD400] hover:bg-yellow-400 text-black font-bold text-xs sm:text-sm shadow-md transition-all cursor-pointer whitespace-nowrap transform hover:scale-105 active:scale-95"
+            >
+              <span>📚</span>
+              <span>Nexovian Study Guide</span>
+            </a>
+
             {/* Header Action Buttons */}
             {isFullPaidAccess || access.allow ? (
               <div className="flex items-center gap-2">
@@ -425,6 +441,24 @@ export const PublicLandingView: React.FC = () => {
                   {chip.label}
                 </button>
               ))}
+            </div>
+
+            {/* Nexovian Study Guide Yellow Hero Button */}
+            <div className="mt-7 flex justify-center">
+              <a
+                href="/study-guide"
+                onClick={(e) => {
+                  e.preventDefault();
+                  setCurrentTab('studyGuide');
+                  if (typeof window !== 'undefined') {
+                    window.history.pushState({}, '', '/study-guide');
+                  }
+                }}
+                className="inline-flex items-center gap-2 px-6 py-3.5 rounded-2xl bg-[#FFD400] hover:bg-yellow-400 text-black font-bold text-base sm:text-lg shadow-[0_0_25px_rgba(255,212,0,0.5)] transition-all transform hover:scale-105 active:scale-95 cursor-pointer"
+              >
+                <span>📚</span>
+                <span>Nexovian Study Guide</span>
+              </a>
             </div>
 
             {/* SECURITY FIX: Active Unlocked Status Banner ONLY if verified & paid */}

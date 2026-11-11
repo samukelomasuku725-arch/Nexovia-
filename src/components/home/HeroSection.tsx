@@ -99,7 +99,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onScrollToFinder }) =>
             <span aria-hidden="true" className="text-slate-600">·</span>
             <span className="inline-flex items-center gap-1 text-slate-300 font-medium">
               <MapPin className="w-3.5 h-3.5 text-amber-400" />
-              <span>Mkhuhlu, Mpumalanga</span>
+              <span>Oakley, Mpumalanga</span>
             </span>
             <span aria-hidden="true" className="text-slate-600 hidden sm:inline">·</span>
             <span className="text-amber-400 font-medium hidden sm:inline">
@@ -131,7 +131,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onScrollToFinder }) =>
 
               {/* 2. SUB-HEADLINE (Smaller, under headline) */}
               <p className="mt-4 sm:mt-5 text-sm sm:text-base lg:text-lg text-slate-200 font-normal leading-relaxed max-w-2xl text-pretty">
-                NEXOVIAN is Mpumalanga&apos;s first AI learning platform teaching Maths, Science &amp; Life Sciences in all 11 official languages &mdash; including Xitsonga &amp; siSwati Native Engine, built in Mkhuhlu for rural learners.
+                NEXOVIAN is Mpumalanga&apos;s first AI learning platform teaching Maths, Science &amp; Life Sciences in all 11 official languages &mdash; including Xitsonga &amp; siSwati Native Engine, built in Oakley for rural learners.
               </p>
 
               {/* Secondary capability summary */}
@@ -182,6 +182,23 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onScrollToFinder }) =>
                 >
                   <span>Start in English</span>
                   <ArrowRight className="w-3.5 h-3.5 text-slate-400" />
+                </a>
+
+                {/* Yellow Nexovian Study Guide Button */}
+                <a
+                  href="/study-guide"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    setCurrentTab('studyGuide');
+                    if (typeof window !== 'undefined') {
+                      window.history.pushState({}, '', '/study-guide');
+                    }
+                  }}
+                  className="flex items-center justify-center gap-2 px-5 py-3.5 text-xs sm:text-sm font-bold text-black bg-[#FFD400] hover:bg-yellow-400 rounded-xl shadow-lg shadow-yellow-500/25 transition-all transform hover:-translate-y-0.5 active:translate-y-0 min-h-[48px] whitespace-nowrap cursor-pointer border border-yellow-300/60"
+                  aria-label="Nexovian Study Guide"
+                >
+                  <span>📚</span>
+                  <span>Nexovian Study Guide</span>
                 </a>
               </div>
 
@@ -252,7 +269,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onScrollToFinder }) =>
               <div className="relative rounded-3xl overflow-hidden shadow-2xl border-2 border-slate-700/80 bg-slate-900 group">
                 <img
                   src="/src/assets/images/mkhuhlu_rural_learners_1792744372735.jpg"
-                  alt="Three happy South African rural learners with smartphones learning maths and science in Mkhuhlu, Mpumalanga"
+                  alt="Three happy South African rural learners with smartphones learning maths and science in Oakley, Mpumalanga"
                   className="w-full h-72 sm:h-84 lg:h-96 object-cover object-center transform transition-transform duration-700 group-hover:scale-103"
                   referrerPolicy="no-referrer"
                 />
@@ -263,7 +280,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onScrollToFinder }) =>
                 {/* Overlaid Location & Caption Badge */}
                 <div className="absolute top-3 left-3 px-3 py-1.5 rounded-xl bg-slate-950/85 backdrop-blur-md border border-slate-700/80 flex items-center gap-2 text-xs">
                   <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                  <span className="font-semibold text-white">Mkhuhlu Village, Mpumalanga</span>
+                  <span className="font-semibold text-white">Oakley Village, Mpumalanga</span>
                 </div>
 
                 {/* Floating Bottom Card: Real Impact Highlight */}
@@ -276,7 +293,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onScrollToFinder }) =>
                     <span className="font-mono text-emerald-400 font-semibold">100% Rural Owned</span>
                   </div>
                   <p className="text-xs text-slate-200 leading-snug font-medium">
-                    Built by Mkhuhlu youth to ensure no South African learner is left behind due to geography or mother-tongue barriers.
+                    Built by Oakley youth to ensure no South African learner is left behind due to geography or mother-tongue barriers.
                   </p>
                   <div className="mt-2.5 pt-2 border-t border-slate-800 flex items-center justify-between text-[11px]">
                     <span className="text-slate-400">Maths · Science · Life Sciences</span>

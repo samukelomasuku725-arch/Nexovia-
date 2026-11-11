@@ -296,6 +296,7 @@ export function AITutorView() {
   const [isStudyPlanOpen, setIsStudyPlanOpen] = useState(false);
   const [isGeneratingQuiz, setIsGeneratingQuiz] = useState(false);
   const [selectedMode, setSelectedMode] = useState<AITutorMode>('explain');
+  const [isPhrasesOpen, setIsPhrasesOpen] = useState(false);
 
   // Grade and Subject changer state with localStorage persistence
   const [selectedGrade, setSelectedGrade] = useState<string>(() => {
@@ -310,6 +311,7 @@ export function AITutorView() {
 
   // When grade changes: update grade, reset subject to the first subject of that tier, and persist
   const handleSelectGrade = (newGrade: string) => {
+    const currentScrollY = window.scrollY;
     setSelectedGrade(newGrade);
     localStorage.setItem('nexovian_grade', newGrade);
 
@@ -324,10 +326,16 @@ export function AITutorView() {
         subject: defaultSubjectForGrade
       });
     }
+
+    requestAnimationFrame(() => {
+      window.scrollTo({ top: currentScrollY, behavior: 'instant' });
+      setTimeout(() => window.scrollTo({ top: currentScrollY, behavior: 'instant' }), 50);
+    });
   };
 
   // When subject changes: update subject and persist
   const handleSelectSubject = (newSubj: string) => {
+    const currentScrollY = window.scrollY;
     setSelectedSubject(newSubj);
     localStorage.setItem('nexovian_subject', newSubj);
 
@@ -336,17 +344,38 @@ export function AITutorView() {
         subject: newSubj
       });
     }
+
+    requestAnimationFrame(() => {
+      window.scrollTo({ top: currentScrollY, behavior: 'instant' });
+      setTimeout(() => window.scrollTo({ top: currentScrollY, behavior: 'instant' }), 50);
+    });
   };
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const shouldScrollOnMessageRef = useRef(false);
 
   // Sync when language dropdown changes
   const handleLanguageChange = (newLang: SALanguageCode) => {
+    const currentScrollY = window.scrollY;
     setSelectedLang(newLang);
     setLanguage(newLang);
     if (updateLearningContext) {
       updateLearningContext({ language: newLang });
     }
+
+    requestAnimationFrame(() => {
+      window.scrollTo({ top: currentScrollY, behavior: 'instant' });
+      setTimeout(() => window.scrollTo({ top: currentScrollY, behavior: 'instant' }), 50);
+    });
+  };
+
+  const handleSelectMode = (mode: AITutorMode) => {
+    const currentScrollY = window.scrollY;
+    setSelectedMode(mode);
+    requestAnimationFrame(() => {
+      window.scrollTo({ top: currentScrollY, behavior: 'instant' });
+      setTimeout(() => window.scrollTo({ top: currentScrollY, behavior: 'instant' }), 50);
+    });
   };
 
   // Initial seed messages in Day 1 dark gold style
@@ -413,13 +442,15 @@ Bala leswi: $x^2 - 7x + 10 = 0$
         }))
       : fallbackMessages;
 
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  };
-
+  // Only scroll down when the user actively submits a message, NEVER on language/grade/subject dropdown selection
   useEffect(() => {
-    scrollToBottom();
-  }, [currentMessages, isTutorLoading]);
+    if (shouldScrollOnMessageRef.current) {
+      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+      if (!isTutorLoading) {
+        shouldScrollOnMessageRef.current = false;
+      }
+    }
+  }, [currentMessages.length, isTutorLoading]);
 
   // Database-First lookup logic
   const findInVerifiedDatabase = (query: string): string | null => {
@@ -450,6 +481,7 @@ Bala leswi: $x^2 - 7x + 10 = 0$
     setInputMessage('');
     setTutorErrorBanner(null);
     setLastQuery(query);
+    shouldScrollOnMessageRef.current = true;
 
     // Call Socratic Tutor
     try {
@@ -488,46 +520,70 @@ Bala leswi: $x^2 - 7x + 10 = 0$
   };
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a] text-white flex flex-col w-full max-w-[100vw] overflow-x-hidden font-sans">
+    <div className="min-h-screen bg-[#0a0a0a] text-white flex flex-col w-full max-w-[100vw] overflow-x-hidden font-sans socratic-tutor-container [overflow-anchor:none]">
       
-      {/* Top Banner: Free Access Week */}
-      <FreeAccessCountdown variant="banner" />
-
-      {/* 1. TOP HEADER & 12 SA LANGUAGES DROPDOWN BAR */}
-      <div className="w-full bg-[#141414] border-b border-[#262626] px-4 py-3 sm:px-6">
-        <div className="max-w-6xl mx-auto flex flex-col md:flex-row md:items-center justify-between gap-3">
-          
-          {/* Engine Header Badges */}
-          <div className="flex items-start gap-3">
-            <div className="w-10 h-10 rounded-xl bg-[#fbbf24] text-black font-black flex items-center justify-center shrink-0 shadow-[0_0_15px_rgba(251,191,36,0.35)]">
-              <Sparkles className="w-5 h-5 text-black" />
+      {/* 1. TOP STICKY HEADER */}
+      <div className="sticky top-0 z-30 w-full bg-[#141414]/95 backdrop-blur-md border-b border-[#262626]">
+        <FreeAccessCountdown variant="banner" />
+        <div className="max-w-4xl mx-auto px-4 py-2.5 sm:px-6 flex items-center justify-between gap-3">
+          {/* Logo & Brand */}
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-xl bg-[#fbbf24] text-black font-black flex items-center justify-center shrink-0 shadow-[0_0_12px_rgba(251,191,36,0.35)]">
+              <Sparkles className="w-4 h-4 text-black" />
             </div>
             <div>
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="text-xs sm:text-sm font-black tracking-wider text-[#fbbf24] uppercase">
-                  Nexovian {activeLangConfig.name} Language Engine Active
-                </span>
-                <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-[#fbbf24]/20 text-[#fbbf24] border border-[#fbbf24]/40">
-                  {activeLangConfig.badge}
-                </span>
-              </div>
-              <p className="text-[11px] sm:text-xs text-slate-400 mt-0.5 leading-snug">
-                {activeLangConfig.subtitle}
-              </p>
+              <span className="text-xs sm:text-sm font-black tracking-wider text-[#fbbf24] uppercase">
+                NEXOVIAN
+              </span>
+              <span className="text-[10px] sm:text-xs text-slate-300 ml-1.5 font-bold">
+                AI Socratic Tutor
+              </span>
             </div>
           </div>
 
-          {/* Controls: 11 Languages Dropdown & Phrasebook Button */}
-          <div className="flex items-center gap-2.5 shrink-0 self-start md:self-center">
-            
-            {/* 11 SA Official Languages Dropdown */}
-            <div className="relative">
-              <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#1e1e1e] border border-[#fbbf24]/50 text-white text-xs font-bold">
+          {/* Right Status Badges */}
+          <div className="flex items-center gap-2">
+            <span className="px-2.5 py-1 rounded-full bg-[#fbbf24]/15 border border-[#fbbf24]/40 text-[#fbbf24] font-mono text-[11px] font-bold">
+              {activeLangConfig.name}
+            </span>
+            <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 hidden sm:inline">
+              Free Access Active
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {/* MAIN CONTAINER: ORDERED STEPS 1 TO 4 */}
+      <div className="flex-1 max-w-4xl w-full mx-auto px-4 py-4 sm:p-6 space-y-4">
+
+        {/* STEP 1: CHOOSE LANGUAGE */}
+        <div className="bg-[#141414] border border-[#2e2e32] hover:border-[#fbbf24]/50 rounded-2xl p-4 transition-all shadow-sm">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="w-6 h-6 rounded-full bg-[#fbbf24] text-black font-black text-xs flex items-center justify-center shrink-0">
+                  1
+                </span>
+                <h3 className="text-sm sm:text-base font-bold text-white">
+                  ① Choose Language &mdash; <span className="text-[#fbbf24]">Khetha Ririmi</span>
+                </h3>
+              </div>
+              <p className="text-xs text-slate-400 mt-1 ml-8">
+                Learn in your language &bull; Database First &mdash; Controlled native vocabulary
+              </p>
+            </div>
+
+            <div className="flex items-center gap-2 ml-8 sm:ml-0 flex-wrap">
+              {/* Language Dropdown */}
+              <div className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-[#1e1e1e] border border-[#fbbf24]/50 text-white text-xs font-bold">
                 <Globe className="w-3.5 h-3.5 text-[#fbbf24]" />
                 <select
                   value={selectedLang}
-                  onChange={(e) => handleLanguageChange(e.target.value as SALanguageCode)}
-                  className="bg-transparent text-[#fbbf24] font-bold focus:outline-none cursor-pointer pr-1"
+                  onChange={(e) => {
+                    e.stopPropagation();
+                    handleLanguageChange(e.target.value as SALanguageCode);
+                  }}
+                  className="bg-transparent text-[#fbbf24] font-bold focus:outline-none cursor-pointer pr-1 text-xs sm:text-sm"
                   aria-label="Select South African Language"
                 >
                   <option value="ts" className="bg-[#1a1a1a] text-white">Xitsonga (Default)</option>
@@ -544,148 +600,211 @@ Bala leswi: $x^2 - 7x + 10 = 0$
                   <option value="sasl" className="bg-[#1a1a1a] text-yellow-300 font-bold">SASL 🤟 (Sign Language)</option>
                 </select>
               </div>
-            </div>
 
-            {/* Phrasebook Button */}
-            <button
-              onClick={() => setIsPhrasebookOpen(true)}
-              className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-[#fbbf24] hover:bg-yellow-400 text-black text-xs font-black shadow-[0_0_15px_-3px_rgba(251,191,36,0.4)] transition-all cursor-pointer active:scale-95"
-            >
-              <BookOpen className="w-3.5 h-3.5 text-black" />
-              <span>{activeLangConfig.name} Phrasebook</span>
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {/* 2. CONTEXT & SOCRATIC MODE BAR */}
-      <div className="w-full bg-[#18181b]/80 border-b border-[#262626] px-4 py-2 sm:px-6">
-        <div className="max-w-6xl mx-auto flex flex-wrap items-center justify-between gap-2 text-xs">
-          {/* Clickable Gold Grade & Subject Changer */}
-          <div className="flex flex-wrap items-center gap-2 font-mono text-xs">
-            {/* Grade Button */}
-            <div className="flex items-center gap-1.5">
-              <span className="text-[#fbbf24] font-bold">Grade:</span>
+              {/* Phrasebook Button */}
               <button
                 type="button"
-                onClick={() => setSelectorModalType('grade')}
-                className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[#1a1a1a] hover:bg-[#222222] border border-[#d4af37] text-white hover:text-[#fbbf24] font-semibold text-xs transition-all shadow-xs active:scale-95 cursor-pointer"
-                title="Change Grade / Qualification Level"
+                onClick={() => setIsPhrasebookOpen(true)}
+                className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-[#fbbf24] hover:bg-yellow-400 text-black text-xs font-black shadow-[0_0_12px_rgba(251,191,36,0.3)] transition-all cursor-pointer active:scale-95"
               >
-                <span>{selectedGrade}</span>
-                <ChevronDown className="w-3.5 h-3.5 text-[#fbbf24] shrink-0" />
+                <BookOpen className="w-3.5 h-3.5 text-black" />
+                <span>{activeLangConfig.name} Phrasebook</span>
               </button>
-            </div>
-
-            <span className="text-slate-600 hidden sm:inline">|</span>
-
-            {/* Subject Button */}
-            <div className="flex items-center gap-1.5">
-              <span className="text-[#fbbf24] font-bold">Subject:</span>
-              <button
-                type="button"
-                onClick={() => setSelectorModalType('subject')}
-                className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[#1a1a1a] hover:bg-[#222222] border border-[#d4af37] text-white hover:text-[#fbbf24] font-semibold text-xs transition-all shadow-xs active:scale-95 cursor-pointer max-w-[200px] sm:max-w-[280px] truncate"
-                title="Change Subject"
-              >
-                <span className="truncate">{selectedSubject}</span>
-                <ChevronDown className="w-3.5 h-3.5 text-[#fbbf24] shrink-0" />
-              </button>
-            </div>
-
-            {/* Live Indicator */}
-            <div className="hidden lg:flex items-center gap-1.5 ml-2 pl-2 border-l border-[#2e2e32] text-[11px] text-slate-300">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-              <span>Tutor ready for <strong className="text-[#fbbf24] font-bold">{selectedSubject}</strong> ({selectedGrade})</span>
             </div>
           </div>
-
-          <div className="flex items-center gap-1.5 bg-[#262626] p-1 rounded-xl">
-            {(['explain', 'practice', 'translate'] as AITutorMode[]).map((mode) => (
-              <button
-                key={mode}
-                onClick={() => setSelectedMode(mode)}
-                className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-colors capitalize cursor-pointer ${
-                  selectedMode === mode
-                    ? 'bg-[#fbbf24] text-black shadow-xs'
-                    : 'text-slate-400 hover:text-white'
-                }`}
-              >
-                {mode === 'explain' ? 'Socratic Tutor' : mode}
-              </button>
-            ))}
-          </div>
         </div>
-      </div>
 
-      {/* 3. NATIVE PHRASES BAR (DYNAMIC PER SELECTED LANGUAGE) */}
-      <div className="w-full bg-[#121212] border-b border-[#262626] px-4 py-2 sm:px-6 overflow-x-auto scrollbar-hide">
-        <div className="max-w-6xl mx-auto flex items-center gap-2 min-w-max">
-          <span className="text-[11px] font-bold uppercase tracking-wider text-[#fbbf24] font-mono mr-1 shrink-0">
-            {activeLangConfig.name} Classroom Phrases:
-          </span>
-          {activeLangConfig.phrases.map((phrase, idx) => (
-            <button
-              key={idx}
-              onClick={() => handleSend(phrase.text)}
-              className="px-3 py-1 rounded-lg bg-[#1e1e1e] hover:bg-[#2a2a2a] text-slate-200 hover:text-[#fbbf24] border border-[#333] hover:border-[#fbbf24]/50 text-xs font-medium transition-all shrink-0 cursor-pointer active:scale-95"
-              title={`Click to send: "${phrase.text}"`}
-            >
-              {phrase.label}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* 3.1 SASL SPECIAL TUTOR BANNER (WHEN SASL 🤟 IS SELECTED) */}
-      {selectedLang === 'sasl' && (
-        <div className="w-full bg-[#1e1b12] border-b border-[#fbbf24]/30 px-4 py-3 sm:px-6">
-          <div className="max-w-4xl mx-auto space-y-2">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+        {/* STEP 2: CHOOSE GRADE */}
+        <div className="bg-[#141414] border border-[#2e2e32] hover:border-[#fbbf24]/50 rounded-2xl p-4 transition-all shadow-sm">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div>
               <div className="flex items-center gap-2">
-                <span className="text-xl">🤟</span>
-                <div>
-                  <h4 className="text-xs sm:text-sm font-bold text-[#fbbf24] flex items-center gap-1.5">
-                    <span>SASL 🤟 Tutor Active &mdash; Simple English + Video Signs &bull; NID &amp; DeafTV Free</span>
-                  </h4>
-                  <p className="text-[11px] text-slate-300">
-                    South African Sign Language (12th Official Language). Using simple English syntax, [Sign: CONCEPT] notations, and open educational sign resources.
-                  </p>
+                <span className="w-6 h-6 rounded-full bg-[#fbbf24] text-black font-black text-xs flex items-center justify-center shrink-0">
+                  2
+                </span>
+                <h3 className="text-sm sm:text-base font-bold text-white">
+                  ② Choose Your Grade
+                </h3>
+              </div>
+              <p className="text-xs text-slate-400 mt-1 ml-8">
+                Grade 4, 5, 6... up to University &bull; CAPS &amp; TVET N1-N6
+              </p>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setSelectorModalType('grade')}
+              className="ml-8 sm:ml-0 flex items-center justify-between gap-3 px-4 py-2.5 rounded-xl bg-[#1e1e1e] hover:bg-[#222222] border border-[#fbbf24]/60 text-white hover:text-[#fbbf24] font-bold text-xs sm:text-sm transition-all shadow-xs active:scale-95 cursor-pointer min-w-[160px]"
+              title="Change Grade / Qualification Level"
+            >
+              <span className="text-[#fbbf24] font-mono">{selectedGrade}</span>
+              <ChevronDown className="w-4 h-4 text-[#fbbf24] shrink-0" />
+            </button>
+          </div>
+        </div>
+
+        {/* STEP 3: CHOOSE SUBJECT */}
+        <div className="bg-[#141414] border border-[#2e2e32] hover:border-[#fbbf24]/50 rounded-2xl p-4 transition-all shadow-sm">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="w-6 h-6 rounded-full bg-[#fbbf24] text-black font-black text-xs flex items-center justify-center shrink-0">
+                  3
+                </span>
+                <h3 className="text-sm sm:text-base font-bold text-white">
+                  ③ Choose Subject
+                </h3>
+              </div>
+              <p className="text-xs text-slate-400 mt-1 ml-8">
+                What do you want to learn?
+              </p>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setSelectorModalType('subject')}
+              className="ml-8 sm:ml-0 flex items-center justify-between gap-3 px-4 py-2.5 rounded-xl bg-[#1e1e1e] hover:bg-[#222222] border border-[#fbbf24]/60 text-white hover:text-[#fbbf24] font-bold text-xs sm:text-sm transition-all shadow-xs active:scale-95 cursor-pointer max-w-full sm:max-w-[280px] truncate"
+              title="Change Subject"
+            >
+              <span className="truncate text-[#fbbf24] font-mono">{selectedSubject}</span>
+              <ChevronDown className="w-4 h-4 text-[#fbbf24] shrink-0" />
+            </button>
+          </div>
+        </div>
+
+        {/* 5. DIVIDER: THIN YELLOW LINE */}
+        <div className="relative py-2">
+          <div className="border-t border-[#fbbf24]/40" />
+          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+            <span className="bg-[#0a0a0a] px-3 text-[10px] uppercase font-mono font-bold tracking-widest text-[#fbbf24]">
+              Start Learning
+            </span>
+          </div>
+        </div>
+
+        {/* STEP 4: START LEARNING */}
+        <div className="bg-[#141414] border border-[#2e2e32] rounded-2xl overflow-hidden shadow-lg">
+          
+          {/* Socratic Tutor Header Banner & Mode Pills */}
+          <div className="p-4 bg-[#18181b] border-b border-[#262626] flex flex-col md:flex-row md:items-center justify-between gap-3">
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="w-6 h-6 rounded-full bg-[#fbbf24] text-black font-black text-xs flex items-center justify-center shrink-0">
+                  4
+                </span>
+                <h3 className="text-sm sm:text-base font-bold text-white flex items-center gap-2">
+                  <span>④ Start Learning</span>
+                  <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 font-semibold">
+                    ● Live
+                  </span>
+                </h3>
+              </div>
+              <p className="text-xs text-slate-300 mt-1 ml-8">
+                Tutor ready for <strong className="text-[#fbbf24]">{selectedSubject}</strong> ({selectedGrade}) in <span className="text-[#fbbf24]">{activeLangConfig.name}</span>
+              </p>
+            </div>
+
+            {/* Mode Pills under tutor */}
+            <div className="flex items-center gap-1.5 bg-[#262626] p-1 rounded-xl self-start md:self-center ml-8 md:ml-0">
+              {(['explain', 'practice', 'translate'] as AITutorMode[]).map((mode) => (
+                <button
+                  key={mode}
+                  type="button"
+                  onClick={() => handleSelectMode(mode)}
+                  className={`px-3 py-1 rounded-lg text-xs font-bold transition-colors capitalize cursor-pointer ${
+                    selectedMode === mode
+                      ? 'bg-[#fbbf24] text-black shadow-xs'
+                      : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  {mode === 'explain' ? 'Socratic Tutor' : mode}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Collapsed Classroom Phrases Accordion */}
+          <div className="border-b border-[#262626] bg-[#121212]">
+            <button
+              type="button"
+              onClick={() => setIsPhrasesOpen(!isPhrasesOpen)}
+              className="w-full px-4 py-2.5 flex items-center justify-between text-xs text-slate-300 hover:text-[#fbbf24] transition-colors cursor-pointer"
+            >
+              <span className="flex items-center gap-2 font-semibold">
+                <span>💬</span>
+                <span>Need help phrasing? Tap here for {activeLangConfig.name} Classroom Phrases</span>
+              </span>
+              <ChevronDown className={`w-4 h-4 text-[#fbbf24] transition-transform duration-200 ${isPhrasesOpen ? 'rotate-180' : ''}`} />
+            </button>
+
+            {isPhrasesOpen && (
+              <div className="p-3 bg-[#161616] border-t border-[#262626] flex flex-wrap gap-2 animate-fadeIn">
+                {activeLangConfig.phrases.map((phrase, idx) => (
+                  <button
+                    key={idx}
+                    type="button"
+                    onClick={() => {
+                      handleSend(phrase.text);
+                      setIsPhrasesOpen(false);
+                    }}
+                    className="px-3 py-1 rounded-lg bg-[#1e1e1e] hover:bg-[#2a2a2a] text-slate-200 hover:text-[#fbbf24] border border-[#333] hover:border-[#fbbf24]/50 text-xs font-medium transition-all cursor-pointer active:scale-95"
+                    title={`Click to ask: "${phrase.text}"`}
+                  >
+                    {phrase.label}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* SASL Special Tutor Banner (when SASL 🤟 is selected) */}
+          {selectedLang === 'sasl' && (
+            <div className="w-full bg-[#1e1b12] border-b border-[#fbbf24]/30 px-4 py-3">
+              <div className="space-y-2">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xl">🤟</span>
+                    <div>
+                      <h4 className="text-xs sm:text-sm font-bold text-[#fbbf24] flex items-center gap-1.5">
+                        <span>SASL 🤟 Tutor Active &mdash; Simple English + Video Signs &bull; NID &amp; DeafTV Free</span>
+                      </h4>
+                      <p className="text-[11px] text-slate-300">
+                        South African Sign Language (12th Official Language). Using simple English syntax, [Sign: CONCEPT] notations, and open educational sign resources.
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <a
+                      href="https://www.deaftv.co.za"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="px-2.5 py-1 rounded-lg bg-black/50 border border-[#fbbf24]/40 text-[#fbbf24] text-[11px] font-bold hover:bg-[#fbbf24] hover:text-black transition-colors"
+                    >
+                      DeafTV Videos ↗
+                    </a>
+                    <a
+                      href="https://nid.org.za"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="px-2.5 py-1 rounded-lg bg-black/50 border border-white/20 text-white text-[11px] font-bold hover:bg-white/20 transition-colors"
+                    >
+                      NID Signs ↗
+                    </a>
+                  </div>
+                </div>
+                <div className="p-2.5 rounded-xl bg-black/60 border border-[#fbbf24]/20 flex items-center justify-between text-[11px] text-slate-300">
+                  <span className="flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                    <span><strong>Visual Sign Learning:</strong> Ask Tisha any concept to see visual step breakdowns and SASL sign references.</span>
+                  </span>
+                  <span className="text-[#fbbf24] font-mono text-[10px] hidden md:inline">100% Free Open Educational Resource</span>
                 </div>
               </div>
-              <div className="flex items-center gap-2 shrink-0">
-                <a
-                  href="https://www.deaftv.co.za"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="px-2.5 py-1 rounded-lg bg-black/50 border border-[#fbbf24]/40 text-[#fbbf24] text-[11px] font-bold hover:bg-[#fbbf24] hover:text-black transition-colors"
-                >
-                  DeafTV Videos ↗
-                </a>
-                <a
-                  href="https://nid.org.za"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="px-2.5 py-1 rounded-lg bg-black/50 border border-white/20 text-white text-[11px] font-bold hover:bg-white/20 transition-colors"
-                >
-                  NID Signs ↗
-                </a>
-              </div>
             </div>
-            {/* Embedded DeafTV Video Preview Container */}
-            <div className="p-2.5 rounded-xl bg-black/60 border border-[#fbbf24]/20 flex items-center justify-between text-[11px] text-slate-300">
-              <span className="flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                <span><strong>Visual Sign Learning:</strong> Ask Tisha any concept to see visual step breakdowns and SASL sign references.</span>
-              </span>
-              <span className="text-[#fbbf24] font-mono text-[10px] hidden md:inline">100% Free Open Educational Resource</span>
-            </div>
-          </div>
-        </div>
-      )}
+          )}
 
-      {/* 4. CHAT MESSAGE STREAM */}
-      <div className="flex-1 max-w-4xl w-full mx-auto p-4 sm:p-6 space-y-6 overflow-y-auto">
+          {/* Chat Message Stream */}
+          <div className="p-4 sm:p-6 space-y-6">
         {currentMessages.map((msg) => {
           const isUser = msg.role === 'user';
           return (
@@ -777,6 +896,8 @@ Bala leswi: $x^2 - 7x + 10 = 0$
 
         <div ref={messagesEndRef} />
       </div>
+    </div>
+  </div>
 
       {/* 5. BOTTOM ACTIONS BAR & INPUT FORM */}
       <div className="w-full bg-[#141414] border-t border-[#262626] p-4 sm:p-5 sticky bottom-0 z-20">

@@ -4,7 +4,7 @@ import { useLearning } from '../../context/LearningContext';
 import { Track } from '../../types';
 
 export const TrackCatalog: React.FC = () => {
-  const { tracks, activeTrack, setActiveTrackId, openLesson, userProgress, setCertificateToView, generateCertificate } = useLearning();
+  const { tracks, activeTrack, setActiveTrackId, openLesson, userProgress } = useLearning();
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [expandedTrackId, setExpandedTrackId] = useState<string | null>(null);
 
@@ -179,16 +179,6 @@ export const TrackCatalog: React.FC = () => {
                         {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
                       </button>
                     </div>
-
-                    {isCompleted && (
-                      <button
-                        onClick={() => generateCertificate(track.id, 'Nexovian Scholar')}
-                        className="flex items-center justify-center gap-1.5 py-1.5 px-3 text-xs font-semibold text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/40 hover:bg-amber-100 rounded-lg transition-colors"
-                      >
-                        <Award className="w-3.5 h-3.5" />
-                        <span>View Certificate</span>
-                      </button>
-                    )}
                   </div>
                 </div>
 

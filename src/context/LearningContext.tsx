@@ -3,7 +3,6 @@ import {
   AIConversation,
   AIMessage,
   AITutorMode,
-  CertificateData,
   GeneratedQuiz,
   LearningContextState,
   Lesson,
@@ -38,7 +37,7 @@ import { isTtsSupportedForLanguage } from '../services/voice/languageCapabilitie
 
 import { learnerStrugglesService } from '../services/struggles/learnerStrugglesService';
 
-export type AppTab = 'landing' | 'login' | 'signup' | 'calculator' | 'home' | 'dashboard' | 'explore' | 'learn' | 'school' | 'tvet' | 'higherEd' | 'tracks' | 'tutor' | 'scan' | 'practice' | 'saved' | 'profile' | 'adaptive' | 'assessments' | 'academicVoice' | 'progress' | 'adminBank' | 'about' | 'smartNotes' | 'myStruggles' | 'success' | 'cancel' | 'trial' | 'paywall' | 'papers' | 'adminPayments' | 'unlock' | 'adminCodes' | 'terms' | 'refundPolicy' | 'privacyPolicy' | 'contact';
+export type AppTab = 'landing' | 'login' | 'signup' | 'calculator' | 'home' | 'dashboard' | 'explore' | 'learn' | 'school' | 'tvet' | 'higherEd' | 'tracks' | 'tutor' | 'scan' | 'practice' | 'saved' | 'profile' | 'adaptive' | 'assessments' | 'academicVoice' | 'progress' | 'adminBank' | 'about' | 'smartNotes' | 'myStruggles' | 'success' | 'cancel' | 'trial' | 'paywall' | 'papers' | 'adminPayments' | 'unlock' | 'adminCodes' | 'terms' | 'refundPolicy' | 'privacyPolicy' | 'contact' | 'studyGuide' | 'studyGuidePhysics' | 'studyGuideLifeSciences' | 'studyGuideChapter';
 
 export interface GeminiStatusInfo {
   checked: boolean;
@@ -63,13 +62,10 @@ interface LearningContextType {
   saveNote: (lessonId: string, lessonTitle: string, trackTitle: string, content: string) => void;
   recordQuizScore: (lessonId: string, score: number) => void;
   setActiveTrackId: (trackId: string) => void;
-  generateCertificate: (trackId: string, studentName: string) => CertificateData;
   isSearchOpen: boolean;
   setIsSearchOpen: (open: boolean) => void;
   isPwaPromptOpen: boolean;
   setIsPwaPromptOpen: (open: boolean) => void;
-  certificateToView: CertificateData | null;
-  setCertificateToView: (cert: CertificateData | null) => void;
   isOffline: boolean;
   theme: 'light' | 'dark';
   toggleTheme: () => void;
@@ -221,7 +217,6 @@ const DEFAULT_PROGRESS: UserProgress = {
   lastActiveDate: new Date().toISOString().split('T')[0],
   activeTrackId: 'fullstack-mastery',
   totalXp: 450,
-  certificates: [],
   learnedDays: ['2026-09-25', '2026-09-26', '2026-09-27', '2026-09-28', '2026-09-29'],
   // Phase 2 default metrics
   questionsAskedCount: 6,
@@ -275,6 +270,10 @@ export const pathToTab = (cleanPath: string, search = ''): AppTab => {
   if (cleanPath === '/refund-policy' || cleanPath === '/refund') return 'refundPolicy';
   if (cleanPath === '/privacy-policy' || cleanPath === '/privacy') return 'privacyPolicy';
   if (cleanPath === '/contact') return 'contact';
+  if (cleanPath === '/study-guide' || cleanPath === '/study-guides') return 'studyGuide';
+  if (cleanPath === '/study-guide/physics-grade-12') return 'studyGuidePhysics';
+  if (cleanPath === '/study-guide/life-sciences-grade-12') return 'studyGuideLifeSciences';
+  if (cleanPath.startsWith('/study-guide/')) return 'studyGuideChapter';
   return 'landing';
 };
 
@@ -302,6 +301,10 @@ export const tabToPath = (tab: AppTab): string => {
     case 'refundPolicy': return '/refund-policy';
     case 'privacyPolicy': return '/privacy-policy';
     case 'contact': return '/contact';
+    case 'studyGuide': return '/study-guide';
+    case 'studyGuidePhysics': return '/study-guide/physics-grade-12';
+    case 'studyGuideLifeSciences': return '/study-guide/life-sciences-grade-12';
+    case 'studyGuideChapter': return typeof window !== 'undefined' ? window.location.pathname : '/study-guide/physics-grade-12/momentum';
     default: return '/';
   }
 };
@@ -355,7 +358,9 @@ export const LearningProvider: React.FC<{ children: React.ReactNode }> = ({ chil
           const clean = normalizePath(url.pathname);
           const tab = pathToTab(clean, url.search);
           e.preventDefault();
+          window.history.pushState({}, '', clean);
           setCurrentTab(tab);
+          window.dispatchEvent(new PopStateEvent('popstate'));
         } catch {
           // fallback to default navigation if URL parsing fails
         }
@@ -373,7 +378,6 @@ export const LearningProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const [activeLessonId, setActiveLessonId] = useState<string | null>(null);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isPwaPromptOpen, setIsPwaPromptOpen] = useState(false);
-  const [certificateToView, setCertificateToView] = useState<CertificateData | null>(null);
   const [isOffline, setIsOffline] = useState(!navigator.onLine);
   const [theme, setTheme] = useState<'light' | 'dark'>(() => {
     try {
@@ -1076,32 +1080,6 @@ export const LearningProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     }));
   };
 
-  const generateCertificate = (trackId: string, studentName: string): CertificateData => {
-    const targetTrack = tracks.find((t) => t.id === trackId) || activeTrack;
-    const cert: CertificateData = {
-      id: `CERT-BP-${Math.random().toString(36).substring(2, 8).toUpperCase()}`,
-      studentName: studentName.trim() || 'NEXOVIAN Scholar',
-      trackId: targetTrack.id,
-      trackTitle: targetTrack.title,
-      issueDate: new Date().toLocaleDateString('en-US', {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric'
-      }),
-      completionScore: 98,
-      instructorName: 'Sarah Jenkins, Principal Architect',
-      verificationHash: `0x${Array.from({ length: 16 }, () => Math.floor(Math.random() * 16).toString(16)).join('')}`
-    };
-
-    setUserProgress((prev) => ({
-      ...prev,
-      certificates: [cert, ...prev.certificates.filter((c) => c.trackId !== trackId)]
-    }));
-
-    setCertificateToView(cert);
-    return cert;
-  };
-
   // ==========================================
   // VOICE & READ-ALOUD SYSTEM (ENGLISH & AFRIKAANS ONLY)
   // ==========================================
@@ -1670,12 +1648,27 @@ export const LearningProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         })
       });
 
-      const json = await res.json();
-      if (!res.ok || !json.success) {
-        if (json.keyMissing) {
+      const text = await res.text();
+      let json: any = null;
+      try {
+        json = text ? JSON.parse(text) : null;
+      } catch (e) {
+        console.error("Invalid JSON:", text);
+        throw new Error("AI server not configured. Please add GEMINI_API_KEY in Vercel env vars and redeploy.");
+      }
+
+      if (res.status === 429 || json?.error === "LIMIT_REACHED") {
+        const quotaErr: any = new Error(json?.message || "Daily AI limit reached. NEXOVIAN uses Google Gemini free tier (50 scans/day). Limit resets at midnight SAST. Try tomorrow or upgrade to NEXOVIAN Pro for unlimited.");
+        quotaErr.isQuota = true;
+        quotaErr.quotaData = json;
+        throw quotaErr;
+      }
+
+      if (!res.ok || !json?.success) {
+        if (json?.keyMissing || json?.error === "GEMINI_API_KEY_MISSING") {
           throw new Error('Gemini API key is not configured. Please set GEMINI_API_KEY in your server environment.');
         }
-        throw new Error(json.message || "NEXOVIAN couldn't analyze the scanned image right now.");
+        throw new Error(json?.message || json?.error || `Server error ${res.status}: ${text.slice(0, 140)}`);
       }
 
       const session: ScanSession = json.data.session;
@@ -1717,9 +1710,21 @@ export const LearningProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         })
       });
 
-      const json = await res.json();
-      if (!res.ok || !json.success) {
-        throw new Error(json.message || "NEXOVIAN couldn't process your follow-up question.");
+      const text = await res.text();
+      let json: any = null;
+      try {
+        json = text ? JSON.parse(text) : null;
+      } catch (e) {
+        console.error("Invalid JSON:", text);
+        throw new Error("AI server not configured. Please add GEMINI_API_KEY in Vercel env vars and redeploy.");
+      }
+
+      if (res.status === 429 || json?.error === "LIMIT_REACHED") {
+        throw new Error(json?.message || "Daily AI limit reached.");
+      }
+
+      if (!res.ok || !json?.success) {
+        throw new Error(json?.message || "NEXOVIAN couldn't process your follow-up question.");
       }
 
       const updatedSession: ScanSession = json.data.session;
@@ -1795,13 +1800,10 @@ export const LearningProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         saveNote,
         recordQuizScore,
         setActiveTrackId,
-        generateCertificate,
         isSearchOpen,
         setIsSearchOpen,
         isPwaPromptOpen,
         setIsPwaPromptOpen,
-        certificateToView,
-        setCertificateToView,
         isOffline,
         theme,
         toggleTheme,

@@ -39,9 +39,7 @@ export const MyProgressHubView: React.FC = () => {
     userProgress,
     adaptiveProfile,
     setCurrentTab,
-    openLesson,
-    certificateToView,
-    setCertificateToView
+    openLesson
   } = useLearning();
   const { user } = useAuth();
 

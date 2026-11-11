@@ -107,6 +107,24 @@ export const ScanAndLearnView: React.FC = () => {
   const [isQuizSubmitted, setIsQuizSubmitted] = useState<boolean>(false);
   const [quizScore, setQuizScore] = useState<number>(0);
   const [imageZoomOpen, setImageZoomOpen] = useState<boolean>(false);
+  const [quotaLimitReached, setQuotaLimitReached] = useState<boolean>(false);
+  const [quotaData, setQuotaData] = useState<any>(null);
+
+  const LANG_NAMES: Record<string, string> = {
+    zu: 'isiZulu',
+    ts: 'Xitsonga',
+    xh: 'isiXhosa',
+    af: 'Afrikaans',
+    nso: 'Sepedi',
+    tn: 'Setswana',
+    st: 'Sesotho',
+    ss: 'siSwati',
+    ve: 'Tshivenda',
+    nr: 'isiNdebele',
+    en: 'English',
+    sasl: 'SASL 🤟'
+  };
+  const activeLangName = LANG_NAMES[learningContext.language] || 'isiZulu';
 
   // Video and canvas refs for live camera
   const videoRef = useRef<HTMLVideoElement | null>(null);
@@ -254,9 +272,11 @@ export const ScanAndLearnView: React.FC = () => {
 
   // Submit scan for AI analysis
   const handleScanSubmit = async (modeOverride?: ScanMode, questionOverride?: string) => {
-    if (!selectedImageBase64) return;
+    if (!selectedImageBase64 || isScanLoading) return;
     const activeMode = modeOverride || selectedMode;
     const activeQ = questionOverride || userQuestion;
+    setQuotaLimitReached(false);
+    clearScanError();
 
     try {
       const session = await analyzeScannedImage({
@@ -273,9 +293,66 @@ export const ScanAndLearnView: React.FC = () => {
       });
       setActiveQuizAnswers({});
       setIsQuizSubmitted(false);
-    } catch (err) {
-      // Error handled in context state
+    } catch (err: any) {
+      const msg = String(err?.message || '');
+      if (err?.isQuota || msg.includes('429') || msg.includes('quota') || msg.includes('limit')) {
+        setQuotaLimitReached(true);
+        setQuotaData(err?.quotaData || {
+          message: "Daily AI limit reached. NEXOVIAN uses Google Gemini free tier (50 scans/day). Limit resets at midnight SAST. Try tomorrow or upgrade to NEXOVIAN Pro for unlimited.",
+          isiZuluMessage: "Umkhawulo wansuku zonke ufinyelelwe. Zama kusasa ekuseni noma thuthukela ku-Pro."
+        });
+        clearScanError();
+      }
     }
+  };
+
+  // Offline fallback explanation when quota is reached
+  const handleOfflineFallback = () => {
+    const grade = learningContext.gradeOrProgramme || 'Grade 12';
+    const subj = learningContext.subject || 'Curriculum Material';
+    const top = learningContext.topic || 'Revision';
+
+    const fallbackExplanation = `### Offline Preview: Scanned Learning Material (${grade} ${subj})
+
+**Summary in ${activeLangName}:**
+Lesi sifundo sihlola imiqondo eyinhloko ye-${subj} (${top}). Isithombe sakho siqukethe imibuzo ebalulekile nezibalo ezihambisana nohlelo lwe-CAPS.
+
+- **Umsebenzi Oyinhloko**: Landela izinyathelo ezicacile zokuxazulula umbuzo wesibonelo.
+- **Isikhumbuzo Se-Exam**: Bhala zonke izinyathelo zokusebenza ukuze uthole amamaki aphelele.
+
+*(Full AI explanation available after midnight reset &bull; Limit resets at 00:00 SAST)*`;
+
+    const fallbackSession: ScanSession = {
+      id: `offline_${Date.now()}`,
+      userId: 'learner',
+      title: `${subj} · Offline Preview`,
+      thumbnail: selectedImageBase64 ? selectedImageBase64.slice(0, 500000) : '',
+      mimeType: selectedMimeType,
+      initialQuestion: userQuestion || 'What does this mean?',
+      mode: (selectedMode || 'explain') as ScanMode,
+      educationLevel: learningContext.educationLevel,
+      gradeOrProgramme: learningContext.gradeOrProgramme,
+      subject: learningContext.subject,
+      topic: learningContext.topic,
+      language: learningContext.language,
+      aiExplanation: fallbackExplanation,
+      summary: `Offline preview of ${subj} material.`,
+      clarityAssessment: { isClear: true, issue: 'none', message: 'Offline mode active.' },
+      followUpSuggestions: ['Can you show formulas?', 'Practice another question'],
+      messages: [
+        { id: `u_${Date.now()}`, role: 'user', content: userQuestion || 'What does this mean?', timestamp: new Date().toISOString() },
+        { id: `a_${Date.now()}`, role: 'assistant', content: fallbackExplanation, timestamp: new Date().toISOString(), isAiGenerated: false }
+      ],
+      imageUrl: selectedImageBase64 || '',
+      isAiGenerated: false,
+      disclaimer: 'Offline preview mode &bull; Free Daily Limit reached',
+      saved: false,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+
+    setActiveScanSession(fallbackSession);
+    setQuotaLimitReached(false);
   };
 
   // Handle follow-up chat submit
@@ -666,35 +743,71 @@ export const ScanAndLearnView: React.FC = () => {
               <button
                 onClick={() => handleScanSubmit()}
                 disabled={isScanLoading}
-                className="w-full py-3 bg-amber-400 hover:bg-amber-300 text-slate-950 font-bold rounded-xl text-xs sm:text-sm shadow-sm transition-all flex items-center justify-center gap-2 active:scale-98 disabled:opacity-50"
+                className="w-full py-3.5 bg-amber-400 hover:bg-amber-300 text-slate-950 font-bold rounded-xl text-xs sm:text-sm shadow-md transition-all flex items-center justify-center gap-2 active:scale-98 disabled:opacity-60 disabled:cursor-not-allowed"
               >
                 {isScanLoading ? (
                   <>
-                    <RefreshCw className="w-4 h-4 animate-spin" />
-                    <span>Analyzing Image with Gemini Vision...</span>
+                    <RefreshCw className="w-4 h-4 animate-spin text-black" />
+                    <span className="font-semibold text-slate-950">Thinking in {activeLangName}... 🤔</span>
                   </>
                 ) : (
                   <>
-                    <Sparkles className="w-4 h-4" />
+                    <Sparkles className="w-4 h-4 text-black" />
                     <span>Scan & Understand with AI</span>
                   </>
                 )}
               </button>
+            )}
+
+            {/* Daily Quota Limit Reached Card */}
+            {quotaLimitReached && (
+              <div className="p-4 rounded-2xl bg-amber-500/10 border-2 border-amber-400/80 text-amber-100 space-y-2.5 animate-fadeIn">
+                <div className="flex items-center gap-2 text-amber-300 font-bold text-sm">
+                  <span>⏳</span>
+                  <span>Daily AI Limit Reached - 50 scans/day</span>
+                </div>
+                <p className="text-xs text-amber-200/90 leading-relaxed">
+                  {quotaData?.message || "You learned a lot today! Limit resets at 00:00 (midnight SAST). Come back tomorrow or upgrade to NEXOVIAN Pro for unlimited scans."}
+                </p>
+                {quotaData?.isiZuluMessage && (
+                  <p className="text-xs text-amber-300/80 italic font-medium">
+                    "{quotaData.isiZuluMessage}"
+                  </p>
+                )}
+                <div className="pt-1 flex flex-wrap gap-2">
+                  <button
+                    onClick={handleOfflineFallback}
+                    className="px-3.5 py-1.5 rounded-lg bg-amber-400 hover:bg-amber-300 text-slate-950 font-bold text-xs transition-colors shadow-sm"
+                  >
+                    Try Mock Explanation (Offline)
+                  </button>
+                  <a
+                    href="mailto:support@nexovian.group?subject=Upgrade%20to%20NEXOVIAN%20Pro"
+                    className="px-3 py-1.5 rounded-lg border border-amber-400/50 hover:bg-amber-400/20 text-amber-300 text-xs font-semibold transition-colors flex items-center gap-1"
+                  >
+                    Upgrade to Pro ✨
+                  </a>
+                </div>
+              </div>
             )}
           </div>
         </div>
 
         {/* Right Column: AI Analysis, Clarity Assessment, Follow-up Chat & Quizzes (7 cols) */}
         <div className="lg:col-span-7 space-y-4">
-          {/* Scan Error Message */}
-          {scanError && (
+          {/* Scan Error Message (suppress if quota or raw JSON error) */}
+          {!quotaLimitReached && scanError && (
             <div className="p-4 rounded-2xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900 text-rose-800 dark:text-rose-200 text-xs flex items-start justify-between gap-3">
               <div className="flex items-start gap-2">
                 <AlertTriangle className="w-4 h-4 shrink-0 text-rose-600 mt-0.5" />
                 <div>
-                  <p className="font-semibold">{scanError}</p>
+                  <p className="font-semibold">
+                    {scanError.includes("JSON")
+                      ? "Unable to reach AI Scan service. Please check server connection."
+                      : scanError}
+                  </p>
                   <p className="text-[11px] text-rose-600 dark:text-rose-300 mt-0.5">
-                    Verify that your GEMINI_API_KEY is configured in your server environment.
+                    Verify that your GEMINI_API_KEY is configured in your server environment (Vercel Settings &gt; Environment Variables).
                   </p>
                 </div>
               </div>

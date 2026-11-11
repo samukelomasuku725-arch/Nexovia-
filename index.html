@@ -151,13 +151,27 @@
         }, 3000);
       }
 
-      // Service Worker registration for offline mode
+      // Service Worker registration: only in production to prevent stale Vite dev chunk caching
       if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => {
-          navigator.serviceWorker.register('/sw.js').catch((err) => {
-            console.log('SW registration note:', err);
+        const isDev = window.location.hostname.includes('localhost') || window.location.hostname.includes('run.app');
+        if (isDev) {
+          navigator.serviceWorker.getRegistrations().then((registrations) => {
+            for (const r of registrations) {
+              r.unregister();
+            }
           });
-        });
+          if ('caches' in window) {
+            caches.keys().then((names) => {
+              for (const name of names) caches.delete(name);
+            });
+          }
+        } else {
+          window.addEventListener('load', () => {
+            navigator.serviceWorker.register('/sw.js').catch((err) => {
+              console.log('SW registration note:', err);
+            });
+          });
+        }
       }
     </script>
 

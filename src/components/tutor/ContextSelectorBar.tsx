@@ -55,6 +55,7 @@ export const ContextSelectorBar: React.FC = () => {
     modes.find((m) => m.id === learningContext.mode) || modes[0];
 
   const handleSelectLevel = (levelName: string, categoryName: string, keepSubjectOpen = false) => {
+    const currentScrollY = window.scrollY;
     const subjectsForNewLevel = getSubjectsForLevel(levelName);
     
     // Check if the current subject exists in the newly selected grade/pathway
@@ -105,6 +106,11 @@ export const ContextSelectorBar: React.FC = () => {
     } else {
       setIsSubjectOpen(false);
     }
+
+    requestAnimationFrame(() => {
+      window.scrollTo({ top: currentScrollY, behavior: 'instant' });
+      setTimeout(() => window.scrollTo({ top: currentScrollY, behavior: 'instant' }), 50);
+    });
   };
 
   const handleSelectLevelQuick = (lvl: string) => {
@@ -114,6 +120,7 @@ export const ContextSelectorBar: React.FC = () => {
   };
 
   const handleSelectSubject = (subjectName: string) => {
+    const currentScrollY = window.scrollY;
     const subjectsForCurrentLevel = getSubjectsForLevel(learningContext.gradeOrProgramme);
     const subj = subjectsForCurrentLevel.find((s) => s.name.toLowerCase() === subjectName.toLowerCase());
     // Changing the subject must clear any incompatible old topic
@@ -124,23 +131,46 @@ export const ContextSelectorBar: React.FC = () => {
       subject: subj ? subj.name : subjectName,
       topic: nextTopic
     });
+
+    requestAnimationFrame(() => {
+      window.scrollTo({ top: currentScrollY, behavior: 'instant' });
+      setTimeout(() => window.scrollTo({ top: currentScrollY, behavior: 'instant' }), 50);
+    });
   };
 
   const handleSelectTopic = (topicName: string) => {
+    const currentScrollY = window.scrollY;
     updateLearningContext({ topic: topicName });
     setIsSubjectOpen(false);
+
+    requestAnimationFrame(() => {
+      window.scrollTo({ top: currentScrollY, behavior: 'instant' });
+      setTimeout(() => window.scrollTo({ top: currentScrollY, behavior: 'instant' }), 50);
+    });
   };
 
   const handleClearSubjectOrTopic = () => {
+    const currentScrollY = window.scrollY;
     updateLearningContext({ subject: '', topic: '' });
+
+    requestAnimationFrame(() => {
+      window.scrollTo({ top: currentScrollY, behavior: 'instant' });
+      setTimeout(() => window.scrollTo({ top: currentScrollY, behavior: 'instant' }), 50);
+    });
   };
 
   const handleSelectLanguage = (code: string) => {
+    const currentScrollY = window.scrollY;
     updateLearningContext({ language: code as any });
     if (isAuthenticated) {
       updateProfile({ preferredLanguage: code }).catch(() => {});
     }
     setIsLanguageOpen(false);
+
+    requestAnimationFrame(() => {
+      window.scrollTo({ top: currentScrollY, behavior: 'instant' });
+      setTimeout(() => window.scrollTo({ top: currentScrollY, behavior: 'instant' }), 50);
+    });
   };
 
   return (
@@ -479,8 +509,13 @@ export const ContextSelectorBar: React.FC = () => {
                   <button
                     key={m.id}
                     onClick={() => {
+                      const currentScrollY = window.scrollY;
                       updateLearningContext({ mode: m.id as any });
                       setIsModeOpen(false);
+                      requestAnimationFrame(() => {
+                        window.scrollTo({ top: currentScrollY, behavior: 'instant' });
+                        setTimeout(() => window.scrollTo({ top: currentScrollY, behavior: 'instant' }), 50);
+                      });
                     }}
                     className={`w-full text-left p-2 rounded-lg transition-colors ${
                       learningContext.mode === m.id

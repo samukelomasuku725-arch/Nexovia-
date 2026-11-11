@@ -43,12 +43,17 @@ export const GradeSubjectSelectorModal: React.FC<Props> = ({
   );
 
   const handleSelect = (item: string) => {
+    const currentScrollY = window.scrollY;
     if (isGrade) {
       onSelectGrade(item);
     } else {
       onSelectSubject(item);
     }
     onClose();
+    requestAnimationFrame(() => {
+      window.scrollTo({ top: currentScrollY, behavior: 'instant' });
+      setTimeout(() => window.scrollTo({ top: currentScrollY, behavior: 'instant' }), 50);
+    });
   };
 
   return (
@@ -90,7 +95,6 @@ export const GradeSubjectSelectorModal: React.FC<Props> = ({
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="w-full bg-[#1a1a1a] text-white text-xs placeholder-slate-500 pl-9 pr-4 py-2.5 rounded-xl border border-[#333] focus:border-[#d4af37] focus:outline-none focus:ring-1 focus:ring-[#d4af37]"
-              autoFocus
             />
           </div>
         </div>

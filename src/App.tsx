@@ -46,10 +46,13 @@ import { RefundPolicyPage } from './components/legal/RefundPolicyPage';
 import { PrivacyPolicyPage } from './components/legal/PrivacyPolicyPage';
 import { ContactPage } from './components/legal/ContactPage';
 import { AboutPage } from './components/legal/AboutPage';
+import { StudyGuideHubPage } from './components/study-guide/StudyGuideHubPage';
+import { PhysicsGrade12Page } from './components/study-guide/PhysicsGrade12Page';
+import { LifeSciencesGrade12Page } from './components/study-guide/LifeSciencesGrade12Page';
+import { StudyGuideChapterPage } from './components/study-guide/StudyGuideChapterPage';
 import { checkAccess } from './services/snapscanSubscriptionService';
 import { LessonPlayerModal } from './components/player/LessonPlayerModal';
 import { Analytics } from '@vercel/analytics/react';
-import { CertificateModal } from './components/certificate/CertificateModal';
 import { SearchModal } from './components/search/SearchModal';
 import { PwaInstallBanner } from './components/pwa/PwaInstallBanner';
 import { ToastProvider } from './components/layout/ToastNotification';
@@ -90,8 +93,8 @@ const MainLayout: React.FC = () => {
   useEffect(() => {
     if (isLoading) return;
 
-    // Free routes (no lock): / (homepage), /papers, /learn, /login, /signup, /trial, /calculator, /about, /paywall, /unlock, /terms, /refund-policy, /privacy-policy, /contact
-    const isPublicTab = ['landing', 'login', 'signup', 'calculator', 'learn', 'about', 'success', 'cancel', 'trial', 'paywall', 'papers', 'adminPayments', 'unlock', 'adminCodes', 'terms', 'refundPolicy', 'privacyPolicy', 'contact'].includes(currentTab);
+    // Free routes (no lock): / (homepage), /papers, /learn, /login, /signup, /trial, /calculator, /about, /paywall, /unlock, /terms, /refund-policy, /privacy-policy, /contact, /study-guide
+    const isPublicTab = ['landing', 'login', 'signup', 'calculator', 'learn', 'about', 'success', 'cancel', 'trial', 'paywall', 'papers', 'adminPayments', 'unlock', 'adminCodes', 'terms', 'refundPolicy', 'privacyPolicy', 'contact', 'studyGuide', 'studyGuidePhysics', 'studyGuideLifeSciences', 'studyGuideChapter'].includes(currentTab);
     if (isPublicTab) return;
 
     if (isAdminUser(user)) return;
@@ -339,7 +342,7 @@ const MainLayout: React.FC = () => {
                     <div className="p-5">
                       <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400 mb-1">
                         <Briefcase className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-                        <span>NATED & NC(V) Certificates</span>
+                        <span>NATED & NC(V) Programmes</span>
                       </div>
                       <h3 className="font-display text-lg font-bold text-slate-900 dark:text-white">
                         {t('pathwayTvetTitle')}
@@ -669,6 +672,10 @@ const MainLayout: React.FC = () => {
         {currentTab === 'refundPolicy' && <RefundPolicyPage />}
         {currentTab === 'privacyPolicy' && <PrivacyPolicyPage />}
         {currentTab === 'contact' && <ContactPage />}
+        {currentTab === 'studyGuide' && <StudyGuideHubPage />}
+        {currentTab === 'studyGuidePhysics' && <PhysicsGrade12Page />}
+        {currentTab === 'studyGuideLifeSciences' && <LifeSciencesGrade12Page />}
+        {currentTab === 'studyGuideChapter' && <StudyGuideChapterPage />}
       </main>
 
       {/* Global Footer (shown on all tabs except immersive tutor chat and scan view) */}
@@ -679,7 +686,6 @@ const MainLayout: React.FC = () => {
 
       {/* Modals & Overlays */}
       <LessonPlayerModal />
-      <CertificateModal />
       <SearchModal />
       <PwaInstallBanner />
       <AuthModal />

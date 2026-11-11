@@ -116,6 +116,22 @@ export const Navbar: React.FC = () => {
             <span>Past Papers &amp; Memos</span>
           </button>
 
+          {/* Yellow Nexovian Study Guide Button */}
+          <a
+            href="/study-guide"
+            onClick={(e) => {
+              e.preventDefault();
+              setCurrentTab('studyGuide');
+              if (typeof window !== 'undefined') {
+                window.history.pushState({}, '', '/study-guide');
+              }
+            }}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#FFD400] hover:bg-yellow-400 text-black font-bold text-xs shadow-md transition-all whitespace-nowrap cursor-pointer transform hover:scale-105 active:scale-95"
+          >
+            <span>📚</span>
+            <span>Nexovian Study Guide</span>
+          </a>
+
           <button
             onClick={() => setCurrentTab('calculator')}
             className={`flex items-center gap-1.5 transition-colors hover:text-white py-1 whitespace-nowrap ${
@@ -370,6 +386,22 @@ export const Navbar: React.FC = () => {
               </button>
             </div>
           )}
+
+          {/* Mobile Yellow Study Guide Button */}
+          <a
+            href="/study-guide"
+            onClick={(e) => {
+              e.preventDefault();
+              setCurrentTab('studyGuide');
+              if (typeof window !== 'undefined') {
+                window.history.pushState({}, '', '/study-guide');
+              }
+            }}
+            className="md:hidden flex items-center gap-1 px-2.5 py-1.5 text-xs font-bold text-black bg-[#FFD400] hover:bg-yellow-400 rounded-lg shadow-sm transition-all active:scale-95 whitespace-nowrap cursor-pointer"
+          >
+            <span>📚</span>
+            <span>Study Guide</span>
+          </a>
 
           {/* Primary Action CTA: Launch AI Tutor */}
           <button

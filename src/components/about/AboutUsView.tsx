@@ -79,18 +79,18 @@ export const AboutUsView: React.FC = () => {
 
           <div className="flex items-center gap-2">
             <span className="text-[11px] font-mono font-bold uppercase tracking-wider px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-900 border border-emerald-300">
-              Mkhuhlu, Mpumalanga
+              Oakley, Mpumalanga
             </span>
           </div>
         </div>
       </div>
 
-      {/* TOP BANNER: Mkhuhlu Village Banner (3 rural learners with phones) */}
-      <section aria-label="Mkhuhlu Village Banner" className="relative w-full bg-slate-950 overflow-hidden">
+      {/* TOP BANNER: Oakley Village Banner (3 rural learners with phones) */}
+      <section aria-label="Oakley Village Banner" className="relative w-full bg-slate-950 overflow-hidden">
         <div className="relative h-64 sm:h-80 md:h-96 lg:h-[420px] w-full">
           <img
             src="/src/assets/images/mkhuhlu_rural_learners_1792744372735.jpg"
-            alt="Three rural South African learners with smartphones smiling in Mkhuhlu village, Mpumalanga"
+            alt="Three rural South African learners with smartphones smiling in Oakley village, Mpumalanga"
             className="w-full h-full object-cover object-center"
             referrerPolicy="no-referrer"
           />
@@ -101,7 +101,7 @@ export const AboutUsView: React.FC = () => {
           <div className="absolute bottom-6 left-4 sm:left-8 right-4 sm:right-8 max-w-4xl">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-black/60 backdrop-blur-md border border-white/20 text-white text-xs font-mono mb-2">
               <MapPin className="w-3.5 h-3.5 text-amber-400" />
-              <span>Mkhuhlu, Bushbuckridge · Mpumalanga, South Africa</span>
+              <span>Oakley, Bushbuckridge · Mpumalanga, South Africa</span>
             </div>
             <h1 className="font-display text-2xl sm:text-4xl lg:text-5xl font-black text-white tracking-tight leading-tight">
               About NEXOVIAN
@@ -127,12 +127,12 @@ export const AboutUsView: React.FC = () => {
           </div>
 
           <h2 className="font-display text-2xl sm:text-3xl lg:text-4xl font-extrabold text-slate-950 tracking-tight leading-tight">
-            Built in Mkhuhlu, For Every Learner in South Africa
+            Built in Oakley, For Every Learner in South Africa
           </h2>
 
           <div className="prose prose-slate max-w-none text-slate-800 text-sm sm:text-base leading-relaxed space-y-4">
             <p className="font-medium text-slate-900 text-base sm:text-lg">
-              <strong>NEXOVIAN (PTY) LTD</strong> is Mpumalanga&apos;s first homegrown artificial intelligence educational technology enterprise, founded and rooted in Mkhuhlu (Bushbuckridge Municipality), Mpumalanga.
+              <strong>NEXOVIAN (PTY) LTD</strong> is Mpumalanga&apos;s first homegrown artificial intelligence educational technology enterprise, founded and rooted in Oakley (Bushbuckridge Municipality), Mpumalanga.
             </p>
             <p>
               We are a <strong>100% Black Owned, 100% Youth Owned, and 100% Rural Owned</strong> company operating at <strong>B-BBEE Level 1 (135% procurement recognition)</strong>. We build next-generation educational technologies tailored specifically for South African students across the complete academic continuum:
@@ -183,7 +183,7 @@ export const AboutUsView: React.FC = () => {
               <span>Founder &amp; Community Journey</span>
             </div>
             <p className="text-sm sm:text-base text-slate-800 italic leading-relaxed">
-              [Section 2 - Our Story: Standing by for your story text in your next message. This section is primed and formatted to seamlessly receive your exact wording, founder history, and community milestones from Mkhuhlu.]
+              [Section 2 - Our Story: Standing by for your story text in your next message. This section is primed and formatted to seamlessly receive your exact wording, founder history, and community milestones from Oakley.]
             </p>
             <div className="pt-2 text-xs text-amber-800 font-medium">
               Ready to insert: Send your story narrative and it will be typeset here immediately.
@@ -281,7 +281,7 @@ export const AboutUsView: React.FC = () => {
               Decades of global and South African educational research (including UNESCO and DBE foundational studies) consistently show that students grasp complex STEM concepts significantly faster and deeper when introduced in their primary language.
             </p>
             <p>
-              When a Grade 10 student in Mkhuhlu attempts to master Ohm&apos;s Law or quadratic factorisation while simultaneously struggling with English linguistic hurdles, cognitive capacity is divided. By explaining scientific principles first in <strong>Xitsonga</strong> or <strong>siSwati</strong> alongside standard English terminology, NEXOVIAN achieves three breakthroughs:
+              When a Grade 10 student in Oakley attempts to master Ohm&apos;s Law or quadratic factorisation while simultaneously struggling with English linguistic hurdles, cognitive capacity is divided. By explaining scientific principles first in <strong>Xitsonga</strong> or <strong>siSwati</strong> alongside standard English terminology, NEXOVIAN achieves three breakthroughs:
             </p>
 
             <div className="space-y-3 not-prose mt-4">
@@ -398,7 +398,7 @@ export const AboutUsView: React.FC = () => {
                   Operational Headquarters
                 </span>
                 <p className="font-bold text-slate-950 text-base">
-                  Mkhuhlu, Mpumalanga
+                  Oakley, Mpumalanga
                 </p>
                 <span className="text-xs text-slate-600 block">
                   Bushbuckridge Local Municipality · Ehlanzeni District

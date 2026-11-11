@@ -42,11 +42,38 @@ export const LearnHubView: React.FC = () => {
   // Active view: 'hub' (beginner selector) or deep pathway views ('school' | 'tvet' | 'higherEd')
   const [activePathwayDetail, setActivePathwayDetail] = useState<'none' | 'school' | 'tvet' | 'higherEd'>('none');
 
-  // Guided 3-step selector state
   const [selectedLevel, setSelectedLevel] = useState<'school' | 'tvet' | 'higherEd'>('school');
   const [selectedGrade, setSelectedGrade] = useState<string>('Grade 11');
   const [selectedSubject, setSelectedSubject] = useState<string>('Mathematics');
   const [selectedActivity, setSelectedActivity] = useState<'lesson' | 'tutor' | 'quiz' | 'voice'>('lesson');
+
+  const handleLevelSelect = (level: 'school' | 'tvet' | 'higherEd', defaultSubj: string) => {
+    const currentScrollY = window.scrollY;
+    setSelectedLevel(level);
+    setSelectedSubject(defaultSubj);
+    requestAnimationFrame(() => {
+      window.scrollTo({ top: currentScrollY, behavior: 'instant' });
+      setTimeout(() => window.scrollTo({ top: currentScrollY, behavior: 'instant' }), 50);
+    });
+  };
+
+  const handleSubjectSelect = (subj: string) => {
+    const currentScrollY = window.scrollY;
+    setSelectedSubject(subj);
+    requestAnimationFrame(() => {
+      window.scrollTo({ top: currentScrollY, behavior: 'instant' });
+      setTimeout(() => window.scrollTo({ top: currentScrollY, behavior: 'instant' }), 50);
+    });
+  };
+
+  const handleActivitySelect = (act: 'lesson' | 'tutor' | 'quiz' | 'voice') => {
+    const currentScrollY = window.scrollY;
+    setSelectedActivity(act);
+    requestAnimationFrame(() => {
+      window.scrollTo({ top: currentScrollY, behavior: 'instant' });
+      setTimeout(() => window.scrollTo({ top: currentScrollY, behavior: 'instant' }), 50);
+    });
+  };
 
   // Subjects by level
   const schoolSubjects = [
@@ -237,10 +264,7 @@ export const LearnHubView: React.FC = () => {
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <button
                   type="button"
-                  onClick={() => {
-                    setSelectedLevel('school');
-                    setSelectedSubject(schoolSubjects[0]);
-                  }}
+                  onClick={() => handleLevelSelect('school', schoolSubjects[0])}
                   className={`flex items-center gap-3 p-4 rounded-2xl border text-left transition-all min-h-[62px] cursor-pointer ${
                     selectedLevel === 'school'
                       ? 'border-[#FACC15] bg-[#FACC15]/15 text-white ring-2 ring-[#FACC15]/40 shadow-[0_0_15px_-3px_rgba(250,204,21,0.3)]'
@@ -258,10 +282,7 @@ export const LearnHubView: React.FC = () => {
 
                 <button
                   type="button"
-                  onClick={() => {
-                    setSelectedLevel('tvet');
-                    setSelectedSubject(tvetSubjects[0]);
-                  }}
+                  onClick={() => handleLevelSelect('tvet', tvetSubjects[0])}
                   className={`flex items-center gap-3 p-4 rounded-2xl border text-left transition-all min-h-[62px] cursor-pointer ${
                     selectedLevel === 'tvet'
                       ? 'border-[#FACC15] bg-[#FACC15]/15 text-white ring-2 ring-[#FACC15]/40 shadow-[0_0_15px_-3px_rgba(250,204,21,0.3)]'
@@ -279,10 +300,7 @@ export const LearnHubView: React.FC = () => {
 
                 <button
                   type="button"
-                  onClick={() => {
-                    setSelectedLevel('higherEd');
-                    setSelectedSubject(universitySubjects[0]);
-                  }}
+                  onClick={() => handleLevelSelect('higherEd', universitySubjects[0])}
                   className={`flex items-center gap-3 p-4 rounded-2xl border text-left transition-all min-h-[62px] cursor-pointer ${
                     selectedLevel === 'higherEd'
                       ? 'border-[#FACC15] bg-[#FACC15]/15 text-white ring-2 ring-[#FACC15]/40 shadow-[0_0_15px_-3px_rgba(250,204,21,0.3)]'
@@ -310,7 +328,7 @@ export const LearnHubView: React.FC = () => {
                   <button
                     key={subj}
                     type="button"
-                    onClick={() => setSelectedSubject(subj)}
+                    onClick={() => handleSubjectSelect(subj)}
                     className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all min-h-[44px] cursor-pointer ${
                       selectedSubject === subj
                         ? 'bg-[#FACC15] text-black shadow-[0_0_12px_rgba(250,204,21,0.4)]'
@@ -341,7 +359,7 @@ export const LearnHubView: React.FC = () => {
                     <button
                       key={act.id}
                       type="button"
-                      onClick={() => setSelectedActivity(act.id as any)}
+                      onClick={() => handleActivitySelect(act.id as any)}
                       className={`p-3.5 rounded-2xl border text-left transition-all min-h-[64px] cursor-pointer ${
                         isSelected
                           ? 'border-[#FACC15] bg-[#FACC15]/15 text-white ring-2 ring-[#FACC15]/40 shadow-[0_0_12px_rgba(250,204,21,0.25)]'

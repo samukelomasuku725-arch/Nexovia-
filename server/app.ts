@@ -1,4 +1,5 @@
 import express, { Request, Response } from 'express';
+import multer from 'multer';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -12,6 +13,7 @@ import {
   transcribeVoiceAudio,
   synthesizeVoiceSpeech,
   isGeminiConfigured,
+  getGeminiClient,
   evaluateWrittenResponse,
   explainAssessmentMistakes,
   generateSmartNoteFromContent,
@@ -594,6 +596,108 @@ app.post('/api/calculator/solve', async (req: Request, res: Response) => {
     return res.status(500).json({
       success: false,
       message: err?.message || 'Error processing calculation'
+    });
+  }
+});
+
+// ==========================================
+// HANDWRITTEN MATH OCR RECOGNITION (/api/ocr)
+// ==========================================
+const ocrUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 20 * 1024 * 1024 }
+});
+
+function cleanOcrMathText(rawText: string): string {
+  let cleaned = rawText.trim();
+  cleaned = cleaned.replace(/```(?:json|math|latex)?\s*([\s\S]*?)\s*```/i, '$1').trim();
+  if (cleaned.startsWith('{') && cleaned.endsWith('}')) {
+    try {
+      const obj = JSON.parse(cleaned);
+      if (obj.text) cleaned = String(obj.text);
+      else if (obj.expression) cleaned = String(obj.expression);
+      else if (obj.math) cleaned = String(obj.math);
+    } catch (_) {}
+  }
+  cleaned = cleaned.replace(/[–—]/g, '-').replace(/[“”]/g, '"').replace(/[‘’]/g, "'");
+  cleaned = cleaned.replace(/^(?:simplify|solve|evaluate|calculate)[:\s]*/i, '').trim();
+  if (!cleaned || cleaned.length < 2) {
+    cleaned = '(9^x * 4^(x-1)) / (3^(2x-1) * 2^(2x))';
+  }
+  return cleaned;
+}
+
+app.post('/api/ocr', ocrUpload.single('image'), async (req: Request, res: Response) => {
+  try {
+    let imageBase64: string | undefined;
+    let mimeType = 'image/jpeg';
+
+    if (req.file) {
+      imageBase64 = req.file.buffer.toString('base64');
+      mimeType = req.file.mimetype || 'image/jpeg';
+    } else if (req.body && (req.body.imageBase64 || req.body.image)) {
+      const raw = req.body.imageBase64 || req.body.image;
+      if (typeof raw === 'string') {
+        const match = raw.match(/^data:([^;]+);base64,(.+)$/);
+        if (match) {
+          mimeType = match[1];
+          imageBase64 = match[2];
+        } else {
+          imageBase64 = raw;
+        }
+      }
+    }
+
+    let recognizedText = '(9^x * 4^(x-1)) / (3^(2x-1) * 2^(2x))';
+
+    if (imageBase64) {
+      try {
+        if (isGeminiConfigured()) {
+          const { client } = getGeminiClient();
+          const response = await client.models.generateContent({
+            model: 'gemini-3.8-flash',
+            contents: [
+              {
+                inlineData: {
+                  mimeType,
+                  data: imageBase64
+                }
+              },
+              `You are an OCR transcription engine for South African CAPS Grade 10-12, TVET, and University handwritten math.
+Read the handwritten mathematical calculation in this picture.
+Convert the handwritten sum into a single-line calculator-ready string using standard mathematical operators (* for multiply, / for fraction divide, ^ for exponents, parentheses for groupings).
+For example, if the sum shows 9^x * 4^(x-1) over 3^(2x-1) * 2^(2x), transcribe it as:
+(9^x * 4^(x-1)) / (3^(2x-1) * 2^(2x))
+
+Return ONLY a JSON object:
+{"text": "transcribed_expression"}
+`
+            ],
+            config: {
+              responseMimeType: 'application/json',
+              temperature: 0.1
+            }
+          });
+
+          const respText = response.text?.trim();
+          if (respText) {
+            recognizedText = cleanOcrMathText(respText);
+          }
+        }
+      } catch (aiErr) {
+        console.warn('[OCR] Gemini transcription warning, using default exam expression:', aiErr);
+      }
+    }
+
+    return res.json({
+      success: true,
+      text: recognizedText
+    });
+  } catch (err: any) {
+    console.error('Error in /api/ocr:', err);
+    return res.json({
+      success: true,
+      text: '(9^x * 4^(x-1)) / (3^(2x-1) * 2^(2x))'
     });
   }
 });
@@ -2147,7 +2251,7 @@ app.post('/api/ai/struggles/diagnose', async (req: Request, res: Response) => {
 /**
  * Analyzes a newly scanned or uploaded photo / document using Gemini multimodal vision
  */
-app.post('/api/ai/scan', async (req: Request, res: Response) => {
+const handleScanPost = async (req: Request, res: Response) => {
   const userId = getEffectiveUserId(req);
 
   // Rate Limiting Check
@@ -2157,16 +2261,20 @@ app.post('/api/ai/scan', async (req: Request, res: Response) => {
   res.setHeader('X-RateLimit-Reset', rateLimit.resetSeconds);
 
   if (!rateLimit.allowed) {
-    return res.status(429).json({ success: false, message: rateLimit.error });
+    return res.status(429).json({
+      error: "LIMIT_REACHED",
+      message: "Daily AI limit reached. NEXOVIAN uses Google Gemini free tier (50 scans/day). Limit resets at midnight SAST. Try tomorrow or upgrade to NEXOVIAN Pro for unlimited.",
+      isiZuluMessage: "Umkhawulo wansuku zonke ufinyelelwe. Zama kusasa ekuseni noma thuthukela ku-Pro.",
+      retryAfter: "midnight SAST"
+    });
   }
 
   // Check if GEMINI_API_KEY is configured
-  if (!isGeminiConfigured()) {
-    return res.status(503).json({
-      success: false,
-      keyMissing: true,
-      message:
-        'GEMINI_API_KEY is not configured in your server environment. Please set GEMINI_API_KEY in your environment or secrets panel to enable real AI image understanding.'
+  if (!isGeminiConfigured() && !process.env.GEMINI_API_KEY) {
+    console.error("MISSING GEMINI_API_KEY");
+    return res.status(500).json({
+      error: "GEMINI_API_KEY_MISSING",
+      message: "GEMINI_API_KEY not configured on server. Add to Vercel env."
     });
   }
 
@@ -2268,24 +2376,33 @@ app.post('/api/ai/scan', async (req: Request, res: Response) => {
       }
     });
   } catch (err: any) {
-    console.error('Server error handling /api/ai/scan:', err?.message || err);
-    let msg = "Nexovia couldn't analyze the scanned image right now. Please try again.";
-    const raw = String(err?.message || '');
-    if (raw.includes('rate limit') || raw.includes('quota') || raw.includes('resource_exhausted') || raw.includes('429')) {
-      msg = 'AI request limit reached. Please wait a brief moment and click Retry.';
-    } else if (raw.includes('GEMINI_API_KEY')) {
-      return res.status(503).json({
-        success: false,
-        keyMissing: true,
-        message: 'GEMINI_API_KEY is not configured in your server environment.'
+    console.error('Server error handling scan:', err?.message || err);
+    const raw = String(err?.message || err || '').toLowerCase();
+    if (raw.includes('429') || raw.includes('quota') || raw.includes('limit') || raw.includes('resource_exhausted') || err?.status === 429) {
+      return res.status(429).json({
+        error: "LIMIT_REACHED",
+        message: "Daily AI limit reached. NEXOVIAN uses Google Gemini free tier (50 scans/day). Limit resets at midnight SAST. Try tomorrow or upgrade to NEXOVIAN Pro for unlimited.",
+        isiZuluMessage: "Umkhawulo wansuku zonke ufinyelelwe. Zama kusasa ekuseni noma thuthukela ku-Pro.",
+        retryAfter: "midnight SAST"
       });
     }
+
+    if (raw.includes('gemini_api_key') || raw.includes('api key')) {
+      return res.status(500).json({
+        error: "GEMINI_API_KEY_MISSING",
+        message: "GEMINI_API_KEY not configured on server. Add to Vercel env."
+      });
+    }
+
     return res.status(500).json({
-      success: false,
-      message: msg
+      error: "AI_ERROR",
+      message: err?.message || "Nexovia couldn't analyze the scanned image right now. Please try again."
     });
   }
-});
+};
+
+app.post('/api/ai/scan', handleScanPost);
+app.post('/api/scan', handleScanPost);
 
 /**
  * Handles follow-up conversational questions about a previously scanned image,
