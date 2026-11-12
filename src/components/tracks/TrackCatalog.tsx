@@ -125,7 +125,7 @@ export const TrackCatalog: React.FC = () => {
                       <span aria-hidden="true">·</span>
                       <span>{allLessons.length} Lessons</span>
                       <span aria-hidden="true">·</span>
-                      <span>Certificate</span>
+                      <span>CAPS Aligned</span>
                     </div>
 
                     <h3 className="font-display text-lg font-bold text-slate-900 dark:text-white leading-snug">

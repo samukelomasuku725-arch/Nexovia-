@@ -95,7 +95,7 @@ export const LANGUAGE_MAP: Record<string, string> = {
   ts: 'XiTsonga'
 };
 
-const CANDIDATE_MODELS = ['gemini-3.1-flash-lite', 'gemini-3.8-flash'];
+const CANDIDATE_MODELS = ['gemini-3.5-flash-lite', 'gemini-3.1-flash-lite', 'gemini-3.8-flash'];
 
 export function isGeminiConfigured(): boolean {
   const key = process.env.GEMINI_API_KEY || process.env.AI_API_KEY;

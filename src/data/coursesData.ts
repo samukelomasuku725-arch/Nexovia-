@@ -511,7 +511,7 @@ export function IconButton({ icon: Icon, label, onClick }: Props) {
 
 const ai = new GoogleGenAI();
 const response = await ai.models.generateContent({
-  model: 'gemini-2.5-flash',
+  model: 'gemini-3.5-flash-lite',
   contents: 'Analyze the architectural pros and cons of event sourcing.',
   config: {
     responseMimeType: 'application/json',

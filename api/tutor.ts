@@ -54,10 +54,29 @@ ${promptQuestion}
 
 Respond helpfully in ${selectedLanguage || language} with clear step-by-step logic, encouraging tone, and Socratic guidance.`;
 
-    const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
-      contents: promptText
-    });
+    const candidateModels = ['gemini-3.5-flash-lite', 'gemini-3.1-flash-lite', 'gemini-3.8-flash'];
+    let response: any = null;
+    let lastError: any = null;
+
+    for (const candidateModel of candidateModels) {
+      try {
+        response = await ai.models.generateContent({
+          model: candidateModel,
+          contents: promptText
+        });
+        if (response) break;
+      } catch (err: any) {
+        lastError = err;
+        const errMsg = String(err?.message || '');
+        if (errMsg.includes('429') || errMsg.includes('quota') || errMsg.includes('limit') || err?.status === 429) {
+          throw err;
+        }
+      }
+    }
+
+    if (!response && lastError) {
+      throw lastError;
+    }
 
     const answer = response.text || '';
 

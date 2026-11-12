@@ -138,7 +138,7 @@ export const MyProgressHubView: React.FC = () => {
             }`}
           >
             <Bookmark className="w-3.5 h-3.5 text-purple-500" />
-            <span>Saved & Certificates</span>
+            <span>Saved Documents</span>
           </button>
         </div>
 

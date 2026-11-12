@@ -152,7 +152,7 @@ export function getTrialTimelineInfo(overrideNow?: Date): TrialTimelineInfo {
 
 export function buildStageInfo(stage: TrialTimelineStage): TrialTimelineInfo {
   const trialEndsAtFormatted = PREMIUM_TRIAL_ENDS_AT;
-  const hardPaywallMessage = 'Your progress will be saved. Pay R60/month to continue learning & get your certificates.';
+  const hardPaywallMessage = 'Your progress will be saved. Pay R60/month to continue learning.';
   const button1Text = 'Pay R60 & Keep Learning (Live Tuesday 9am)';
   const button2Text = 'Remind me Tuesday 9am on WhatsApp';
   const button2Url = WHATSAPP_REMIND_URL;

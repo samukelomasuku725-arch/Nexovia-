@@ -117,7 +117,7 @@ export const MoreToolsModal: React.FC<Props> = ({
         {
           id: 'tracks',
           title: 'Featured STEM & Coding Tracks',
-          subtitle: 'Foundational modules and tech certificates',
+          subtitle: 'Foundational modules and structured lessons',
           icon: Layers,
           color: 'bg-indigo-500 text-white',
           onClick: () => navigateTo('tracks')

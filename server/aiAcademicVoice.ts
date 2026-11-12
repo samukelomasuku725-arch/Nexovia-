@@ -281,7 +281,7 @@ Return ONLY a valid JSON object matching this TypeScript structure:
 }
 Return ONLY valid JSON. No conversational chatter.`;
 
-  for (const model of ['gemini-3.8-flash', 'gemini-3.1-flash-lite']) {
+  for (const model of ['gemini-3.5-flash-lite', 'gemini-3.8-flash', 'gemini-3.1-flash-lite']) {
     try {
       const response = await client.models.generateContent({
         model,

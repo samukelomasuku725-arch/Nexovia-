@@ -88,17 +88,6 @@ export interface UserNote {
   content: string;
 }
 
-export interface CertificateData {
-  id: string;
-  studentName: string;
-  trackId: string;
-  trackTitle: string;
-  issueDate: string;
-  completionScore: number;
-  instructorName: string;
-  verificationHash: string;
-}
-
 // ==========================================
 // PHASE 2: AI TUTOR & LEARNING ENGINE TYPES
 // ==========================================
@@ -353,7 +342,6 @@ export interface UserProgress {
   activeTrackId: string;
   activeLessonId?: string;
   totalXp: number;
-  certificates: CertificateData[];
   learnedDays: string[]; // ISO date strings (YYYY-MM-DD)
   // Phase 2 additions
   questionsAskedCount: number;

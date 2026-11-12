@@ -50,7 +50,7 @@ const LANGUAGE_NAMES: Record<string, string> = {
  */
 export async function generateAIResponse(params: AIRequestParams): Promise<StructuredAIResponse> {
   const apiKey = process.env.AI_API_KEY || process.env.GEMINI_API_KEY;
-  const modelName = process.env.AI_MODEL || 'gemini-3.8-flash';
+  const modelName = process.env.AI_MODEL || 'gemini-3.5-flash-lite';
   const languageName = LANGUAGE_NAMES[params.selectedLanguage] || params.selectedLanguage || 'English';
 
   // Sanitize input strings

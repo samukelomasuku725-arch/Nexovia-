@@ -159,7 +159,7 @@ export const SubscriptionBanner: React.FC = () => {
 
               {/* Message */}
               <p className="mt-2.5 text-sm sm:text-[15px] font-medium text-amber-300 leading-snug">
-                Your progress will be saved. Pay R60/month to continue learning &amp; get your certificates.
+                Your progress will be saved. Pay R60/month to continue learning.
               </p>
 
               <p className="mt-2 text-xs sm:text-sm text-[#d1d5db] leading-relaxed font-normal">

@@ -88,7 +88,6 @@ export class LearnerProgressRepository implements ILearnerProgressRepository {
       lastActiveDate: new Date().toISOString(),
       activeTrackId: 'school-grade10',
       totalXp: 120,
-      certificates: [],
       learnedDays: [new Date().toISOString().slice(0, 10)],
       questionsAskedCount: 0,
       practiceSessionsCount: 0,
