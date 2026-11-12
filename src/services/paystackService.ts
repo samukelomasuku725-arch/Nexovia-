@@ -52,9 +52,17 @@ declare global {
 }
 
 export const PAYSTACK_PUBLIC_KEY =
-  (import.meta as any).env?.VITE_PAYSTACK_PUBLIC_KEY || 'pk_live_nexovian_placeholder_key';
+  (import.meta as any).env?.VITE_PAYSTACK_PUBLIC_KEY ||
+  (import.meta as any).env?.NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY ||
+  (typeof process !== 'undefined' ? (process.env?.NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY || process.env?.VITE_PAYSTACK_PUBLIC_KEY) : '') ||
+  '';
 
-export const SUBSCRIPTION_PLAN_NAME = 'NEXOVIAN R60 Learner';
+export const PAYSTACK_PLAN_CODE = 'PLN_suslgrc1q9rtsfi';
+export const PAYSTACK_PLAN_NAME = 'Nexovian Monthly';
+export const SUBSCRIPTION_PLAN_NAME = 'Nexovian Monthly';
+export const PAYSTACK_PAYMENT_PAGE = 'https://paystack.shop/pay/2vrisypa3i';
+export const PAYSTACK_SUCCESS_URL = 'https://nexovian.group/success';
+
 export const SUBSCRIPTION_AMOUNT_CENTS = 6000; // R60 in cents
 export const SUBSCRIPTION_AMOUNT_ZAR = 60; // R60
 
@@ -191,3 +199,84 @@ export function openPaystackPayment({
     }
   }
 }
+
+/**
+ * Starts official Paystack checkout for Plan PLN_suslgrc1q9rtsfi (Nexovian Monthly - R60/month).
+ * Redirects user to Paystack checkout, then back to nexovian.group/success.
+ */
+export async function startPaystackCheckout({
+  user,
+  returnUrl
+}: {
+  user?: { id?: string; email?: string; name?: string } | null;
+  returnUrl?: string;
+} = {}): Promise<void> {
+  const finalEmail = user?.email || (typeof window !== 'undefined' ? localStorage.getItem('nexovian_last_email') || '' : '') || 'learner@nexovian.group';
+  const targetCallback = returnUrl || (typeof window !== 'undefined' ? `${window.location.origin}/success` : PAYSTACK_SUCCESS_URL);
+
+  try {
+    const res = await fetch('/api/paystack/initialize', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        email: finalEmail,
+        userId: user?.id,
+        callbackUrl: targetCallback
+      })
+    });
+
+    const data = await res.json();
+    if (data?.authorization_url) {
+      if (typeof window !== 'undefined') {
+        window.location.href = data.authorization_url;
+        return;
+      }
+    }
+  } catch (err) {
+    console.warn('[Paystack Checkout API failed, falling back to direct payment page]:', err);
+  }
+
+  // Fallback direct redirect to official Paystack payment page
+  if (typeof window !== 'undefined') {
+    window.location.href = PAYSTACK_PAYMENT_PAGE;
+  }
+}
+
+/**
+ * Checks whether the current user is ACTIVE (subscribed, active trial, or admin).
+ * Used to protect Tutor, Scan & Understand, and Voice Docs.
+ */
+export function isUserActive(user?: any): boolean {
+  if (typeof window === 'undefined') return true;
+
+  // 1. Direct local payment tokens
+  if (
+    localStorage.getItem('nexovian_paid') === 'true' ||
+    localStorage.getItem('isPremium') === 'true' ||
+    localStorage.getItem('nexovian_premium') === 'active' ||
+    localStorage.getItem('nexovian_unlocked') === 'true' ||
+    localStorage.getItem('nexovian_paystack_active') === 'true'
+  ) {
+    return true;
+  }
+
+  // 2. Admin email bypass
+  if (user && isAdminUser(user)) {
+    return true;
+  }
+
+  // 3. Check fast trial & subscription state
+  const sub = checkUserSubscription(user || null);
+  if (sub.isSubscribed) {
+    return true;
+  }
+
+  if (sub.isTrialActive && !sub.isTrialExpired) {
+    return true;
+  }
+
+  return false;
+}
+

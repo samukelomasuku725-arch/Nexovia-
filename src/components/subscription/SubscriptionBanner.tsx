@@ -36,6 +36,7 @@ import { useAuth } from '../../context/AuthContext';
 import {
   checkUserSubscription,
   openPaystackPayment,
+  startPaystackCheckout,
   SubscriptionStatus,
   SUBSCRIPTION_AMOUNT_ZAR,
   SUBSCRIPTION_PLAN_NAME
@@ -183,16 +184,25 @@ export const SubscriptionBanner: React.FC = () => {
               </div>
             </div>
 
-            {/* Action Buttons: SnapScan & WhatsApp Reminder */}
+            {/* Action Buttons: Paystack Subscribe R60, SnapScan & Unlock Code */}
             <div className="space-y-2.5 pt-1">
+              <button
+                type="button"
+                onClick={() => startPaystackCheckout({ user })}
+                className="w-full h-[50px] rounded-[25px] bg-[#FFB612] hover:bg-yellow-400 text-black font-black text-sm sm:text-base flex items-center justify-center gap-2 shadow-lg shadow-yellow-500/20 transition-all active:scale-98 cursor-pointer"
+              >
+                <span>Subscribe R60/month</span>
+                <ArrowRight className="w-4 h-4 text-black" />
+              </button>
+
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 <button
                   type="button"
                   onClick={() => window.open('https://pos.snapscan.io/qr/NKJJYpV6', '_blank')}
-                  className="w-full h-[48px] rounded-[25px] bg-[#0077b6] hover:bg-[#023e8a] text-white font-bold text-sm sm:text-[15px] flex items-center justify-center gap-2 shadow-sm transition-all active:scale-98 cursor-pointer"
+                  className="w-full h-[46px] rounded-[23px] bg-[#0077b6] hover:bg-[#023e8a] text-white font-bold text-xs sm:text-sm flex items-center justify-center gap-2 shadow-sm transition-all active:scale-98 cursor-pointer"
                 >
                   <QrCode className="w-4 h-4" />
-                  <span>Pay R60 with SnapScan</span>
+                  <span>Pay with SnapScan</span>
                 </button>
                 <button
                   type="button"
@@ -202,9 +212,9 @@ export const SubscriptionBanner: React.FC = () => {
                       window.history.pushState({}, '', '/unlock');
                     }
                   }}
-                  className="w-full h-[48px] rounded-[25px] bg-[#FFB612] hover:bg-yellow-400 text-black font-extrabold text-sm sm:text-[15px] flex items-center justify-center gap-2 shadow-sm transition-all active:scale-98 cursor-pointer"
+                  className="w-full h-[46px] rounded-[23px] bg-slate-800 hover:bg-slate-700 border border-gray-700 text-slate-200 font-extrabold text-xs sm:text-sm flex items-center justify-center gap-2 shadow-sm transition-all active:scale-98 cursor-pointer"
                 >
-                  <KeyRound className="w-4 h-4 text-black" />
+                  <KeyRound className="w-4 h-4 text-amber-400" />
                   <span>Enter Code to Unlock</span>
                 </button>
               </div>
@@ -259,11 +269,10 @@ export const SubscriptionBanner: React.FC = () => {
 
             <button
               type="button"
-              onClick={() => window.open('https://pos.snapscan.io/qr/NKJJYpV6', '_blank')}
-              className="px-3.5 py-1.5 rounded-full bg-[#0077b6] hover:bg-[#023e8a] text-white font-bold text-xs flex items-center gap-1.5 transition-transform active:scale-95 cursor-pointer shadow-sm border border-cyan-400/40"
+              onClick={() => startPaystackCheckout({ user })}
+              className="px-3.5 py-1.5 rounded-full bg-[#FFB612] hover:bg-yellow-400 text-black font-extrabold text-xs flex items-center gap-1.5 transition-transform active:scale-95 cursor-pointer shadow-sm"
             >
-              <QrCode className="w-3.5 h-3.5" />
-              <span>Unlock R60 • SnapScan</span>
+              <span>Subscribe R60/month</span>
             </button>
           </div>
         </div>

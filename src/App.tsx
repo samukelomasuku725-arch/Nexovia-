@@ -62,6 +62,8 @@ import { SplashScreen } from './components/common/SplashScreen';
 import { useAuth } from './context/AuthContext';
 import { CreateAccountScreen } from './components/auth/CreateAccountScreen';
 import { SubscriptionBanner } from './components/subscription/SubscriptionBanner';
+import { SubscribeView } from './components/subscription/SubscribeView';
+import { isUserActive } from './services/paystackService';
 import { isAdminUser } from './services/antiAbuseService';
 import { LogoIcon } from './components/common/LogoIcon';
 import { APP_CONFIG } from './config/brand';
@@ -652,15 +654,16 @@ const MainLayout: React.FC = () => {
         {currentTab === 'higherEd' && <HigherEdPathwayView />}
 
         {/* Existing Functional Views */}
-        {currentTab === 'tutor' && <AITutorView />}
-        {currentTab === 'scan' && <ScanAndLearnView />}
+        {currentTab === 'tutor' && (isUserActive(user) ? <AITutorView /> : <SubscribeView protectedFeature="AI Tutor" />)}
+        {currentTab === 'scan' && (isUserActive(user) ? <ScanAndLearnView /> : <SubscribeView protectedFeature="Scan & Understand" />)}
         {currentTab === 'tracks' && <TrackCatalog />}
         {currentTab === 'practice' && <FlashcardPractice />}
         {currentTab === 'saved' && <SavedLearningArea />}
         {currentTab === 'profile' && <UserProfileView />}
         {currentTab === 'adaptive' && <AdaptiveDashboardView />}
         {currentTab === 'assessments' && <AssessmentHubView />}
-        {currentTab === 'academicVoice' && <AcademicVoiceView />}
+        {currentTab === 'academicVoice' && (isUserActive(user) ? <AcademicVoiceView /> : <SubscribeView protectedFeature="Voice Docs" />)}
+        {currentTab === 'subscribe' && <SubscribeView />}
         {currentTab === 'smartNotes' && <SmartNotesView />}
         {currentTab === 'myStruggles' && <LearnerStrugglesView />}
         {currentTab === 'adminBank' && <AdminQuestionBankView />}

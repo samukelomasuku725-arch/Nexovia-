@@ -327,6 +327,36 @@ export async function verifyAndActivatePaystackPayment({
   return existing;
 }
 
+/**
+ * Deactivates user subscription when subscription.disable webhook event is received.
+ * Sets subscription_status = 'expired'.
+ */
+export async function deactivateUserSubscription(email: string): Promise<UserSubscriptionRecord | null> {
+  const normEmail = (email || '').trim().toLowerCase();
+  const records = readAllUserSubscriptions();
+  const now = new Date();
+
+  let existing = records.find(
+    (r) => r.email.toLowerCase() === normEmail
+  );
+
+  if (!existing) {
+    return null;
+  }
+
+  existing.subscription_status = 'expired';
+  existing.updated_at = now.toISOString();
+
+  const idx = records.findIndex((r) => r.email.toLowerCase() === normEmail);
+  if (idx !== -1) {
+    records[idx] = existing;
+    writeAllUserSubscriptions(records);
+    await syncToSupabaseProfile(existing);
+  }
+
+  return existing;
+}
+
 async function syncToSupabaseProfile(record: UserSubscriptionRecord): Promise<void> {
   try {
     if (!record.email) return;

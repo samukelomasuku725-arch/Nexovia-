@@ -38,7 +38,8 @@ import {
   Briefcase,
   AlertCircle,
   KeyRound,
-  Search
+  Search,
+  CreditCard
 } from 'lucide-react';
 import { FULL_PAPERS } from '../papers/PastPapersView';
 import { useLearning } from '../../context/LearningContext';
@@ -50,6 +51,7 @@ import {
   verifyOneTimeCode,
   saveSubscription
 } from '../../services/snapscanSubscriptionService';
+import { startPaystackCheckout } from '../../services/paystackService';
 
 /**
  * SECURITY TOGGLE:
@@ -947,15 +949,25 @@ export const PublicLandingView: React.FC = () => {
                 </li>
               </ul>
 
-              {/* Side-by-Side Payment Buttons on Pricing Card */}
+              {/* Payment Buttons on Pricing Card */}
               <div className="space-y-3">
                 <button
                   type="button"
-                  onClick={navigateToPaywall}
-                  className="w-full py-4 rounded-xl bg-[#007A4D] hover:bg-emerald-600 text-white font-black text-base shadow-xl shadow-emerald-950/40 transition-all transform hover:-translate-y-0.5 active:translate-y-0 cursor-pointer flex items-center justify-center gap-2"
+                  onClick={() => startPaystackCheckout({ user })}
+                  className="w-full py-4 rounded-xl bg-[#FFB612] hover:bg-yellow-400 text-black font-black text-base shadow-xl shadow-yellow-500/20 transition-all transform hover:-translate-y-0.5 active:translate-y-0 cursor-pointer flex items-center justify-center gap-2"
                 >
-                  <QrCode className="w-5 h-5 shrink-0" />
-                  <span>Pay R60 with SnapScan &mdash; 30 Days</span>
+                  <CreditCard className="w-5 h-5 text-black shrink-0" />
+                  <span>Subscribe R60/month</span>
+                  <ArrowRight className="w-4 h-4 text-black shrink-0" />
+                </button>
+
+                <button
+                  type="button"
+                  onClick={navigateToPaywall}
+                  className="w-full py-3.5 rounded-xl bg-[#007A4D] hover:bg-emerald-600 text-white font-bold text-sm shadow-md transition-all transform hover:-translate-y-0.5 active:translate-y-0 cursor-pointer flex items-center justify-center gap-2"
+                >
+                  <QrCode className="w-4 h-4 shrink-0" />
+                  <span>Pay with SnapScan &mdash; 30 Days</span>
                 </button>
 
                 <button

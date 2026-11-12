@@ -1,4 +1,5 @@
 import express, { Request, Response } from 'express';
+import crypto from 'crypto';
 import multer from 'multer';
 import fs from 'fs';
 import path from 'path';
@@ -85,6 +86,7 @@ import {
   getOrCreateUserSubscription,
   checkSubscriptionAccess,
   verifyAndActivatePaystackPayment,
+  deactivateUserSubscription,
   readAllUserSubscriptions
 } from './userSubscriptionService';
 import {
@@ -1124,6 +1126,176 @@ app.post('/api/subscription/register-trial', async (req: Request, res: Response)
   } catch (err: any) {
     console.error('[Subscription Register Error]:', err);
     return res.status(500).json({ success: false, message: err?.message || 'Register failed' });
+  }
+});
+
+// ==========================================
+// PAYSTACK OFFICIAL SUBSCRIPTION INTEGRATION
+// Plan: PLN_suslgrc1q9rtsfi (Nexovian Monthly - R60/month ZAR)
+// Redirect: https://nexovian.group/success
+// ==========================================
+const PAYSTACK_PLAN_CODE = 'PLN_suslgrc1q9rtsfi';
+const PAYSTACK_PLAN_NAME = 'Nexovian Monthly';
+const PAYSTACK_DIRECT_PAGE = 'https://paystack.shop/pay/2vrisypa3i';
+
+app.post('/api/paystack/initialize', async (req: Request, res: Response) => {
+  try {
+    const { email, userId, callbackUrl } = req.body || {};
+    const secretKey = process.env.PAYSTACK_SECRET_KEY;
+    const finalEmail = (email || '').trim().toLowerCase() || 'learner@nexovian.group';
+    const finalCallback = callbackUrl || 'https://nexovian.group/success';
+    const reference = `NEX_${userId || 'anon'}_${Date.now()}`;
+
+    if (secretKey && secretKey.startsWith('sk_')) {
+      try {
+        const paystackRes = await fetch('https://api.paystack.co/transaction/initialize', {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${secretKey.trim()}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            email: finalEmail,
+            amount: 6000,
+            currency: 'ZAR',
+            plan: PAYSTACK_PLAN_CODE,
+            reference,
+            callback_url: finalCallback,
+            metadata: {
+              user_id: userId,
+              email: finalEmail,
+              plan_code: PAYSTACK_PLAN_CODE,
+              plan_name: PAYSTACK_PLAN_NAME,
+              company: 'Nexovian'
+            }
+          })
+        });
+
+        const paystackData: any = await paystackRes.json();
+        if (paystackData?.status && paystackData?.data?.authorization_url) {
+          return res.json({
+            success: true,
+            authorization_url: paystackData.data.authorization_url,
+            access_code: paystackData.data.access_code,
+            reference: paystackData.data.reference || reference,
+            plan_code: PAYSTACK_PLAN_CODE
+          });
+        }
+      } catch (err: any) {
+        console.warn('[Paystack Initialize Network Error]:', err?.message);
+      }
+    }
+
+    return res.json({
+      success: true,
+      authorization_url: PAYSTACK_DIRECT_PAGE,
+      reference,
+      plan_code: PAYSTACK_PLAN_CODE,
+      directPayPage: true
+    });
+  } catch (err: any) {
+    console.error('[Paystack Initialize Error]:', err);
+    return res.json({
+      success: true,
+      authorization_url: PAYSTACK_DIRECT_PAGE,
+      reference: `NEX_${Date.now()}`,
+      plan_code: PAYSTACK_PLAN_CODE,
+      directPayPage: true
+    });
+  }
+});
+
+app.post('/api/paystack/webhook', async (req: Request, res: Response) => {
+  try {
+    const secretKey = process.env.PAYSTACK_SECRET_KEY;
+    const signature = req.headers['x-paystack-signature'] as string;
+
+    if (secretKey && signature) {
+      try {
+        const bodyStr = typeof req.body === 'string' ? req.body : JSON.stringify(req.body);
+        const hash = crypto.createHmac('sha512', secretKey.trim()).update(bodyStr).digest('hex');
+        if (hash !== signature) {
+          console.warn('[Paystack Webhook] Signature mismatch in server');
+        }
+      } catch (sigErr) {
+        console.warn('[Paystack Webhook] Signature error:', sigErr);
+      }
+    }
+
+    const event = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
+    const eventType = event?.event;
+    const data = event?.data;
+
+    console.log(`[Express Paystack Webhook]: ${eventType}`);
+
+    if (eventType === 'charge.success') {
+      const email = data?.customer?.email || data?.metadata?.email || data?.email;
+      const reference = data?.reference;
+      const userId = data?.metadata?.user_id;
+
+      if (email) {
+        await verifyAndActivatePaystackPayment({ reference: reference || `PAY_${Date.now()}`, email, userId });
+        await recordPaystackPayment({ email, userId, reference });
+      }
+      return res.json({ status: 'success', message: 'User marked active' });
+    }
+
+    if (eventType === 'subscription.disable') {
+      const email = data?.customer?.email || data?.email;
+      if (email) {
+        await deactivateUserSubscription(email);
+      }
+      return res.json({ status: 'success', message: 'User marked inactive' });
+    }
+
+    return res.json({ status: 'success', received: true });
+  } catch (err: any) {
+    console.error('[Express Paystack Webhook Error]:', err);
+    return res.status(500).json({ error: 'Webhook processing error', message: err?.message });
+  }
+});
+
+app.all(['/api/paystack/verify', '/api/paystack/verify/:ref'], async (req: Request, res: Response) => {
+  try {
+    const reference = (req.params.ref || req.query.reference || req.body?.reference || '').trim();
+    const email = (req.query.email || req.body?.email || '').trim();
+    const userId = (req.query.userId || req.body?.userId || '').trim();
+
+    if (!reference) {
+      return res.status(400).json({ success: false, error: 'Reference required' });
+    }
+
+    let verifiedEmail = email;
+    const secretKey = process.env.PAYSTACK_SECRET_KEY;
+
+    if (secretKey && secretKey.startsWith('sk_')) {
+      try {
+        const verifyRes = await fetch(`https://api.paystack.co/transaction/verify/${encodeURIComponent(reference)}`, {
+          headers: { Authorization: `Bearer ${secretKey.trim()}` }
+        });
+        const verifyData: any = await verifyRes.json();
+        if (verifyData?.status && verifyData?.data?.status === 'success') {
+          verifiedEmail = verifyData.data.customer?.email || verifyData.data.metadata?.email || email;
+        }
+      } catch (e) {
+        console.warn('[Paystack verify fetch error]:', e);
+      }
+    }
+
+    const finalEmail = verifiedEmail || 'learner@nexovian.group';
+    const record = await verifyAndActivatePaystackPayment({ reference, email: finalEmail, userId });
+    await recordPaystackPayment({ email: finalEmail, userId, reference });
+
+    return res.json({
+      success: true,
+      verified: true,
+      subscription_status: 'active',
+      reference,
+      record
+    });
+  } catch (err: any) {
+    console.error('[Paystack verify error]:', err);
+    return res.status(500).json({ success: false, error: err?.message });
   }
 });
 

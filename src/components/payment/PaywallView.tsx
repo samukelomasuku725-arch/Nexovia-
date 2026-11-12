@@ -38,6 +38,7 @@ import {
 import { useAuth } from '../../context/AuthContext';
 import { useLearning } from '../../context/LearningContext';
 import { checkAccess, generateUnlockCodeApi } from '../../services/snapscanSubscriptionService';
+import { startPaystackCheckout } from '../../services/paystackService';
 
 const SNAPSCAN_URL = 'https://pos.snapscan.io/qr/NKJJYpV6';
 const WHATSAPP_URL = 'https://wa.me/27636508381?text=Hi%20Nexovian%2C%20I%20have%20a%20question%20about%20my%20unlock%20code';
@@ -342,6 +343,34 @@ export const PaywallView: React.FC = () => {
                   <span>Start Learning Now &mdash; Free Premium Access</span>
                   <ArrowRight className="w-4 h-4 text-black" />
                 </button>
+              </div>
+
+              {/* Official Paystack Monthly Subscription */}
+              <div className="p-6 rounded-2xl bg-[#0a0a0a] border-2 border-[#FFB612]/60 text-center shadow-xl space-y-4">
+                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#FFB612]/20 text-[#FFB612] border border-[#FFB612]/40 text-xs font-mono font-bold uppercase">
+                  <span>Paystack Subscription • Plan PLN_suslgrc1q9rtsfi</span>
+                </div>
+                <div>
+                  <h3 className="text-xl font-black text-white">Nexovian Monthly &mdash; R60/month</h3>
+                  <p className="text-xs text-slate-300 mt-1">Automatic recurring card or instant EFT subscription. Cancel anytime.</p>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <button
+                    type="button"
+                    onClick={() => startPaystackCheckout({ user })}
+                    className="w-full py-3.5 rounded-xl bg-[#FFB612] hover:bg-yellow-400 text-black font-black text-sm flex items-center justify-center gap-2 shadow-lg transition-transform active:scale-95 cursor-pointer"
+                  >
+                    <span>Subscribe R60/month</span>
+                    <ArrowRight className="w-4 h-4 text-black" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => startPaystackCheckout({ user })}
+                    className="w-full py-3.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-[#FFB612]/40 text-[#FFB612] font-extrabold text-sm flex items-center justify-center gap-2 transition-transform active:scale-95 cursor-pointer"
+                  >
+                    <span>Start 2-Day Free Trial</span>
+                  </button>
+                </div>
               </div>
 
               {/* Form: Phone + SnapScan Reference + Email + Button "Get My Unlock Code" */}

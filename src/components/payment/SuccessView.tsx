@@ -33,14 +33,27 @@ export const SuccessView: React.FC = () => {
     localStorage.setItem('isPremium', 'true');
     localStorage.setItem('nexovian_unlocked', 'true');
     localStorage.setItem('nexovian_paid', 'true');
+    localStorage.setItem('nexovian_paystack_active', 'true');
     localStorage.setItem('nexovian_logged_in', 'true');
     localStorage.setItem(`used_${code}`, 'true');
     localStorage.setItem('premium_expiry', String(expiry));
 
+    // Check URL query parameters for Paystack reference callback
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      const ref = params.get('reference') || params.get('trxref');
+      if (ref) {
+        localStorage.setItem('nexovian_paystack_ref', ref);
+        fetch(`/api/paystack/verify?reference=${encodeURIComponent(ref)}`)
+          .then((r) => r.json())
+          .catch((err) => console.warn('Paystack verify background call notice:', err));
+      }
+    }
+
     saveSubscription({
       access_code: code,
       payment_phone: '0820000000',
-      payment_reference: 'SNAPSCAN-R60-PAID',
+      payment_reference: 'PAYSTACK-R60-MONTHLY',
       payment_status: 'paid',
       subscription_status: 'active',
       subscription_start: now,
@@ -116,14 +129,25 @@ export const SuccessView: React.FC = () => {
         <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
           <button
             onClick={() => {
-              setCurrentTab('home');
-              if (typeof window !== 'undefined') window.history.pushState({}, '', '/');
+              setCurrentTab('tutor');
+              if (typeof window !== 'undefined') window.history.pushState({}, '', '/app');
             }}
             className="w-full sm:w-auto px-6 py-3.5 bg-[#fbbf24] hover:bg-yellow-400 text-black font-black text-sm rounded-xl shadow-[0_0_20px_rgba(251,191,36,0.4)] flex items-center justify-center gap-2 cursor-pointer transition-transform active:scale-95"
           >
             <Sparkles className="w-4 h-4 text-black" />
-            <span>Start Learning Now</span>
+            <span>Open AI Tutor</span>
             <ArrowRight className="w-4 h-4 text-black" />
+          </button>
+
+          <button
+            onClick={() => {
+              setCurrentTab('scan');
+              if (typeof window !== 'undefined') window.history.pushState({}, '', '/app');
+            }}
+            className="w-full sm:w-auto px-5 py-3.5 bg-slate-800 hover:bg-slate-700 text-white font-bold text-sm rounded-xl border border-slate-700 flex items-center justify-center gap-2 cursor-pointer transition-colors"
+          >
+            <BookOpen className="w-4 h-4 text-amber-400" />
+            <span>Scan &amp; Understand</span>
           </button>
         </div>
 
