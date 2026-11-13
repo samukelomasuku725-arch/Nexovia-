@@ -81,7 +81,7 @@ import { HeroSection } from '../home/HeroSection';
 import { MissionVisionSection } from '../home/MissionVisionSection';
 import { MissionHeroBanner } from '../home/MissionHeroBanner';
 import { HomeSocraticHero } from '../home/HomeSocraticHero';
-import { checkAccess } from '../../services/snapscanSubscriptionService';
+import { getCachedPaystackStatus, isUserActive } from '../../services/paystackService';
 
 export const StudentMasteryDashboardView: React.FC = () => {
   const {
@@ -198,69 +198,87 @@ export const StudentMasteryDashboardView: React.FC = () => {
     setCurrentTab('tutor');
   };
 
-  const subInfo = checkAccess(user);
+  const isSubActive = isUserActive(user);
+  const paystackRecord = user?.email ? getCachedPaystackStatus(user.email) : null;
+  const isOnTrial = paystackRecord?.status === 'trial';
+  const nextBillingIso = paystackRecord?.next_payment_date || paystackRecord?.trial_end_date;
+  const nextBillingFormatted = nextBillingIso
+    ? new Date(nextBillingIso).toLocaleDateString('en-ZA', { day: '2-digit', month: 'short', year: 'numeric' })
+    : 'Scheduled';
 
   React.useEffect(() => {
-    if (!subInfo.allow) {
+    if (!isSubActive) {
       if (typeof window !== 'undefined') {
         window.history.pushState({}, '', '/paywall?reason=subscription_expired');
       }
       setCurrentTab('paywall');
     }
-  }, [subInfo.allow, setCurrentTab]);
+  }, [isSubActive, setCurrentTab]);
 
   return (
     <div className="min-h-screen bg-[#0F0F0F] text-[#F8FAFC] pb-24 md:pb-12 transition-colors w-full max-w-[100vw] overflow-x-hidden">
-      {/* 30-Day Subscription Countdown Banner */}
-      {subInfo.status === 'active' && subInfo.daysRemaining > 7 && (
-        <div className="bg-[#007A4D]/15 border-b border-[#007A4D]/40 text-emerald-300 px-4 py-2 text-xs font-bold">
+      {/* Paystack 2-Day Free Trial / Active Subscription Banner */}
+      {isSubActive && isOnTrial && (
+        <div className="bg-amber-500/15 border-b border-amber-400/50 text-amber-200 px-4 py-2 text-xs font-bold">
           <div className="max-w-7xl mx-auto w-full flex items-center justify-between gap-2">
             <span className="flex items-center gap-2">
-              <CheckCircle2 className="w-4 h-4 text-emerald-500" />
-              <span>Subscription Active &mdash; {subInfo.daysRemaining} days remaining (Expires: {subInfo.expiresAtFormatted})</span>
-            </span>
-            <span className="text-[11px] font-mono text-emerald-400">
-              Access Code: {subInfo.accessCode}
-            </span>
-          </div>
-        </div>
-      )}
-
-      {subInfo.status === 'active' && subInfo.daysRemaining <= 7 && (
-        <div className="bg-amber-500/15 border-b border-amber-400 text-amber-200 px-4 py-2 text-xs font-bold">
-          <div className="max-w-7xl mx-auto w-full flex items-center justify-between gap-2">
-            <span className="flex items-center gap-2">
-              <Clock className="w-4 h-4 text-amber-500" />
-              <span>Subscription Active &mdash; {subInfo.daysRemaining} days remaining (Expires: {subInfo.expiresAtFormatted})</span>
+              <Clock className="w-4 h-4 text-amber-400" />
+              <span>Active (2-Day Free Trial) &mdash; Trial ends on {nextBillingFormatted} &bull; Next payment R60 on {nextBillingFormatted}</span>
             </span>
             <button
               onClick={() => {
-                setCurrentTab('paywall');
-                if (typeof window !== 'undefined') window.history.pushState({}, '', '/paywall');
+                setCurrentTab('mySubscription');
+                if (typeof window !== 'undefined') window.history.pushState({}, '', '/my-subscription');
               }}
               className="px-3 py-1 rounded-lg bg-[#FFB612] text-black font-black text-xs hover:bg-yellow-400 transition-colors cursor-pointer"
             >
-              Renew for R60 &mdash; 30 Days
+              My Subscription
             </button>
           </div>
         </div>
       )}
 
-      {subInfo.status !== 'active' && (
+      {isSubActive && !isOnTrial && (
+        <div className="bg-[#007A4D]/15 border-b border-[#007A4D]/40 text-emerald-300 px-4 py-2 text-xs font-bold">
+          <div className="max-w-7xl mx-auto w-full flex items-center justify-between gap-2">
+            <span className="flex items-center gap-2">
+              <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+              <span>Active (R60/month) &mdash; Next payment R60 on {nextBillingFormatted}</span>
+            </span>
+            <button
+              onClick={() => {
+                setCurrentTab('mySubscription');
+                if (typeof window !== 'undefined') window.history.pushState({}, '', '/my-subscription');
+              }}
+              className="text-[11px] font-bold text-emerald-300 hover:text-emerald-200 underline cursor-pointer"
+            >
+              My Subscription
+            </button>
+          </div>
+        </div>
+      )}
+
+      {!isSubActive && (
         <div className="bg-red-500/20 border-b border-red-500/50 text-red-200 px-4 py-2 text-xs font-bold">
           <div className="max-w-7xl mx-auto w-full flex items-center justify-between gap-2">
             <span className="flex items-center gap-2">
               <AlertCircle className="w-4 h-4 text-red-500" />
-              <span>Subscription Expired &mdash; Renew for R60</span>
+              <span>
+                {paystackRecord?.status === 'cancelled'
+                  ? 'Subscription Cancelled (R0 Due)'
+                  : paystackRecord?.status === 'expired'
+                  ? 'Trial Expired'
+                  : 'Trial Not Started'}
+              </span>
             </span>
             <button
               onClick={() => {
-                setCurrentTab('paywall');
-                if (typeof window !== 'undefined') window.history.pushState({}, '', '/paywall');
+                setCurrentTab('subscribe');
+                if (typeof window !== 'undefined') window.history.pushState({}, '', '/subscribe');
               }}
-              className="px-3 py-1 rounded-lg bg-red-600 hover:bg-red-500 text-white font-black text-xs transition-colors cursor-pointer"
+              className="px-3 py-1 rounded-lg bg-[#FFB612] hover:bg-yellow-400 text-black font-black text-xs transition-colors cursor-pointer"
             >
-              Renew for R60 &mdash; 30 Days
+              Start 2-Day Free Trial - Then R60/month
             </button>
           </div>
         </div>

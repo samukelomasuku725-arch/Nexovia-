@@ -147,6 +147,14 @@ export const MoreToolsModal: React.FC<Props> = ({
       title: 'Account & Settings',
       items: [
         {
+          id: 'mySubscription',
+          title: 'My Subscription',
+          subtitle: 'Manage your 2-day free trial, R60 billing & cancellation',
+          icon: ShieldCheck,
+          color: 'bg-[#FFD400] text-black',
+          onClick: () => navigateTo('mySubscription')
+        },
+        {
           id: 'profile',
           title: 'Learner Profile & Goals',
           subtitle: 'Grade, target subjects & study milestones',

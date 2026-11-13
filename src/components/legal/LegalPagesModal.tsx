@@ -215,7 +215,7 @@ export const LegalPagesModal: React.FC<LegalPagesModalProps> = ({
               </div>
               <h3 className="font-bold text-white text-sm">How to Request a Refund:</h3>
               <p className="text-xs">
-                Contact our support team on WhatsApp at <strong>+27 63 650 8381</strong> or via email at <strong>samukelomasuku725@gmail.com</strong> with your phone number and SnapScan reference. Approved refunds are processed to your original payment method within 3–5 business days.
+                Contact our support team on WhatsApp at <strong>+27 63 650 8381</strong> or via email at <strong>samukelomasuku725@gmail.com</strong> with your account email and Paystack payment reference. Approved refunds are processed to your original payment method within 3–5 business days.
               </p>
             </div>
           )}

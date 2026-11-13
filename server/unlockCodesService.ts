@@ -5,8 +5,8 @@
  * NEXOVIAN AUTO ONE-TIME UNLOCK CODE SERVICE
  * 
  * Flow:
- * 1. User pays R60 on SnapScan (https://pos.snapscan.io/qr/NKJJYpV6).
- * 2. On /paywall, user submits phone + reference -> calls POST /api/generate-code.
+ * 1. User receives a voucher or subscription reference.
+ * 2. User submits phone + reference -> calls POST /api/generate-code.
  * 3. System auto-generates UNIQUE code: format NEX- + 6 random digits (e.g. NEX-482910).
  *    Saves in unlock_codes table with status = 'unused'.
  *    Displays code in Big Gold Box with [Copy Code] and link to /unlock.
@@ -152,7 +152,7 @@ export async function createUnlockCode({
   if (!cleanRef || cleanRef.length < 2) {
     return {
       success: false,
-      message: 'Please enter your SnapScan reference or receipt number from your payment.'
+      message: 'Please enter your payment reference or receipt number.'
     };
   }
 
@@ -176,7 +176,7 @@ export async function createUnlockCode({
     if (existingForRef.status === 'used') {
       return {
         success: false,
-        message: `This SnapScan reference (${cleanRef}) was already used for code ${existingForRef.code}. Please make a new R60 payment for a new code.`
+        message: `This reference (${cleanRef}) was already used for code ${existingForRef.code}. Please start a subscription or obtain a new code.`
       };
     }
   }
@@ -259,7 +259,7 @@ export async function unlockCode({
   if (!record) {
     return {
       success: false,
-      message: 'Invalid code. Please check your code or pay R60 on SnapScan to get a new code.'
+      message: 'Invalid code. Please check your code or start your 2-day free trial via Paystack.'
     };
   }
 
@@ -270,7 +270,7 @@ export async function unlockCode({
       : 'earlier';
     return {
       success: false,
-      message: `This code was already used on ${usedDate}. Each code works once only. Pay R60 for a new code.`
+      message: `This code was already used on ${usedDate}. Each code works once only.`
     };
   }
 
@@ -278,7 +278,7 @@ export async function unlockCode({
   if (record.status === 'expired') {
     return {
       success: false,
-      message: 'This code has expired. Pay R60 on SnapScan for a new 30-day unlock code.'
+      message: 'This code has expired. Please start a subscription or obtain a new code.'
     };
   }
 

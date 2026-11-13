@@ -3,6 +3,7 @@ import { X, Lock, Mail, User, GraduationCap, Globe, Key, ShieldCheck, AlertCircl
 import { useAuth } from '../../context/AuthContext';
 import { EDUCATION_SYSTEM, SA_OFFICIAL_LANGUAGES } from '../../data/educationData';
 import { APP_CONFIG } from '../../config/brand';
+import { PENDING_TRIAL_STORAGE_KEY, startTwoDayFreeTrialCheckout } from '../../services/paystackService';
 
 export const AuthModal: React.FC = () => {
   const {
@@ -31,10 +32,12 @@ export const AuthModal: React.FC = () => {
     setLoading(true);
 
     try {
+      let authedUser: any = null;
       if (authModalMode === 'login') {
-        await login(email, password);
+        const res = await login(email, password);
+        authedUser = res?.user || { email };
       } else {
-        await register({
+        const res = await register({
           name,
           email,
           password,
@@ -42,6 +45,15 @@ export const AuthModal: React.FC = () => {
           educationLevel: gradeOrProgramme.startsWith('Grade') ? 'School (CAPS)' : 'TVET',
           preferredLanguage
         });
+        authedUser = res?.user || { email, name };
+      }
+
+      if (typeof window !== 'undefined' && sessionStorage.getItem(PENDING_TRIAL_STORAGE_KEY) === 'true') {
+        const trialRes = await startTwoDayFreeTrialCheckout({ user: authedUser });
+        if (!trialRes.success && trialRes.error) {
+          setError(trialRes.error);
+          return;
+        }
       }
     } catch (err: any) {
       setError(err.message || 'Authentication failed. Please check your credentials.');

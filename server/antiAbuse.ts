@@ -141,18 +141,6 @@ export async function checkAntiAbuseStatus({
     };
   }
 
-  // STATE 5: Admin bypass
-  if (ADMIN_EMAILS.some((adm) => adm.toLowerCase() === normEmail)) {
-    return {
-      blocked: false,
-      status: 'ADMIN',
-      isAdmin: true,
-      isPaidUser: true,
-      canUseFreeTrial: false,
-      showYellowBox: false
-    };
-  }
-
   const now = new Date();
   const records = readTrialRecords();
 

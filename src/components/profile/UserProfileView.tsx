@@ -21,7 +21,8 @@ import { useAuth } from '../../context/AuthContext';
 export const UserProfileView: React.FC = () => {
   const {
     userProgress,
-    tracks
+    tracks,
+    setCurrentTab
   } = useLearning();
 
   const {
@@ -88,14 +89,23 @@ export const UserProfileView: React.FC = () => {
             </div>
 
             {isAuthenticated ? (
-              <button
-                onClick={logout}
-                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30 border border-rose-200 dark:border-rose-900 rounded-lg transition-colors"
-                title="Log out of Nexovian"
-              >
-                <LogOut className="w-3.5 h-3.5" />
-                <span>Log Out</span>
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setCurrentTab('mySubscription')}
+                  className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-black bg-[#FFD400] hover:bg-yellow-400 rounded-lg transition-colors cursor-pointer"
+                >
+                  <ShieldCheck className="w-3.5 h-3.5" />
+                  <span>My Subscription</span>
+                </button>
+                <button
+                  onClick={logout}
+                  className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30 border border-rose-200 dark:border-rose-900 rounded-lg transition-colors cursor-pointer"
+                  title="Log out of Nexovian"
+                >
+                  <LogOut className="w-3.5 h-3.5" />
+                  <span>Log Out</span>
+                </button>
+              </div>
             ) : (
               <button
                 onClick={() => {

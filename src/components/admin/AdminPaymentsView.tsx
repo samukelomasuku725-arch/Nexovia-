@@ -162,7 +162,7 @@ export const AdminPaymentsView: React.FC = () => {
             Admin Payments Panel
           </h2>
           <p className="text-xs text-white/60 mb-6">
-            Enter the admin master password to inspect SnapScan payments and manage learner access.
+            Enter the admin master password to inspect Paystack subscriptions and manage learner access.
           </p>
 
           {authError && (
@@ -328,7 +328,7 @@ export const AdminPaymentsView: React.FC = () => {
                 <tr>
                   <th className="py-3.5 px-4">Learner Name</th>
                   <th className="py-3.5 px-4">Phone</th>
-                  <th className="py-3.5 px-4">SnapScan Reference</th>
+                  <th className="py-3.5 px-4">Paystack Reference</th>
                   <th className="py-3.5 px-4">Access Code</th>
                   <th className="py-3.5 px-4">Start Date</th>
                   <th className="py-3.5 px-4">End Date</th>
@@ -341,7 +341,7 @@ export const AdminPaymentsView: React.FC = () => {
                 {filtered.length === 0 ? (
                   <tr>
                     <td colSpan={9} className="py-12 text-center text-white/50 text-xs font-mono">
-                      No payments recorded yet. As learners verify their SnapScan receipts, they will appear here automatically.
+                      No subscriptions recorded yet. As learners start their 2-day free trials on Paystack, they will appear here automatically.
                     </td>
                   </tr>
                 ) : (

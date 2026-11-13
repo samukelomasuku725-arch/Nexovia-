@@ -85,19 +85,13 @@ import { solveStepByStepCalculation } from './mathSolverService';
 import {
   getOrCreateUserSubscription,
   checkSubscriptionAccess,
+  activatePaystackTrial,
   verifyAndActivatePaystackPayment,
+  markSubscriptionCancelled,
   deactivateUserSubscription,
+  getUserSubscriptionRecord,
   readAllUserSubscriptions
 } from './userSubscriptionService';
-import {
-  verifySnapScanPayment,
-  verifyAndConsumeOneTimeCode,
-  readAllOneTimeCodes,
-  checkUserAccess as checkSnapScanAccess,
-  readAllPayments as readAllSnapScanPayments,
-  extendSubscription as extendSnapScanSubscription,
-  expireSubscription as expireSnapScanSubscription
-} from './snapscanPaymentService';
 import {
   createUnlockCode,
   unlockCode,
@@ -1130,95 +1124,96 @@ app.post('/api/subscription/register-trial', async (req: Request, res: Response)
 });
 
 // ==========================================
-// PAYSTACK OFFICIAL SUBSCRIPTION INTEGRATION
-// Plan: PLN_suslgrc1q9rtsfi (Nexovian Monthly - R60/month ZAR)
-// Redirect: https://nexovian.group/success
+// PAYSTACK 2-DAY FREE TRIAL & SUBSCRIPTION INTEGRATION
+// Uses process.env.PAYSTACK_SECRET_KEY and process.env.PAYSTACK_PLAN_CODE only
 // ==========================================
-const PAYSTACK_PLAN_CODE = 'PLN_suslgrc1q9rtsfi';
-const PAYSTACK_PLAN_NAME = 'Nexovian Monthly';
-const PAYSTACK_DIRECT_PAGE = 'https://paystack.shop/pay/2vrisypa3i';
-
-app.post('/api/paystack/initialize', async (req: Request, res: Response) => {
+app.post(['/api/paystack/subscribe', '/api/paystack/initialize'], async (req: Request, res: Response) => {
   try {
+    const secretKey = (process.env.PAYSTACK_SECRET_KEY || '').trim();
+    const planCode = (process.env.PAYSTACK_PLAN_CODE || '').trim();
+
+    if (!secretKey || !planCode) {
+      return res.status(500).json({
+        success: false,
+        error: 'Paystack configuration missing. Set PAYSTACK_SECRET_KEY and PAYSTACK_PLAN_CODE in environment variables.'
+      });
+    }
+
     const { email, userId, callbackUrl } = req.body || {};
-    const secretKey = process.env.PAYSTACK_SECRET_KEY;
-    const finalEmail = (email || '').trim().toLowerCase() || 'learner@nexovian.group';
-    const finalCallback = callbackUrl || 'https://nexovian.group/success';
-    const reference = `NEX_${userId || 'anon'}_${Date.now()}`;
+    const finalEmail = (email || '').trim().toLowerCase();
 
-    if (secretKey && secretKey.startsWith('sk_')) {
-      try {
-        const paystackRes = await fetch('https://api.paystack.co/transaction/initialize', {
-          method: 'POST',
-          headers: {
-            Authorization: `Bearer ${secretKey.trim()}`,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            email: finalEmail,
-            amount: 6000,
-            currency: 'ZAR',
-            plan: PAYSTACK_PLAN_CODE,
-            reference,
-            callback_url: finalCallback,
-            metadata: {
-              user_id: userId,
-              email: finalEmail,
-              plan_code: PAYSTACK_PLAN_CODE,
-              plan_name: PAYSTACK_PLAN_NAME,
-              company: 'Nexovian'
-            }
-          })
-        });
+    if (!finalEmail || !finalEmail.includes('@')) {
+      return res.status(400).json({
+        success: false,
+        error: 'Please log in or create an account with a valid email before starting your 2-day free trial.'
+      });
+    }
 
-        const paystackData: any = await paystackRes.json();
-        if (paystackData?.status && paystackData?.data?.authorization_url) {
-          return res.json({
-            success: true,
-            authorization_url: paystackData.data.authorization_url,
-            access_code: paystackData.data.access_code,
-            reference: paystackData.data.reference || reference,
-            plan_code: PAYSTACK_PLAN_CODE
-          });
+    const trialEnd = new Date(Date.now() + 2 * 24 * 60 * 60 * 1000);
+    const startDate = trialEnd.toISOString();
+    const reference = `NEX_TRIAL_${userId || 'usr'}_${Date.now()}`;
+    const originHeader = req.headers.origin || (req.headers.host ? `https://${req.headers.host}` : '');
+    const finalCallback = callbackUrl || (originHeader ? `${originHeader}/success` : 'https://nexovian.group/success');
+
+    const paystackRes = await fetch('https://api.paystack.co/transaction/initialize', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${secretKey}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        email: finalEmail,
+        amount: 100, // R1.00 card/bank authorization hold; first R60 billing starts in 2 days
+        currency: 'ZAR',
+        reference,
+        callback_url: finalCallback,
+        metadata: {
+          type: 'two_day_trial',
+          user_id: userId || '',
+          email: finalEmail,
+          plan_code: planCode,
+          start_date: startDate,
+          company: 'Nexovian'
         }
-      } catch (err: any) {
-        console.warn('[Paystack Initialize Network Error]:', err?.message);
-      }
+      })
+    });
+
+    const paystackData: any = await paystackRes.json();
+    if (!paystackRes.ok || !paystackData?.status || !paystackData?.data?.authorization_url) {
+      return res.status(paystackRes.status >= 400 ? paystackRes.status : 502).json({
+        success: false,
+        error: paystackData?.message || 'Failed to initialize Paystack checkout.'
+      });
     }
 
     return res.json({
       success: true,
-      authorization_url: PAYSTACK_DIRECT_PAGE,
-      reference,
-      plan_code: PAYSTACK_PLAN_CODE,
-      directPayPage: true
+      authorization_url: paystackData.data.authorization_url,
+      access_code: paystackData.data.access_code,
+      reference: paystackData.data.reference || reference,
+      start_date: startDate,
+      trial_end_date: startDate
     });
   } catch (err: any) {
-    console.error('[Paystack Initialize Error]:', err);
-    return res.json({
-      success: true,
-      authorization_url: PAYSTACK_DIRECT_PAGE,
-      reference: `NEX_${Date.now()}`,
-      plan_code: PAYSTACK_PLAN_CODE,
-      directPayPage: true
+    console.error('[Paystack Subscribe Error]:', err);
+    return res.status(500).json({
+      success: false,
+      error: err?.message || 'Failed to start Paystack checkout.'
     });
   }
 });
 
 app.post('/api/paystack/webhook', async (req: Request, res: Response) => {
   try {
-    const secretKey = process.env.PAYSTACK_SECRET_KEY;
+    const secretKey = (process.env.PAYSTACK_SECRET_KEY || '').trim();
+    const planCode = (process.env.PAYSTACK_PLAN_CODE || '').trim();
     const signature = req.headers['x-paystack-signature'] as string;
 
     if (secretKey && signature) {
-      try {
-        const bodyStr = typeof req.body === 'string' ? req.body : JSON.stringify(req.body);
-        const hash = crypto.createHmac('sha512', secretKey.trim()).update(bodyStr).digest('hex');
-        if (hash !== signature) {
-          console.warn('[Paystack Webhook] Signature mismatch in server');
-        }
-      } catch (sigErr) {
-        console.warn('[Paystack Webhook] Signature error:', sigErr);
+      const bodyStr = typeof req.body === 'string' ? req.body : JSON.stringify(req.body);
+      const hash = crypto.createHmac('sha512', secretKey).update(bodyStr).digest('hex');
+      if (hash !== signature) {
+        return res.status(401).json({ error: 'Invalid Paystack webhook signature' });
       }
     }
 
@@ -1229,23 +1224,95 @@ app.post('/api/paystack/webhook', async (req: Request, res: Response) => {
     console.log(`[Express Paystack Webhook]: ${eventType}`);
 
     if (eventType === 'charge.success') {
-      const email = data?.customer?.email || data?.metadata?.email || data?.email;
-      const reference = data?.reference;
+      const email = (data?.customer?.email || data?.metadata?.email || data?.email || '').trim().toLowerCase();
+      const reference = data?.reference || `PAY_${Date.now()}`;
       const userId = data?.metadata?.user_id;
+      const isTrialInit = data?.metadata?.type === 'two_day_trial';
+      const customerCode = data?.customer?.customer_code || null;
+      const authorizationCode = data?.authorization?.authorization_code || null;
 
       if (email) {
-        await verifyAndActivatePaystackPayment({ reference: reference || `PAY_${Date.now()}`, email, userId });
+        if (isTrialInit) {
+          const startDateIso = data?.metadata?.start_date || new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString();
+          const existing = await getUserSubscriptionRecord(email);
+          let subscriptionCode = existing?.paystack_subscription_code || null;
+          let emailToken = existing?.paystack_email_token || null;
+
+          if (secretKey && planCode && customerCode && !subscriptionCode) {
+            try {
+              const subRes = await fetch('https://api.paystack.co/subscription', {
+                method: 'POST',
+                headers: {
+                  Authorization: `Bearer ${secretKey}`,
+                  'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                  customer: customerCode,
+                  plan: planCode,
+                  authorization: authorizationCode,
+                  start_date: startDateIso
+                })
+              });
+              const subData: any = await subRes.json();
+              if (subData?.status && subData?.data?.subscription_code) {
+                subscriptionCode = subData.data.subscription_code;
+                emailToken = subData.data.email_token || emailToken;
+              }
+            } catch (err) {
+              console.warn('[Express Webhook subscription create error]:', err);
+            }
+          }
+
+          await activatePaystackTrial({
+            email,
+            userId,
+            reference,
+            startDateIso,
+            subscriptionCode,
+            emailToken,
+            customerCode,
+            authorizationCode
+          });
+        } else {
+          await verifyAndActivatePaystackPayment({
+            reference,
+            email,
+            userId,
+            customerCode,
+            authorizationCode
+          });
+        }
         await recordPaystackPayment({ email, userId, reference });
       }
-      return res.json({ status: 'success', message: 'User marked active' });
+      return res.json({ status: 'success', message: 'Charge processed' });
     }
 
-    if (eventType === 'subscription.disable') {
-      const email = data?.customer?.email || data?.email;
+    if (eventType === 'subscription.create') {
+      const email = (data?.customer?.email || '').trim().toLowerCase();
+      const subscriptionCode = data?.subscription_code || null;
+      const emailToken = data?.email_token || null;
+      const nextPaymentDate = data?.next_payment_date || null;
+      if (email) {
+        const existing = await getUserSubscriptionRecord(email);
+        if (!existing || existing.subscription_status === 'none' || existing.subscription_status === 'trial') {
+          await activatePaystackTrial({
+            email,
+            reference: existing?.paystack_reference || subscriptionCode || `SUB_${Date.now()}`,
+            startDateIso: nextPaymentDate || undefined,
+            subscriptionCode,
+            emailToken
+          });
+        }
+      }
+      return res.json({ status: 'success', message: 'Subscription recorded' });
+    }
+
+    if (eventType === 'subscription.disable' || eventType === 'subscription.not_renew') {
+      const email = (data?.customer?.email || data?.email || '').trim().toLowerCase();
       if (email) {
         await deactivateUserSubscription(email);
       }
-      return res.json({ status: 'success', message: 'User marked inactive' });
+      return res.json({ status: 'success', message: 'User subscription marked cancelled' });
     }
 
     return res.json({ status: 'success', received: true });
@@ -1257,275 +1324,222 @@ app.post('/api/paystack/webhook', async (req: Request, res: Response) => {
 
 app.all(['/api/paystack/verify', '/api/paystack/verify/:ref'], async (req: Request, res: Response) => {
   try {
-    const reference = (req.params.ref || req.query.reference || req.body?.reference || '').trim();
-    const email = (req.query.email || req.body?.email || '').trim();
-    const userId = (req.query.userId || req.body?.userId || '').trim();
+    const reference = String(req.params.ref || req.query.reference || req.query.trxref || req.body?.reference || '').trim();
+    const email = String(req.query.email || req.body?.email || '').trim().toLowerCase();
+    const userId = String(req.query.userId || req.body?.userId || '').trim();
 
     if (!reference) {
       return res.status(400).json({ success: false, error: 'Reference required' });
     }
 
-    let verifiedEmail = email;
-    const secretKey = process.env.PAYSTACK_SECRET_KEY;
+    const secretKey = (process.env.PAYSTACK_SECRET_KEY || '').trim();
+    const planCode = (process.env.PAYSTACK_PLAN_CODE || '').trim();
 
-    if (secretKey && secretKey.startsWith('sk_')) {
+    if (!secretKey) {
+      return res.status(500).json({ success: false, error: 'PAYSTACK_SECRET_KEY is not configured.' });
+    }
+
+    const verifyRes = await fetch(`https://api.paystack.co/transaction/verify/${encodeURIComponent(reference)}`, {
+      headers: { Authorization: `Bearer ${secretKey}` }
+    });
+    const verifyData: any = await verifyRes.json();
+
+    if (!verifyRes.ok || !verifyData?.status || verifyData?.data?.status !== 'success') {
+      return res.status(400).json({
+        success: false,
+        verified: false,
+        error: verifyData?.data?.gateway_response || verifyData?.message || 'Paystack transaction verification failed.'
+      });
+    }
+
+    const txData = verifyData.data;
+    const verifiedEmail = (txData.customer?.email || txData.metadata?.email || email || '').trim().toLowerCase();
+    const customerCode = txData.customer?.customer_code || null;
+    const authorizationCode = txData.authorization?.authorization_code || null;
+    const metadata = txData.metadata || {};
+    const isTrialInit = metadata.type === 'two_day_trial';
+    const startDateIso = metadata.start_date || new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString();
+
+    let subscriptionCode: string | null = null;
+    let emailToken: string | null = null;
+    const existing = verifiedEmail ? await getUserSubscriptionRecord(verifiedEmail) : null;
+    subscriptionCode = existing?.paystack_subscription_code || null;
+    emailToken = existing?.paystack_email_token || null;
+
+    if (isTrialInit && planCode && customerCode && (!subscriptionCode || existing?.subscription_status !== 'trial')) {
       try {
-        const verifyRes = await fetch(`https://api.paystack.co/transaction/verify/${encodeURIComponent(reference)}`, {
-          headers: { Authorization: `Bearer ${secretKey.trim()}` }
-        });
-        const verifyData: any = await verifyRes.json();
-        if (verifyData?.status && verifyData?.data?.status === 'success') {
-          verifiedEmail = verifyData.data.customer?.email || verifyData.data.metadata?.email || email;
+        const subPayload: any = {
+          customer: customerCode,
+          plan: planCode,
+          start_date: startDateIso
+        };
+        if (authorizationCode) {
+          subPayload.authorization = authorizationCode;
         }
-      } catch (e) {
-        console.warn('[Paystack verify fetch error]:', e);
+        const subRes = await fetch('https://api.paystack.co/subscription', {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${secretKey}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(subPayload)
+        });
+        const subData: any = await subRes.json();
+        if (subData?.status && subData?.data?.subscription_code) {
+          subscriptionCode = subData.data.subscription_code;
+          emailToken = subData.data.email_token || emailToken;
+        }
+      } catch (err) {
+        console.warn('[Express Paystack subscription create notice]:', err);
       }
     }
 
-    const finalEmail = verifiedEmail || 'learner@nexovian.group';
-    const record = await verifyAndActivatePaystackPayment({ reference, email: finalEmail, userId });
-    await recordPaystackPayment({ email: finalEmail, userId, reference });
+    const finalEmail = verifiedEmail || email;
+    const record = isTrialInit
+      ? await activatePaystackTrial({
+          email: finalEmail,
+          userId: userId || metadata.user_id,
+          reference,
+          startDateIso,
+          subscriptionCode,
+          emailToken,
+          customerCode,
+          authorizationCode
+        })
+      : await verifyAndActivatePaystackPayment({
+          reference,
+          email: finalEmail,
+          userId: userId || metadata.user_id,
+          subscriptionCode,
+          emailToken,
+          customerCode,
+          authorizationCode
+        });
+
+    await recordPaystackPayment({ email: finalEmail, userId: userId || metadata.user_id, reference });
 
     return res.json({
       success: true,
       verified: true,
-      subscription_status: 'active',
+      email: finalEmail,
+      status: record.subscription_status,
+      subscription_status: record.subscription_status,
+      trial_end_date: record.trial_end_date,
+      next_payment_date: record.next_payment_date,
+      subscription_code: record.paystack_subscription_code,
       reference,
       record
     });
   } catch (err: any) {
     console.error('[Paystack verify error]:', err);
-    return res.status(500).json({ success: false, error: err?.message });
+    return res.status(500).json({ success: false, error: err?.message || 'Verification failed' });
   }
 });
 
-// ==========================================
-// SNAPSCAN FULLY AUTOMATIC PAYMENT & 30-DAY AUTO-LOCK SYSTEM
-// ==========================================
-// POST /api/verify-payment
-// Step 3: On click "I Have Paid - Unlock Now":
-// Checks phone is valid (10 digits) + reference is not empty
-// AUTO-APPROVE: Immediately sets:
-// payment_status = 'paid', subscription_status = 'active'
-// subscription_start = now, subscription_end = now + 30 days
-// generates unique access_code (e.g. 'NEX-XXXXXX')
-app.post(['/api/verify-payment', '/api/snapscan/verify'], async (req: Request, res: Response) => {
+app.post('/api/paystack/cancel', async (req: Request, res: Response) => {
   try {
-    const { phone, reference, email, name, userId } = req.body || {};
-    
-    // Auto-fill fallback if phone not provided directly but passed in reference/userId
-    const cleanPhone = (phone || '').trim();
-    const cleanRef = (reference || '').trim();
-    const cleanEmail = (email || '').trim().toLowerCase();
-    const cleanName = (name || '').trim();
-
-    // Check phone is valid (at least 10 digits)
-    const phoneDigits = cleanPhone.replace(/\D/g, '');
-    if (!cleanPhone || phoneDigits.length < 10) {
-      return res.status(400).json({
-        success: false,
-        message: 'Please enter a valid phone number with at least 10 digits (e.g. 0821234567).'
-      });
+    const { email, userId } = req.body || {};
+    const normEmail = (email || '').trim().toLowerCase();
+    if (!normEmail) {
+      return res.status(400).json({ success: false, error: 'Email is required to cancel subscription.' });
     }
 
-    // Check reference is not empty
-    if (!cleanRef || cleanRef.length < 2) {
-      return res.status(400).json({
-        success: false,
-        message: 'Please enter your SnapScan reference or receipt number from your payment confirmation screen.'
-      });
-    }
+    const secretKey = (process.env.PAYSTACK_SECRET_KEY || '').trim();
+    const existing = await getUserSubscriptionRecord(normEmail);
+    let subCode = existing?.paystack_subscription_code || null;
+    let emailToken = existing?.paystack_email_token || null;
 
-    // Replace auto-approve with SnapScan webhook verification later - verify amount R60 via SnapScan API
-    const result = await verifySnapScanPayment({
-      phone: cleanPhone,
-      reference: cleanRef,
-      email: cleanEmail,
-      name: cleanName
-    });
-
-    if (!result.success) {
-      return res.status(400).json({ success: false, message: result.message });
-    }
-
-    // Also update existing user subscription if email exists
-    if (cleanEmail) {
+    if (secretKey && (!subCode || !emailToken)) {
       try {
-        await verifyAndActivatePaystackPayment({
-          reference: cleanRef,
-          email: cleanEmail,
-          userId
+        const listRes = await fetch('https://api.paystack.co/subscription?perPage=50', {
+          headers: { Authorization: `Bearer ${secretKey}` }
         });
-      } catch (_) {}
+        const listData: any = await listRes.json();
+        if (listData?.status && Array.isArray(listData.data)) {
+          const match = listData.data.find(
+            (s: any) =>
+              s?.customer?.email?.toLowerCase() === normEmail &&
+              (s?.status === 'active' || s?.status === 'attention' || s?.status === 'non-renewing')
+          );
+          if (match) {
+            subCode = match.subscription_code;
+            emailToken = match.email_token;
+          }
+        }
+      } catch (err) {
+        console.warn('[Express Paystack lookup error]:', err);
+      }
+    }
+
+    if (secretKey && subCode && emailToken) {
+      try {
+        await fetch('https://api.paystack.co/subscription/disable', {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${secretKey}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ code: subCode, token: emailToken })
+        });
+      } catch (err) {
+        console.warn('[Express Paystack disable error]:', err);
+      }
+    }
+
+    const wasInTrial = existing?.subscription_status === 'trial';
+    const updated = await markSubscriptionCancelled(normEmail);
+    if (!updated) {
+      await getOrCreateUserSubscription({ email: normEmail, userId });
+      await markSubscriptionCancelled(normEmail);
     }
 
     return res.json({
       success: true,
-      access_code: result.access_code,
-      subscription_start: result.subscription_start,
-      subscription_end: result.subscription_end,
-      subscription_status: 'active',
-      message: `Payment Verified! Your Access Code: ${result.access_code}. Valid for 30 days until ${new Date(result.subscription_end || Date.now()).toLocaleDateString('en-ZA', { day: '2-digit', month: 'short', year: 'numeric' })}. Enjoy full access!`,
-      record: result.record
+      status: 'cancelled',
+      charged_amount: 'R0',
+      message: wasInTrial
+        ? 'Your 2-day free trial subscription has been cancelled. R0 will be charged.'
+        : 'Your monthly subscription has been cancelled. You will not be billed again.',
+      record: updated
     });
   } catch (err: any) {
-    console.error('[SnapScan Verify Payment Error]:', err);
-    return res.status(500).json({ success: false, message: err?.message || 'Verification failed. Please contact support.' });
+    console.error('[Paystack Cancel Error]:', err);
+    return res.status(500).json({ success: false, error: err?.message || 'Cancel failed.' });
   }
 });
 
-// GET /api/subscription/status - route guard status query
-app.get('/api/subscription/status', (req: Request, res: Response) => {
+app.get(['/api/paystack/status', '/api/subscription/status'], async (req: Request, res: Response) => {
   try {
-    const phone = req.query.phone as string;
-    const email = req.query.email as string;
-    const accessCode = req.query.access_code as string;
-
-    const access = checkSnapScanAccess({ phone, email, accessCode });
-    return res.json({ success: true, ...access });
+    const email = String(req.query.email || '').trim().toLowerCase();
+    const userId = String(req.query.userId || '').trim();
+    const access = await checkSubscriptionAccess({ email, userId });
+    return res.json({
+      success: true,
+      status: access.status,
+      has_access: access.allow,
+      allow: access.allow,
+      trial_end_date: access.trial_end_date || null,
+      next_payment_date: access.status === 'cancelled' ? null : access.next_payment_date || null,
+      subscription_code: access.subscription_code || null,
+      days_remaining: access.daysRemaining || 0,
+      hours_remaining: access.hoursRemaining || 0,
+      is_admin: access.isAdmin || false,
+      record: access.record
+    });
   } catch (err: any) {
     return res.status(500).json({ success: false, message: 'Status check failed' });
   }
 });
 
-// POST /api/verify-one-time-code - Verify one-time access code from database (used=false -> used=true)
-app.post('/api/verify-one-time-code', async (req: Request, res: Response) => {
-  try {
-    const { code, phone, email, name } = req.body || {};
-    if (!code || typeof code !== 'string') {
-      return res.status(400).json({ success: false, message: 'Please provide a one-time access code.' });
-    }
-
-    const result = await verifyAndConsumeOneTimeCode({
-      code: code.trim(),
-      phone: phone || '',
-      email: email || '',
-      name: name || ''
-    });
-
-    if (!result.success) {
-      return res.status(400).json({ success: false, message: result.message });
-    }
-
-    return res.json({
-      success: true,
-      verified: true,
-      access_code: result.access_code,
-      subscription_start: result.subscription_start,
-      subscription_end: result.subscription_end,
-      message: result.message || 'One-time code verified and activated successfully!'
-    });
-  } catch (err: any) {
-    console.error('[Verify One-Time Code Error]:', err);
-    return res.status(500).json({ success: false, message: err?.message || 'Verification failed.' });
-  }
-});
-
-// GET /api/one-time-codes/check?code=... - Pre-check if one-time code is valid and unused
-app.get('/api/one-time-codes/check', (req: Request, res: Response) => {
-  try {
-    const code = (req.query.code as string || '').trim().toUpperCase();
-    if (!code) {
-      return res.status(400).json({ success: false, message: 'Code parameter is required.' });
-    }
-
-    const codes = readAllOneTimeCodes();
-    const found = codes.find((c) => c.code === code);
-    if (!found) {
-      return res.json({ success: false, exists: false, used: false, message: 'Code does not exist.' });
-    }
-
-    return res.json({
-      success: true,
-      exists: true,
-      used: found.used,
-      amount: found.amount,
-      message: found.used ? 'Code has already been consumed.' : 'Code is valid and unused.'
-    });
-  } catch (err: any) {
-    return res.status(500).json({ success: false, message: 'Error checking code.' });
-  }
-});
-
-// ==========================================
-// 🚀 AUTO ONE-TIME UNLOCK CODE SYSTEM (NO WHATSAPP, NO MANUAL ADMIN)
-// ==========================================
-
-// POST /api/generate-code:
-// a) Validate phone (10 digits) and reference not empty
-// b) Auto-generate UNIQUE code NEX-XXXXXX
-// c) Save to DB status='unused', phone, email, reference
-// d) Return code instantly to show on /paywall
-app.post('/api/generate-code', async (req: Request, res: Response) => {
-  try {
-    const { phone, reference, email } = req.body || {};
-    const result = await createUnlockCode({
-      phone: phone || '',
-      reference: reference || '',
-      email: email || ''
-    });
-
-    if (!result.success) {
-      return res.status(400).json({ success: false, message: result.message });
-    }
-
-    return res.json({
-      success: true,
-      code: result.code,
-      message: result.message,
-      record: result.record
-    });
-  } catch (err: any) {
-    console.error('[API /api/generate-code] Error:', err);
-    return res.status(500).json({ success: false, message: err?.message || 'Failed to generate unlock code.' });
-  }
-});
-
-// POST /api/unlock:
-// a) IF code not found -> Error "Invalid code"
-// b) IF status == 'used' -> Error "This code was already used on {used_at}. Each code works once only. Pay R60 for a new code."
-// c) IF status == 'unused' -> SUCCESS: Set status='used', used_at=NOW(), subscription_start=NOW(), subscription_end=NOW()+30 DAYS.
-app.post('/api/unlock', async (req: Request, res: Response) => {
-  try {
-    const { code, phone } = req.body || {};
-    const result = await unlockCode({
-      code: code || '',
-      phone: phone || ''
-    });
-
-    if (!result.success) {
-      return res.status(400).json({ success: false, message: result.message });
-    }
-
-    return res.json({
-      success: true,
-      code: result.code,
-      subscription_start: result.subscription_start,
-      subscription_end: result.subscription_end,
-      days_remaining: result.days_remaining,
-      expires_at_formatted: result.expires_at_formatted,
-      message: result.message,
-      record: result.record
-    });
-  } catch (err: any) {
-    console.error('[API /api/unlock] Error:', err);
-    return res.status(500).json({ success: false, message: err?.message || 'Failed to unlock app.' });
-  }
-});
-
-// GET /api/subscription/session-check - Route guard verifier
 app.get('/api/subscription/session-check', (req: Request, res: Response) => {
   try {
     const code = (req.query.code as string || '').trim();
     const result = verifySessionAccess(code);
     return res.json(result);
-  } catch (err: any) {
+  } catch {
     return res.status(500).json({ allow: false, status: 'invalid', message: 'Verification check failed' });
   }
 });
-
-// Admin Authentication Middleware / Helper
-const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'nexovian2026admin';
 
 function checkAdminAuth(req: Request): boolean {
   const sentPassword = (req.headers['x-admin-password'] as string) || (req.query.password as string) || (req.body?.password as string);
@@ -1534,80 +1548,74 @@ function checkAdminAuth(req: Request): boolean {
   return cleanSent === targetPassword || cleanSent === 'nexovian2026admin';
 }
 
-// GET /api/admin/payments - View all payments with days left and status
 app.get('/api/admin/payments', (req: Request, res: Response) => {
   if (!checkAdminAuth(req)) {
     return res.status(401).json({ success: false, message: 'Unauthorized. Invalid admin password.' });
   }
 
-  const payments = readAllSnapScanPayments();
+  const subs = readAllUserSubscriptions();
   const now = Date.now();
 
-  const formatted = payments.map((p) => {
-    const msRemaining = p.subscription_end - now;
-    const daysLeft = Math.max(0, Math.ceil(msRemaining / (1000 * 60 * 60 * 24)));
-    const isCurrentlyActive = p.subscription_status === 'active' && now <= p.subscription_end;
-
+  const formatted = subs.map((s) => {
+    const endIso = s.next_payment_date || s.subscription_end_date || s.trial_end_date;
+    const endMs = endIso ? new Date(endIso).getTime() : now;
+    const daysLeft = Math.max(0, Math.ceil((endMs - now) / (1000 * 60 * 60 * 24)));
     return {
-      id: p.id,
-      name: p.name || 'Learner',
-      phone: p.payment_phone,
-      email: p.email || '—',
-      reference: p.payment_reference,
-      access_code: p.access_code,
-      payment_status: p.payment_status,
-      subscription_status: isCurrentlyActive ? 'active' : 'expired',
-      subscription_start: p.subscription_start,
-      subscription_end: p.subscription_end,
-      start_date_formatted: new Date(p.subscription_start).toLocaleDateString('en-ZA'),
-      end_date_formatted: new Date(p.subscription_end).toLocaleDateString('en-ZA'),
-      days_left: isCurrentlyActive ? daysLeft : 0,
-      last_payment_date: p.last_payment_date
+      id: s.user_id,
+      name: s.full_name || 'Learner',
+      phone: '—',
+      email: s.email || '—',
+      reference: s.paystack_reference || s.paystack_subscription_code || '—',
+      access_code: s.paystack_subscription_code || '—',
+      payment_status: s.subscription_status === 'active' || s.subscription_status === 'trial' ? 'paid' : s.subscription_status,
+      subscription_status: s.subscription_status,
+      subscription_start: s.trial_start_date ? new Date(s.trial_start_date).getTime() : now,
+      subscription_end: endMs,
+      start_date_formatted: s.trial_start_date ? new Date(s.trial_start_date).toLocaleDateString('en-ZA') : '—',
+      end_date_formatted: endIso ? new Date(endIso).toLocaleDateString('en-ZA') : '—',
+      days_left: s.subscription_status === 'active' || s.subscription_status === 'trial' ? daysLeft : 0,
+      last_payment_date: new Date(s.updated_at).getTime()
     };
   });
 
   return res.json({
     success: true,
     total: formatted.length,
-    activeCount: formatted.filter((p) => p.subscription_status === 'active').length,
+    activeCount: formatted.filter((p) => p.subscription_status === 'active' || p.subscription_status === 'trial').length,
     payments: formatted
   });
 });
 
-// POST /api/admin/payments/:id/extend - Add 30 Days
-app.post('/api/admin/payments/:id/extend', (req: Request, res: Response) => {
+app.post('/api/admin/payments/:id/extend', async (req: Request, res: Response) => {
   if (!checkAdminAuth(req)) {
     return res.status(401).json({ success: false, message: 'Unauthorized' });
   }
-
-  const updated = extendSnapScanSubscription(req.params.id);
-  if (!updated) {
-    return res.status(404).json({ success: false, message: 'Payment record not found' });
+  const subs = readAllUserSubscriptions();
+  const target = subs.find((s) => s.user_id === req.params.id || s.email === req.params.id);
+  if (!target) {
+    return res.status(404).json({ success: false, message: 'Subscription record not found' });
   }
-
+  const updated = await verifyAndActivatePaystackPayment({
+    reference: target.paystack_reference || `ADMIN_EXT_${Date.now()}`,
+    email: target.email,
+    userId: target.user_id
+  });
   return res.json({ success: true, message: 'Subscription extended by 30 days.', record: updated });
 });
 
-// POST /api/admin/payments/:id/expire - Expire Now
-app.post('/api/admin/payments/:id/expire', (req: Request, res: Response) => {
+app.post('/api/admin/payments/:id/expire', async (req: Request, res: Response) => {
   if (!checkAdminAuth(req)) {
     return res.status(401).json({ success: false, message: 'Unauthorized' });
   }
-
-  const updated = expireSnapScanSubscription(req.params.id);
-  if (!updated) {
-    return res.status(404).json({ success: false, message: 'Payment record not found' });
+  const subs = readAllUserSubscriptions();
+  const target = subs.find((s) => s.user_id === req.params.id || s.email === req.params.id);
+  if (!target) {
+    return res.status(404).json({ success: false, message: 'Subscription record not found' });
   }
-
-  return res.json({ success: true, message: 'Subscription expired immediately.', record: updated });
+  const updated = await markSubscriptionCancelled(target.email);
+  return res.json({ success: true, message: 'Subscription cancelled immediately.', record: updated });
 });
 
-// ==========================================
-// ADMIN CODES ENDPOINTS (/admin/codes)
-// ONLY for viewing, NOT for generating.
-// List: Code, Phone, Reference, Status, Created, Used Date, Expiry, Days Left.
-// Buttons: [Expire Code] [Delete Code]. NO [Generate Code] button.
-// ==========================================
 app.get('/api/admin/codes', (req: Request, res: Response) => {
   if (!checkAdminAuth(req)) {
     return res.status(401).json({ success: false, message: 'Unauthorized. Invalid admin password.' });
@@ -1615,7 +1623,6 @@ app.get('/api/admin/codes', (req: Request, res: Response) => {
 
   const codes = readAllUnlockCodes();
   const now = Date.now();
-
   const formatted = codes.map((c) => {
     let currentStatus = c.status;
     let daysLeft = 0;
@@ -1623,11 +1630,9 @@ app.get('/api/admin/codes', (req: Request, res: Response) => {
       if (now > c.subscription_end) {
         currentStatus = 'expired';
       } else {
-        const msRemaining = c.subscription_end - now;
-        daysLeft = Math.max(0, Math.ceil(msRemaining / (1000 * 60 * 60 * 24)));
+        daysLeft = Math.max(0, Math.ceil((c.subscription_end - now) / (1000 * 60 * 60 * 24)));
       }
     }
-
     return {
       id: c.id,
       code: c.code,
@@ -1660,17 +1665,10 @@ app.post('/api/admin/codes/expire', (req: Request, res: Response) => {
   if (!checkAdminAuth(req)) {
     return res.status(401).json({ success: false, message: 'Unauthorized' });
   }
-
   const { code } = req.body || {};
-  if (!code) {
-    return res.status(400).json({ success: false, message: 'Code is required' });
-  }
-
+  if (!code) return res.status(400).json({ success: false, message: 'Code is required' });
   const updated = adminExpireCode(code);
-  if (!updated) {
-    return res.status(404).json({ success: false, message: 'Code not found' });
-  }
-
+  if (!updated) return res.status(404).json({ success: false, message: 'Code not found' });
   return res.json({ success: true, message: `Code ${code} expired successfully.`, code: updated });
 });
 
@@ -1678,37 +1676,11 @@ app.post('/api/admin/codes/delete', (req: Request, res: Response) => {
   if (!checkAdminAuth(req)) {
     return res.status(401).json({ success: false, message: 'Unauthorized' });
   }
-
   const { code } = req.body || {};
-  if (!code) {
-    return res.status(400).json({ success: false, message: 'Code is required' });
-  }
-
+  if (!code) return res.status(400).json({ success: false, message: 'Code is required' });
   const deleted = adminDeleteCode(code);
-  if (!deleted) {
-    return res.status(404).json({ success: false, message: 'Code not found' });
-  }
-
+  if (!deleted) return res.status(404).json({ success: false, message: 'Code not found' });
   return res.json({ success: true, message: `Code ${code} deleted successfully.` });
-});
-
-// Payment Notification Webhook Endpoint (SnapScan)
-app.post(['/notify', '/api/payment/notify', '/api/snapscan/webhook'], async (req: Request, res: Response) => {
-  try {
-    console.log('[SnapScan Webhook] Received notification:', req.body);
-    const { reference, extra, status, user_phone } = req.body || {};
-    if (reference && status === 'completed') {
-      await verifySnapScanPayment({
-        phone: user_phone || extra?.phone || '0000000000',
-        reference: reference,
-        email: extra?.email
-      });
-    }
-    return res.status(200).send('OK');
-  } catch (err: any) {
-    console.warn('[SnapScan Webhook] notice:', err);
-    return res.status(200).send('OK');
-  }
 });
 
 app.get('/api/anti-abuse/status', (_req: Request, res: Response) => {

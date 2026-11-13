@@ -8,37 +8,28 @@
  * - Filter by Grade (Grade 4 to University) + Subject
  * - Shows 3 real past paper previews
  * - Questions 1 & 2: 100% FREE with full step-by-step memo in all 11 SA languages
- * - Question 3 onwards: Blurred + Locked + Button "Unlock Full Memo - R60" -> SnapScan
- * - If user has active subscription (checkAccess), all questions are unlocked!
+ * - Question 3 onwards: Blurred + Locked + Button "Start 2-Day Free Trial - Then R60/month"
+ * - If user has active subscription (hasFullAccess), all questions are unlocked!
  */
 
 import React, { useState, useEffect, useMemo } from 'react';
 import {
-  BookOpen,
   FileText,
   Lock,
-  Unlock,
   Sparkles,
   Search,
   CheckCircle2,
-  ChevronDown,
   Languages,
   ArrowRight,
-  ExternalLink,
-  QrCode,
-  ShieldCheck,
   ArrowLeft,
-  GraduationCap,
-  Download,
   Eye,
   Check,
-  AlertCircle,
-  KeyRound,
+  CreditCard,
   X
 } from 'lucide-react';
 import { useLearning } from '../../context/LearningContext';
 import { useAuth } from '../../context/AuthContext';
-import { checkAccess, verifyAndUnlockPayment } from '../../services/snapscanSubscriptionService';
+import { isUserActive, startTwoDayFreeTrialCheckout } from '../../services/paystackService';
 import { ALL_11_LANGUAGES } from '../home/PublicLandingView';
 import { EXPANDED_PAST_PAPERS_CATALOG, BASE_GRADE_SUBJECT_MAP } from '../../data/expandedPastPapersCatalog';
 import { generatePaperExplanation } from '../../services/language/paperExplanationGenerator';
@@ -343,8 +334,15 @@ export const PastPapersView: React.FC = () => {
     setSelectedSubject('All Subjects');
   };
 
-  // Check access status
-  const [accessState, setAccessState] = useState(() => checkAccess(user));
+  // Reactive subscription status check
+  const [hasFullAccess, setHasFullAccess] = useState<boolean>(() => isUserActive(user));
+
+  useEffect(() => {
+    setHasFullAccess(isUserActive(user));
+    const onSubUpdate = () => setHasFullAccess(isUserActive(user));
+    window.addEventListener('nexovian-subscription-updated', onSubUpdate);
+    return () => window.removeEventListener('nexovian-subscription-updated', onSubUpdate);
+  }, [user]);
 
   useEffect(() => {
     // Read query parameter ?grade=X from URL if present
@@ -361,18 +359,16 @@ export const PastPapersView: React.FC = () => {
     }
   }, []);
 
-  const navigateToPaywall = () => {
-    setCurrentTab('paywall');
-    if (typeof window !== 'undefined') {
-      window.history.pushState({}, '', '/paywall');
-    }
-  };
-
-  const navigateToUnlock = () => {
-    setCurrentTab('unlock');
-    if (typeof window !== 'undefined') {
-      window.history.pushState({}, '', '/unlock');
-    }
+  const handleStartTrial = () => {
+    startTwoDayFreeTrialCheckout({
+      user,
+      onRequireAuth: () => {
+        setCurrentTab('login');
+        if (typeof window !== 'undefined') {
+          window.history.pushState({}, '', '/login');
+        }
+      }
+    });
   };
 
   const filteredPapers = PAST_PAPERS_DATABASE.filter((paper) => {
@@ -436,28 +432,19 @@ export const PastPapersView: React.FC = () => {
           </div>
 
           <div className="flex items-center gap-2.5">
-            {accessState.allow ? (
+            {hasFullAccess ? (
               <div className="px-3 py-1.5 rounded-full bg-[#007A4D]/30 border border-[#007A4D] text-emerald-300 text-xs font-bold flex items-center gap-1.5">
                 <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-                <span>Full Access Active ({accessState.daysRemaining}d left)</span>
+                <span>Full Access Active</span>
               </div>
             ) : (
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={navigateToUnlock}
-                  className="px-3 py-1.5 rounded-full border border-[#FFB612]/60 hover:bg-[#FFB612]/10 text-[#FFB612] font-bold text-xs transition-colors cursor-pointer flex items-center gap-1"
-                >
-                  <KeyRound className="w-3.5 h-3.5" />
-                  <span>Enter Code</span>
-                </button>
-                <button
-                  onClick={navigateToPaywall}
-                  className="px-4 py-2 rounded-full bg-[#007A4D] hover:bg-emerald-600 text-white font-black text-xs sm:text-sm shadow-md transition-all flex items-center gap-1.5 cursor-pointer transform hover:scale-105"
-                >
-                  <QrCode className="w-4 h-4" />
-                  <span>Unlock for R60</span>
-                </button>
-              </div>
+              <button
+                onClick={handleStartTrial}
+                className="px-4 py-2 rounded-full bg-[#FFB612] hover:bg-yellow-400 text-black font-black text-xs sm:text-sm shadow-md transition-all flex items-center gap-1.5 cursor-pointer transform hover:scale-105"
+              >
+                <CreditCard className="w-4 h-4" />
+                <span>Start 2-Day Free Trial - Then R60/month</span>
+              </button>
             )}
           </div>
         </div>
@@ -471,7 +458,7 @@ export const PastPapersView: React.FC = () => {
             <div>
               <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#FFB612]/20 border border-[#FFB612]/40 text-[#FFB612] text-xs font-mono font-bold uppercase mb-2">
                 <Sparkles className="w-3.5 h-3.5" />
-                <span>{accessState.allow ? '🎉 Free Week Active: All Questions & Full Step-by-Step Memos 100% Unlocked' : 'Free Preview: Questions 1 & 2 Full Memo Unlocked'}</span>
+                <span>{hasFullAccess ? 'Subscription Active: All Questions & Step-by-Step Memos Unlocked' : 'Free Preview: Questions 1 & 2 Full Memo Unlocked'}</span>
               </div>
               <h2 className="font-display font-black text-2xl sm:text-3xl text-white">
                 Original DBE Past Papers &amp; Mother-Tongue Memos
@@ -630,31 +617,34 @@ export const PastPapersView: React.FC = () => {
               })
             )}
 
-            {/* Sticky Pricing / Unlock Card or Free Week Active Card */}
-            {accessState.allow ? (
+            {/* Sticky Pricing / Trial Card */}
+            {hasFullAccess ? (
               <div className="p-6 rounded-3xl bg-[#007A4D]/20 border-2 border-[#007A4D] shadow-2xl space-y-4">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-mono font-bold uppercase text-emerald-300 flex items-center gap-1.5">
                     <Sparkles className="w-4 h-4 text-[#FFB612]" />
-                    <span>NEXOVIAN PREMIUM ACTIVE</span>
-                  </span>
-                  <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 text-[10px] font-mono font-bold border border-emerald-500/40">
-                    {accessState.daysRemaining}d Left
+                    <span>NEXOVIAN ACCESS ACTIVE</span>
                   </span>
                 </div>
                 <div className="text-lg font-black text-white">
-                  🎉 FREE WEEK ACTIVE &mdash; 7 Days Left
+                  All Past Papers &amp; Memos Unlocked
                 </div>
                 <p className="text-xs text-white/80 leading-relaxed">
-                  Full access is active! All 4,000+ past exam papers across Grade 4 to University with step-by-step memos in all 12 official languages (incl SASL 🤟) are completely unlocked.
+                  Your subscription is active. All 4,000+ past exam papers across Grade 4 to University with step-by-step memos in 12 languages are unlocked.
                 </p>
-                <div className="pt-2">
+                <div className="pt-2 space-y-2">
                   <button
-                    onClick={() => setCurrentTab('home')}
+                    onClick={() => setCurrentTab('studyGuide')}
                     className="w-full py-3 rounded-2xl bg-[#FFB612] hover:bg-yellow-400 text-black font-black text-xs sm:text-sm flex items-center justify-center gap-2 shadow-lg cursor-pointer transition-transform active:scale-95"
                   >
                     <Sparkles className="w-4 h-4 text-black" />
-                    <span>Go to Tutor &mdash; Ask Anything</span>
+                    <span>Open Study Guide</span>
+                  </button>
+                  <button
+                    onClick={() => setCurrentTab('mySubscription')}
+                    className="w-full py-2.5 rounded-2xl bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs flex items-center justify-center gap-2 cursor-pointer"
+                  >
+                    <span>Manage My Subscription</span>
                   </button>
                 </div>
               </div>
@@ -662,42 +652,35 @@ export const PastPapersView: React.FC = () => {
               <div className="p-6 rounded-3xl bg-[#0A1F44] border-2 border-[#007A4D] shadow-2xl space-y-4">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-mono font-bold uppercase text-[#FFB612]">
-                    NEXOVIAN PREMIUM
+                    2-DAY FREE TRIAL
                   </span>
-                  <span className="text-2xl font-black text-white">R60</span>
+                  <span className="text-2xl font-black text-white">R0 Today</span>
                 </div>
                 <p className="text-xs text-white/80 leading-relaxed">
-                  Unlock full step-by-step memos for all 4,000+ past exam papers across Grade 4 to University in 12 official languages (incl SASL 🤟).
+                  Unlock full step-by-step memos for all 4,000+ past exam papers and CAPS Study Guides. First R60/month billing starts in 2 days. Cancel before 2 days for R0.
                 </p>
                 <div className="space-y-2 text-xs text-white/90">
                   <div className="flex items-center gap-2">
                     <Check className="w-3.5 h-3.5 text-[#007A4D]" />
-                    <span>30 Days Full Access</span>
+                    <span>2 Days Full Free Trial</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <Check className="w-3.5 h-3.5 text-[#007A4D]" />
-                    <span>Instant Auto-Unlock via SnapScan</span>
+                    <span>All 12 Official SA Languages</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <Check className="w-3.5 h-3.5 text-[#007A4D]" />
-                    <span>Zero Admin Waiting</span>
+                    <span>Cancel anytime before 2 days = R0</span>
                   </div>
                 </div>
 
-                <div className="pt-2 space-y-2">
+                <div className="pt-2">
                   <button
-                    onClick={navigateToPaywall}
-                    className="w-full py-3 rounded-2xl bg-[#007A4D] hover:bg-emerald-600 text-white font-black text-xs sm:text-sm flex items-center justify-center gap-2 shadow-lg cursor-pointer"
+                    onClick={handleStartTrial}
+                    className="w-full py-3.5 px-4 rounded-2xl bg-[#FFB612] hover:bg-yellow-400 text-black font-black text-xs sm:text-sm flex items-center justify-center gap-2 shadow-lg cursor-pointer"
                   >
-                    <QrCode className="w-4 h-4" />
-                    <span>Pay R60 with SnapScan &mdash; 30 Days</span>
-                  </button>
-                  <button
-                    onClick={navigateToUnlock}
-                    className="w-full py-3 rounded-2xl bg-[#FFB612] hover:bg-yellow-400 text-black font-black text-xs sm:text-sm flex items-center justify-center gap-2 shadow-lg cursor-pointer"
-                  >
-                    <KeyRound className="w-4 h-4 text-black" />
-                    <span>Enter Code to Unlock</span>
+                    <CreditCard className="w-4 h-4" />
+                    <span>Start 2-Day Free Trial - Then R60/month</span>
                   </button>
                 </div>
               </div>
@@ -744,7 +727,7 @@ export const PastPapersView: React.FC = () => {
               {/* Questions List */}
               <div className="mt-6 space-y-6">
                 {activePaper.questions.map((q, idx) => {
-                  const isFree = idx < 2 || accessState.allow;
+                  const isFree = idx < 2 || hasFullAccess;
                   const structuredExp = generatePaperExplanation({
                     questionNumber: q.questionNumber,
                     questionText: q.questionText,
@@ -904,25 +887,16 @@ export const PastPapersView: React.FC = () => {
                               Locked Question Memo
                             </h4>
                             <p className="text-xs text-white/70 max-w-sm mb-4 leading-relaxed">
-                              First 2 questions are 100% free. Unlock the full step-by-step memo for all questions in this paper for R60.
+                              First 2 questions are 100% free. Start your 2-day free trial to unlock all questions and step-by-step memos (then R60/month).
                             </p>
 
-                            <div className="flex flex-col sm:flex-row items-center gap-2.5">
-                              <button
-                                onClick={navigateToPaywall}
-                                className="px-5 py-2.5 rounded-xl bg-[#007A4D] hover:bg-emerald-600 text-white font-black text-xs sm:text-sm flex items-center gap-2 shadow-lg cursor-pointer transform hover:scale-105"
-                              >
-                                <QrCode className="w-4 h-4" />
-                                <span>Unlock Full Memo &mdash; R60</span>
-                              </button>
-                              <button
-                                onClick={navigateToUnlock}
-                                className="px-4 py-2.5 rounded-xl bg-[#FFB612] hover:bg-yellow-400 text-black font-black text-xs border border-white/20 cursor-pointer flex items-center gap-1.5"
-                              >
-                                <KeyRound className="w-3.5 h-3.5 text-black" />
-                                <span>Enter Code to Unlock</span>
-                              </button>
-                            </div>
+                            <button
+                              onClick={handleStartTrial}
+                              className="px-5 py-3 rounded-xl bg-[#FFB612] hover:bg-yellow-400 text-black font-black text-xs sm:text-sm flex items-center gap-2 shadow-lg cursor-pointer transform hover:scale-105"
+                            >
+                              <CreditCard className="w-4 h-4" />
+                              <span>Start 2-Day Free Trial - Then R60/month</span>
+                            </button>
                           </div>
                         </div>
                       )}
@@ -1022,7 +996,7 @@ export const PastPapersView: React.FC = () => {
               <div>
                 <div className="flex items-center gap-2 mb-2">
                   <span className="px-3 py-1 rounded-full bg-[#007A4D]/30 border border-[#007A4D] text-emerald-300 text-xs font-mono font-bold">
-                    {accessState.allow ? '100% UNLOCKED' : 'FREE PREVIEW: QUESTIONS 1 & 2'}
+                    {hasFullAccess ? '100% UNLOCKED' : 'FREE PREVIEW: QUESTIONS 1 & 2'}
                   </span>
                   <span className="px-3 py-1 rounded-full bg-[#FFB612]/20 border border-[#FFB612]/40 text-[#FFB612] text-xs font-mono font-bold">
                     {selectedPaper.totalMarks} Total Marks
@@ -1061,7 +1035,7 @@ export const PastPapersView: React.FC = () => {
 
             <div className="space-y-6 overflow-y-auto max-h-[80vh] pr-1 scrollbar-thin">
               {selectedPaper.questions.map((q, idx) => {
-                const isFree = idx < 2 || accessState.allow;
+                const isFree = idx < 2 || hasFullAccess;
                 const structuredExp = generatePaperExplanation({
                   questionNumber: q.questionNumber,
                   questionText: q.questionText,
@@ -1233,33 +1207,20 @@ export const PastPapersView: React.FC = () => {
                             Locked Question Memo
                           </h4>
                           <p className="text-xs text-white/70 max-w-sm mb-4 leading-relaxed">
-                            First 2 questions are 100% free. Unlock the full step-by-step memo for all questions in this paper for R60.
+                            First 2 questions are 100% free. Start your 2-day free trial to unlock all questions and step-by-step memos (then R60/month).
                           </p>
 
-                          <div className="flex flex-col sm:flex-row items-center gap-2.5">
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setShowModal(false);
-                                navigateToPaywall();
-                              }}
-                              className="px-5 py-2.5 rounded-xl bg-[#007A4D] hover:bg-emerald-600 text-white font-black text-xs sm:text-sm flex items-center gap-2 shadow-lg cursor-pointer transform hover:scale-105"
-                            >
-                              <QrCode className="w-4 h-4" />
-                              <span>Unlock Full Memo &mdash; R60</span>
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setShowModal(false);
-                                navigateToUnlock();
-                              }}
-                              className="px-4 py-2.5 rounded-xl bg-[#FFB612] hover:bg-yellow-400 text-black font-black text-xs border border-white/20 cursor-pointer flex items-center gap-1.5"
-                            >
-                              <KeyRound className="w-3.5 h-3.5 text-black" />
-                              <span>Enter Code to Unlock</span>
-                            </button>
-                          </div>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setShowModal(false);
+                              handleStartTrial();
+                            }}
+                            className="px-5 py-3 rounded-xl bg-[#FFB612] hover:bg-yellow-400 text-black font-black text-xs sm:text-sm flex items-center gap-2 shadow-lg cursor-pointer transform hover:scale-105"
+                          >
+                            <CreditCard className="w-4 h-4" />
+                            <span>Start 2-Day Free Trial - Then R60/month</span>
+                          </button>
                         </div>
                       </div>
                     )}

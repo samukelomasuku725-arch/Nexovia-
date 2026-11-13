@@ -35,11 +35,13 @@ import {
   Star,
   BookOpen
 } from 'lucide-react';
+import { useAuth } from '../../context/AuthContext';
 import { useLearning } from '../../context/LearningContext';
 import { useTranslation } from '../../i18n/I18nContext';
 import { SALanguageCode } from '../../i18n/types';
 import { APP_CONFIG } from '../../config/brand';
-import { QrCode, ExternalLink } from 'lucide-react';
+import { startTwoDayFreeTrialCheckout, isUserActive } from '../../services/paystackService';
+import { CreditCard } from 'lucide-react';
 
 interface HeroSectionProps {
   onScrollToFinder?: () => void;
@@ -48,6 +50,8 @@ interface HeroSectionProps {
 export const HeroSection: React.FC<HeroSectionProps> = ({ onScrollToFinder }) => {
   const { setCurrentTab, setActiveLearningLanguage } = useLearning();
   const { setLanguage } = useTranslation();
+  const { user, isAuthenticated } = useAuth();
+  const hasActiveSubscription = isAuthenticated && isUserActive(user);
 
   // Navigate to learn tab with specific language parameter
   const handleNavigateToLearn = (langCode: SALanguageCode) => {
@@ -202,18 +206,34 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onScrollToFinder }) =>
                 </a>
               </div>
 
-              {/* SnapScan Instant Access Button */}
+              {/* 2-Day Free Trial / Subscription CTA */}
               <div className="mt-6 p-4 sm:p-5 rounded-2xl bg-slate-950/70 border border-slate-800/90 shadow-xl max-w-xl">
-                <a
-                  href="https://pos.snapscan.io/qr/NKJJYpV6"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="w-full py-3.5 px-5 rounded-xl bg-[#0077b6] hover:bg-[#023e8a] text-white font-extrabold text-sm sm:text-base flex items-center justify-center gap-2 shadow-lg transition-transform active:scale-98"
-                >
-                  <QrCode className="w-5 h-5" />
-                  <span>Pay R60 with SnapScan &bull; Instant Access</span>
-                  <ExternalLink className="w-4 h-4 opacity-70" />
-                </a>
+                {hasActiveSubscription ? (
+                  <button
+                    type="button"
+                    onClick={() => setCurrentTab('mySubscription')}
+                    className="w-full py-3.5 px-5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-sm sm:text-base flex items-center justify-center gap-2 shadow-lg transition-transform active:scale-98 cursor-pointer"
+                  >
+                    <CreditCard className="w-5 h-5" />
+                    <span>Manage My Subscription</span>
+                    <ArrowRight className="w-4 h-4" />
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() =>
+                      startTwoDayFreeTrialCheckout({
+                        user,
+                        onRequireAuth: () => setCurrentTab('login')
+                      })
+                    }
+                    className="w-full py-3.5 px-5 rounded-xl bg-[#FFB612] hover:bg-yellow-400 text-black font-black text-sm sm:text-base flex items-center justify-center gap-2 shadow-lg transition-transform active:scale-98 cursor-pointer"
+                  >
+                    <Sparkles className="w-5 h-5" />
+                    <span>Start 2-Day Free Trial - Then R60/month</span>
+                    <ArrowRight className="w-4 h-4" />
+                  </button>
+                )}
               </div>
 
               {/* 4. LANGUAGE BADGES ROW UNDER BUTTONS */}

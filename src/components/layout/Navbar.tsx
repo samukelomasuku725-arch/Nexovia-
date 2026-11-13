@@ -220,6 +220,19 @@ export const Navbar: React.FC = () => {
             <span>About Us</span>
           </button>
 
+          {isAuthenticated && (
+            <button
+              onClick={() => setCurrentTab('mySubscription')}
+              className={`flex items-center gap-1.5 transition-colors hover:text-white py-1 whitespace-nowrap cursor-pointer ${
+                currentTab === 'mySubscription'
+                  ? 'text-[#FACC15] font-bold border-b-2 border-[#FACC15]'
+                  : ''
+              }`}
+            >
+              <span>My Subscription</span>
+            </button>
+          )}
+
           <button
             onClick={() => setIsMoreToolsOpen(true)}
             className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
@@ -344,6 +357,14 @@ export const Navbar: React.FC = () => {
           {isAuthenticated && user ? (
             <div className="flex items-center gap-1.5 sm:gap-2">
               <button
+                onClick={() => setCurrentTab('mySubscription')}
+                className="hidden sm:flex items-center gap-1 px-2.5 py-1.5 text-xs font-bold text-black bg-[#FFD400] hover:bg-yellow-400 rounded-lg transition-all cursor-pointer whitespace-nowrap"
+                title="Manage your trial & subscription"
+              >
+                <span>My Subscription</span>
+              </button>
+
+              <button
                 onClick={() => setCurrentTab('profile')}
                 className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors text-xs"
                 title={`Logged in as ${user.name} (${user.email})`}
@@ -364,7 +385,7 @@ export const Navbar: React.FC = () => {
               <button
                 onClick={logout}
                 className="px-2.5 py-1.5 text-xs font-bold text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/40 rounded-lg transition-colors border border-red-200 dark:border-red-900/60 cursor-pointer"
-                title="Log out of Supabase"
+                title="Log out"
               >
                 Logout
               </button>
@@ -373,16 +394,16 @@ export const Navbar: React.FC = () => {
             <div className="flex items-center gap-1.5 sm:gap-2">
               <button
                 onClick={() => setCurrentTab('login')}
-                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-900 rounded-lg transition-colors border border-slate-200 dark:border-slate-800"
+                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-900 rounded-lg transition-colors border border-slate-200 dark:border-slate-800 cursor-pointer"
               >
                 <User className="w-3.5 h-3.5" />
                 <span>Login</span>
               </button>
               <button
                 onClick={() => setCurrentTab('signup')}
-                className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-black bg-[#ffd700] hover:bg-[#ffea75] rounded-lg transition-all shadow-sm"
+                className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-black bg-[#FFD400] hover:bg-yellow-400 rounded-lg transition-all shadow-sm cursor-pointer"
               >
-                <span>2-Day Free</span>
+                <span>Start 2-Day Free Trial</span>
               </button>
             </div>
           )}

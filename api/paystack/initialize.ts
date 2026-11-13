@@ -1,20 +1,15 @@
 /**
  * Vercel Serverless Function: /api/paystack/initialize
- * 
- * Initializes a Paystack checkout transaction for:
- * Plan Code: PLN_suslgrc1q9rtsfi (Nexovian Monthly - R60/month, ZAR)
- * Redirects to Paystack checkout, then back to nexovian.group/success
+ *
+ * Self-contained alias for /api/paystack/subscribe: enforces
+ * PAYSTACK_SECRET_KEY + PAYSTACK_PLAN_CODE env vars and 2-Day Free Trial scheduling.
  */
 
-const PLAN_CODE = 'PLN_suslgrc1q9rtsfi';
-const PLAN_NAME = 'Nexovian Monthly';
-const AMOUNT_CENTS = 6000; // R60 in cents
-const DIRECT_PAYMENT_PAGE = 'https://paystack.shop/pay/2vrisypa3i';
 const DEFAULT_CALLBACK_URL = 'https://nexovian.group/success';
 
 export default async function handler(req: any, res: any) {
   res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
 
   if (req.method === 'OPTIONS') {
@@ -22,75 +17,95 @@ export default async function handler(req: any, res: any) {
   }
 
   if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' });
+    return res.status(405).json({ success: false, error: 'Method not allowed' });
   }
 
   try {
-    const { email, userId, callbackUrl } = req.body || {};
-    const secretKey = process.env.PAYSTACK_SECRET_KEY;
-    const finalEmail = (email || '').trim().toLowerCase() || 'learner@nexovian.group';
-    const finalCallback = callbackUrl || DEFAULT_CALLBACK_URL;
-    const reference = `NEX_${userId || 'anon'}_${Date.now()}`;
+    const secretKey = (process.env.PAYSTACK_SECRET_KEY || '').trim();
+    const planCode = (process.env.PAYSTACK_PLAN_CODE || '').trim();
 
-    // If secret key is configured, initialize transaction via official Paystack API
-    if (secretKey && secretKey.startsWith('sk_')) {
-      try {
-        const paystackRes = await fetch('https://api.paystack.co/transaction/initialize', {
-          method: 'POST',
-          headers: {
-            Authorization: `Bearer ${secretKey.trim()}`,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            email: finalEmail,
-            amount: AMOUNT_CENTS,
-            currency: 'ZAR',
-            plan: PLAN_CODE,
-            reference,
-            callback_url: finalCallback,
-            metadata: {
-              user_id: userId,
-              email: finalEmail,
-              plan_code: PLAN_CODE,
-              plan_name: PLAN_NAME,
-              company: 'Nexovian'
-            }
-          })
-        });
-
-        const paystackData: any = await paystackRes.json();
-        if (paystackData?.status && paystackData?.data?.authorization_url) {
-          return res.status(200).json({
-            success: true,
-            authorization_url: paystackData.data.authorization_url,
-            access_code: paystackData.data.access_code,
-            reference: paystackData.data.reference || reference,
-            plan_code: PLAN_CODE
-          });
-        }
-
-        console.warn('[Paystack Initialize API Notice]:', paystackData?.message || 'Using payment page fallback');
-      } catch (err: any) {
-        console.warn('[Paystack Initialize API Network Error]:', err?.message);
-      }
+    if (!secretKey || !planCode) {
+      return res.status(500).json({
+        success: false,
+        error: 'Paystack configuration missing. Please configure PAYSTACK_SECRET_KEY and PAYSTACK_PLAN_CODE in environment variables.'
+      });
     }
 
-    // Fallback directly to Paystack payment page link provided by user
+    const { email, userId, callbackUrl } = req.body || {};
+    const finalEmail = (email || '').trim().toLowerCase();
+
+    if (!finalEmail || !finalEmail.includes('@')) {
+      return res.status(400).json({
+        success: false,
+        error: 'Please log in or create an account with a valid email address before starting your 2-day free trial.'
+      });
+    }
+
+    const trialEnd = new Date(Date.now() + 2 * 24 * 60 * 60 * 1000);
+    const startDate = trialEnd.toISOString();
+    const reference = `NEX_TRIAL_${userId || 'usr'}_${Date.now()}`;
+
+    const originHeader = req.headers.origin || (req.headers.host ? `https://${req.headers.host}` : '');
+    const finalCallback = callbackUrl || (originHeader ? `${originHeader}/success` : DEFAULT_CALLBACK_URL);
+
+    const paystackRes = await fetch('https://api.paystack.co/transaction/initialize', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${secretKey}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        email: finalEmail,
+        amount: 100,
+        currency: 'ZAR',
+        channels: ['card'],
+        reference,
+        callback_url: finalCallback,
+        metadata: {
+          type: 'two_day_trial',
+          user_id: userId || '',
+          email: finalEmail,
+          plan_code: planCode,
+          start_date: startDate,
+          company: 'Nexovian',
+          custom_fields: [
+            {
+              display_name: 'Subscription',
+              variable_name: 'subscription',
+              value: '2-Day Free Trial, then R60/month'
+            },
+            {
+              display_name: 'First R60 Billing Date',
+              variable_name: 'start_date',
+              value: startDate
+            }
+          ]
+        }
+      })
+    });
+
+    const paystackData: any = await paystackRes.json();
+
+    if (!paystackRes.ok || !paystackData?.status || !paystackData?.data?.authorization_url) {
+      return res.status(paystackRes.status >= 400 ? paystackRes.status : 502).json({
+        success: false,
+        error: paystackData?.message || 'Failed to initialize Paystack trial checkout.'
+      });
+    }
+
     return res.status(200).json({
       success: true,
-      authorization_url: DIRECT_PAYMENT_PAGE,
-      reference,
-      plan_code: PLAN_CODE,
-      directPayPage: true
+      authorization_url: paystackData.data.authorization_url,
+      access_code: paystackData.data.access_code,
+      reference: paystackData.data.reference || reference,
+      start_date: startDate,
+      trial_end_date: startDate
     });
   } catch (error: any) {
     console.error('[Paystack Initialize Error]:', error);
-    return res.status(200).json({
-      success: true,
-      authorization_url: DIRECT_PAYMENT_PAGE,
-      reference: `NEX_${Date.now()}`,
-      plan_code: PLAN_CODE,
-      directPayPage: true
+    return res.status(500).json({
+      success: false,
+      error: error?.message || 'Failed to start Paystack checkout.'
     });
   }
 }

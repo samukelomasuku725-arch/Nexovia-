@@ -1,152 +1,59 @@
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
- * 
+ *
  * NEXOVIAN PAYWALL VIEW (/paywall)
- * Design: Deep Navy #0A1F44, Green #007A4D, Gold #FFB612, Sky Blue #1E88E5, Orange #FF6B35.
- * 
- * Flow:
- * - Button 1 Green: "Pay R60 with SnapScan - 30 Days" -> https://pos.snapscan.io/qr/NKJJYpV6 (new tab)
- * - Text under: "Step 1: Pay R60 on SnapScan. Step 2: Come back here, enter your phone + SnapScan reference to get your code instantly."
- * - Form: Phone Number + SnapScan Reference + Email + Button "Get My Unlock Code"
- * - On submit -> POST /api/generate-code:
- *   a) Validate phone (10 digits) and reference not empty
- *   b) Auto-generate UNIQUE code NEX-XXXXXX
- *   c) Save to DB status='unused', phone, email, reference
- *   d) Show success screen INSTANTLY on same page: Big Gold box: "YOUR UNLOCK CODE IS: NEX-482910" + Button [Copy Code] + Text "Write it down. Use once only. Valid 30 days after use."
- *   e) Button below: "Enter Code to Unlock" -> /unlock
- * - Help only: Small link at bottom: "Need help? WhatsApp 063 650 8381"
+ * Presents the 2-Day Free Trial (then R60/month) Paystack flow. Auth required first.
  */
 
 import React, { useState, useEffect } from 'react';
 import {
   Lock,
   Sparkles,
-  CheckCircle2,
   AlertCircle,
   MessageCircle,
   ArrowRight,
   ShieldCheck,
-  QrCode,
-  ExternalLink,
-  Copy,
-  Check,
-  Clock,
-  Layers,
-  GraduationCap
+  Check
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useLearning } from '../../context/LearningContext';
-import { checkAccess, generateUnlockCodeApi } from '../../services/snapscanSubscriptionService';
-import { startPaystackCheckout } from '../../services/paystackService';
+import { isUserActive, startTwoDayFreeTrialCheckout } from '../../services/paystackService';
 
-const SNAPSCAN_URL = 'https://pos.snapscan.io/qr/NKJJYpV6';
-const WHATSAPP_URL = 'https://wa.me/27636508381?text=Hi%20Nexovian%2C%20I%20have%20a%20question%20about%20my%20unlock%20code';
+const WHATSAPP_URL = 'https://wa.me/27636508381?text=Hi%20Nexovian%2C%20I%20need%20help%20with%20my%20subscription';
 
 export const PaywallView: React.FC = () => {
-  const { user } = useAuth();
+  const { user, isAuthenticated } = useAuth();
   const { setCurrentTab } = useLearning();
-
-  const [phone, setPhone] = useState('');
-  const [reference, setReference] = useState('');
-  const [email, setEmail] = useState(user?.email || '');
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [generatedCode, setGeneratedCode] = useState<string | null>(null);
-  const [isCopied, setIsCopied] = useState(false);
-  const [reason, setReason] = useState<string>('subscription_expired');
 
   useEffect(() => {
-    // If user already has active 30-day access, skip to home
-    const status = checkAccess(user);
-    if (status.allow) {
+    if (isAuthenticated && isUserActive(user)) {
       setCurrentTab('home');
-      return;
     }
+  }, [isAuthenticated, user, setCurrentTab]);
 
-    if (typeof window !== 'undefined') {
-      const params = new URLSearchParams(window.location.search);
-      const r = params.get('reason');
-      if (r) setReason(r);
-    }
-  }, [user, setCurrentTab]);
-
-  const handlePayClick = () => {
-    window.open(SNAPSCAN_URL, '_blank');
-  };
-
-  const handleGenerateCodeSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleStartTrial = async () => {
     setErrorMessage(null);
-
-    const cleanPhone = phone.trim();
-    const cleanRef = reference.trim();
-
-    if (!cleanPhone || cleanPhone.replace(/\D/g, '').length < 10) {
-      setErrorMessage('Please enter a valid 10-digit phone number (e.g. 0821234567).');
-      return;
-    }
-
-    if (!cleanRef || cleanRef.length < 2) {
-      setErrorMessage('Please enter your SnapScan reference or receipt number.');
-      return;
-    }
-
-    setIsSubmitting(true);
-    try {
-      let codeToUse = '';
-      try {
-        const result = await generateUnlockCodeApi({
-          phone: cleanPhone,
-          reference: cleanRef,
-          email: email.trim() || user?.email
-        });
-        if (result?.success && result?.code) {
-          codeToUse = result.code;
+    setLoading(true);
+    const res = await startTwoDayFreeTrialCheckout({
+      user,
+      onRequireAuth: () => {
+        setCurrentTab('login');
+        if (typeof window !== 'undefined') {
+          window.history.pushState({}, '', '/login');
         }
-      } catch (_) {
-        // Fallback to local 200k code generator
       }
-
-      if (!codeToUse) {
-        // Import dynamic generator
-        const { generateNextCode } = await import('../../lib/codeGenerator');
-        codeToUse = generateNextCode();
-      }
-
-      setGeneratedCode(codeToUse);
-      if (typeof window !== 'undefined') {
-        localStorage.setItem('nexovian_last_generated_code', codeToUse);
-        localStorage.setItem('nexovian_last_phone', cleanPhone);
-      }
-    } catch (err: any) {
-      setErrorMessage(err?.message || 'Error communicating with server.');
-    } finally {
-      setIsSubmitting(false);
+    });
+    if (!res.success && res.error) {
+      setErrorMessage(res.error);
     }
-  };
-
-  const handleCopyCode = async () => {
-    if (!generatedCode) return;
-    try {
-      await navigator.clipboard.writeText(generatedCode);
-      setIsCopied(true);
-      setTimeout(() => setIsCopied(false), 2500);
-    } catch (_) {
-      setIsCopied(true);
-    }
-  };
-
-  const navigateToUnlock = () => {
-    setCurrentTab('unlock');
-    if (typeof window !== 'undefined') {
-      window.history.pushState({}, '', '/unlock');
-    }
+    setLoading(false);
   };
 
   return (
     <div className="min-h-screen bg-[#0A1F44] text-white font-sans antialiased selection:bg-[#FFB612] selection:text-black py-10 px-4 sm:px-6 flex flex-col justify-between">
-      
       {/* Top Bar */}
       <div className="max-w-4xl mx-auto w-full flex items-center justify-between pb-6 border-b border-white/10">
         <div
@@ -170,18 +77,30 @@ export const PaywallView: React.FC = () => {
         </div>
 
         <div className="flex items-center gap-3">
+          {isAuthenticated ? (
+            <button
+              type="button"
+              onClick={() => setCurrentTab('mySubscription')}
+              className="px-3.5 py-1.5 rounded-full border border-[#FFB612]/50 text-[#FFB612] hover:bg-[#FFB612]/10 text-xs font-bold transition-colors cursor-pointer"
+            >
+              My Subscription
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setCurrentTab('login')}
+              className="px-3.5 py-1.5 rounded-full border border-[#FFB612]/50 text-[#FFB612] hover:bg-[#FFB612]/10 text-xs font-bold transition-colors cursor-pointer"
+            >
+              Log in
+            </button>
+          )}
           <button
-            onClick={navigateToUnlock}
-            className="px-3.5 py-1.5 rounded-full border border-[#FFB612]/50 text-[#FFB612] hover:bg-[#FFB612]/10 text-xs font-bold transition-colors cursor-pointer"
-          >
-            Have a code? Unlock &rarr;
-          </button>
-          <button
+            type="button"
             onClick={() => {
               setCurrentTab('landing');
               if (typeof window !== 'undefined') window.history.pushState({}, '', '/');
             }}
-            className="text-xs font-bold text-white/70 hover:text-white transition-colors"
+            className="text-xs font-bold text-white/70 hover:text-white transition-colors cursor-pointer"
           >
             &larr; Home
           </button>
@@ -190,43 +109,28 @@ export const PaywallView: React.FC = () => {
 
       {/* Main Content Box */}
       <main className="max-w-xl mx-auto w-full my-auto py-8">
-        
-        {/* Expiration or lock notice banner if applicable */}
-        {reason === 'subscription_expired' && !generatedCode && (
-          <div className="mb-6 p-4 rounded-2xl bg-amber-500/15 border border-amber-400 text-amber-200 text-xs flex items-center gap-3 shadow-lg">
-            <Clock className="w-5 h-5 text-amber-400 shrink-0" />
-            <div>
-              <strong className="block font-bold">Your 30-day access has expired.</strong>
-              <span>Pay R60 on SnapScan below to get your new unlock code instantly.</span>
-            </div>
-          </div>
-        )}
-
-        <div className="bg-[#000000] border-2 border-[#007A4D] rounded-3xl p-6 sm:p-10 shadow-2xl relative overflow-hidden">
-          
-          {/* Header */}
+        <div className="bg-[#000000] border-2 border-[#007A4D] rounded-3xl p-6 sm:p-10 shadow-2xl space-y-6">
           <div className="text-center pb-6 border-b border-white/10">
             <div className="w-16 h-16 rounded-full bg-[#007A4D]/20 border-2 border-[#007A4D] text-[#007A4D] flex items-center justify-center mx-auto mb-4 shadow-xl">
               <Lock className="w-8 h-8 text-[#007A4D]" />
             </div>
 
             <div className="inline-block px-3.5 py-1 rounded-full bg-[#FFB612]/20 border border-[#FFB612]/40 text-[#FFB612] text-xs font-mono font-bold uppercase mb-2">
-              R60 FOR 30 DAYS &bull; ONE CODE, ONE USE
+              2-DAY FREE TRIAL &bull; THEN R60/MONTH
             </div>
 
             <h1 className="font-display font-black text-3xl sm:text-4xl text-white tracking-tight">
-              Unlock Full App &mdash; R60
+              Start 2-Day Free Trial
             </h1>
             <p className="mt-2 text-xs sm:text-sm text-white/70 max-w-md mx-auto">
-              30 days full access &mdash; All grades (Grade 4 to University), all subjects, all 11 languages
+              Enjoy 2 days free access to CAPS Study Guides, Grade 4 to University subjects, 4,000+ past papers, and AI Tutor. First R60 payment happens in 2 days. Cancel before 2 days for R0.
             </p>
           </div>
 
-          {/* Value Checklist */}
-          <div className="py-4 grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs text-white/90 border-b border-white/10">
+          <div className="py-2 grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs text-white/90 border-b border-white/10 pb-5">
             <div className="flex items-center gap-2">
               <Check className="w-4 h-4 text-[#007A4D] shrink-0" />
-              <span>Grade 4 to University CAPS</span>
+              <span>Grade 12 Physics &amp; Life Sciences Study Guides</span>
             </div>
             <div className="flex items-center gap-2">
               <Check className="w-4 h-4 text-[#007A4D] shrink-0" />
@@ -242,231 +146,35 @@ export const PaywallView: React.FC = () => {
             </div>
           </div>
 
-          {/* SUCCESS SCREEN: BIG GOLD BOX (Generated code) */}
-          {generatedCode ? (
-            <div className="pt-6 text-center space-y-5 animate-in zoom-in-95 duration-200">
-              <div className="w-14 h-14 rounded-full bg-[#007A4D] text-white flex items-center justify-center mx-auto font-black text-2xl shadow-lg">
-                ✓
-              </div>
-
-              <h2 className="font-display font-black text-2xl text-white">
-                Code Generated Automatically!
-              </h2>
-
-              {/* Big Gold Box */}
-              <div className="p-6 sm:p-8 rounded-3xl bg-gradient-to-b from-[#FFB612] to-amber-500 text-black shadow-2xl border-4 border-yellow-300 relative overflow-hidden">
-                <span className="text-xs font-mono font-black uppercase tracking-widest text-black/70 block mb-1.5">
-                  YOUR ONE-TIME UNLOCK CODE IS:
-                </span>
-
-                <div className="text-3xl sm:text-4xl font-mono font-black tracking-wider my-3 select-all bg-black/10 py-3 px-4 rounded-2xl border border-black/15">
-                  {generatedCode}
-                </div>
-
-                <div className="mt-4 flex flex-col sm:flex-row items-center justify-center gap-3">
-                  <button
-                    type="button"
-                    onClick={handleCopyCode}
-                    className="w-full sm:w-auto px-6 py-2.5 rounded-xl bg-black text-[#FFB612] hover:bg-slate-900 font-black text-xs sm:text-sm flex items-center justify-center gap-2 cursor-pointer shadow-lg transition-transform active:scale-95"
-                  >
-                    {isCopied ? (
-                      <>
-                        <Check className="w-4 h-4 text-emerald-400" />
-                        <span>Code Copied!</span>
-                      </>
-                    ) : (
-                      <>
-                        <Copy className="w-4 h-4" />
-                        <span>Copy Code</span>
-                      </>
-                    )}
-                  </button>
-                </div>
-
-                <p className="mt-3.5 text-xs text-black/80 font-bold leading-relaxed">
-                  Write it down. Use once only. Valid for 30 days after use.
-                </p>
-              </div>
-
-              {/* Button Below: Enter Code to Unlock -> /unlock */}
-              <div className="pt-2">
-                <button
-                  type="button"
-                  onClick={navigateToUnlock}
-                  className="w-full py-4 rounded-2xl bg-[#007A4D] hover:bg-emerald-600 text-white font-black text-base shadow-xl flex items-center justify-center gap-2 cursor-pointer transition-transform hover:scale-[1.01] active:scale-95"
-                >
-                  <span>Enter Code to Unlock &rarr;</span>
-                </button>
-              </div>
-
-              <div className="text-xs text-white/60">
-                <span>Code already saved for phone: </span>
-                <strong className="text-white font-mono">{phone}</strong>
-              </div>
-            </div>
-          ) : (
-            /* PAYWALL MAIN FLOW: ONLY 2 BUTTONS + FORM */
-            <div className="pt-6 space-y-6">
-              
-              {/* Free Access Week Announcement Card */}
-              <div className="p-6 rounded-2xl bg-gradient-to-r from-emerald-950/80 via-[#007A4D]/40 to-black border-2 border-emerald-500 text-center shadow-xl">
-                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 text-xs font-mono font-bold uppercase mb-3">
-                  <Sparkles className="w-3.5 h-3.5" />
-                  <span>Free Access Week Active</span>
-                </div>
-
-                <h3 className="text-xl sm:text-2xl font-black text-white">
-                  Free Access Week &mdash; No Payment Needed Till Wed 12 Nov 23:59
-                </h3>
-
-                <p className="mt-2 text-xs sm:text-sm text-emerald-100 font-mono">
-                  Free access ends: <strong>Wed 12 Nov 2026 23:59 SAST</strong>
-                </p>
-
-                <p className="mt-2 text-xs text-slate-300 leading-relaxed">
-                  Enjoy all CAPS Grades 4–12, TVET, University subjects, 12 South African languages (including SASL 🤟), past papers, and AI Socratic tutor without any payment or code.
-                </p>
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (typeof window !== 'undefined') {
-                      localStorage.setItem('isPremium', 'true');
-                      localStorage.setItem('nexovian_unlocked', 'true');
-                    }
-                    setCurrentTab('home');
-                    if (typeof window !== 'undefined') window.history.pushState({}, '', '/');
-                  }}
-                  className="mt-5 w-full py-4 rounded-xl bg-[#FFB612] hover:bg-yellow-400 text-black font-black text-base shadow-xl flex items-center justify-center gap-2 cursor-pointer transition-transform active:scale-95"
-                >
-                  <Sparkles className="w-5 h-5 text-black" />
-                  <span>Start Learning Now &mdash; Free Premium Access</span>
-                  <ArrowRight className="w-4 h-4 text-black" />
-                </button>
-              </div>
-
-              {/* Official Paystack Monthly Subscription */}
-              <div className="p-6 rounded-2xl bg-[#0a0a0a] border-2 border-[#FFB612]/60 text-center shadow-xl space-y-4">
-                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#FFB612]/20 text-[#FFB612] border border-[#FFB612]/40 text-xs font-mono font-bold uppercase">
-                  <span>Paystack Subscription • Plan PLN_suslgrc1q9rtsfi</span>
-                </div>
-                <div>
-                  <h3 className="text-xl font-black text-white">Nexovian Monthly &mdash; R60/month</h3>
-                  <p className="text-xs text-slate-300 mt-1">Automatic recurring card or instant EFT subscription. Cancel anytime.</p>
-                </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <button
-                    type="button"
-                    onClick={() => startPaystackCheckout({ user })}
-                    className="w-full py-3.5 rounded-xl bg-[#FFB612] hover:bg-yellow-400 text-black font-black text-sm flex items-center justify-center gap-2 shadow-lg transition-transform active:scale-95 cursor-pointer"
-                  >
-                    <span>Subscribe R60/month</span>
-                    <ArrowRight className="w-4 h-4 text-black" />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => startPaystackCheckout({ user })}
-                    className="w-full py-3.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-[#FFB612]/40 text-[#FFB612] font-extrabold text-sm flex items-center justify-center gap-2 transition-transform active:scale-95 cursor-pointer"
-                  >
-                    <span>Start 2-Day Free Trial</span>
-                  </button>
-                </div>
-              </div>
-
-              {/* Form: Phone + SnapScan Reference + Email + Button "Get My Unlock Code" */}
-              <div className="pt-4 border-t border-white/10">
-                <div className="flex items-center gap-2 mb-3">
-                  <Sparkles className="w-4 h-4 text-[#FFB612]" />
-                  <span className="text-xs font-mono font-bold uppercase text-[#FFB612]">
-                    Instant In-App Auto Code Generator
-                  </span>
-                </div>
-
-                {errorMessage && (
-                  <div className="mb-4 p-3 rounded-xl bg-red-500/20 border border-red-500/50 text-red-300 text-xs flex items-center gap-2">
-                    <AlertCircle className="w-4 h-4 shrink-0" />
-                    <span>{errorMessage}</span>
-                  </div>
-                )}
-
-                <form onSubmit={handleGenerateCodeSubmit} className="space-y-3.5">
-                  <div>
-                    <label className="block text-[11px] font-mono uppercase text-white/80 font-bold mb-1">
-                      Phone Number *
-                    </label>
-                    <input
-                      type="tel"
-                      required
-                      placeholder="e.g. 0821234567"
-                      value={phone}
-                      onChange={(e) => setPhone(e.target.value)}
-                      className="w-full px-3.5 py-2.5 rounded-xl bg-white/10 border border-white/20 text-white text-xs placeholder:text-white/40 focus:outline-none focus:border-[#FFB612]"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-[11px] font-mono uppercase text-white/80 font-bold mb-1">
-                      SnapScan Reference / Receipt Number *
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      placeholder="e.g. SNAP-98124 or reference on payment screen"
-                      value={reference}
-                      onChange={(e) => setReference(e.target.value)}
-                      className="w-full px-3.5 py-2.5 rounded-xl bg-white/10 border border-white/20 text-white text-xs placeholder:text-white/40 focus:outline-none focus:border-[#FFB612]"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-[11px] font-mono uppercase text-white/80 font-bold mb-1">
-                      Email Address (Optional)
-                    </label>
-                    <input
-                      type="email"
-                      placeholder="learner@example.com"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      className="w-full px-3.5 py-2.5 rounded-xl bg-white/10 border border-white/20 text-white text-xs placeholder:text-white/40 focus:outline-none focus:border-[#FFB612]"
-                    />
-                  </div>
-
-                  {/* Button 2: Get My Unlock Code */}
-                  <button
-                    type="submit"
-                    disabled={isSubmitting}
-                    className="w-full py-4 rounded-xl bg-[#FFB612] hover:bg-yellow-400 disabled:opacity-50 text-black font-black text-sm sm:text-base shadow-xl flex items-center justify-center gap-2 cursor-pointer transition-transform hover:scale-[1.01] active:scale-95 mt-2"
-                  >
-                    {isSubmitting ? (
-                      <>
-                        <div className="w-4 h-4 border-2 border-black border-t-transparent rounded-full animate-spin" />
-                        <span>Generating Code...</span>
-                      </>
-                    ) : (
-                      <>
-                        <Sparkles className="w-4 h-4 text-black" />
-                        <span>Get My Unlock Code</span>
-                      </>
-                    )}
-                  </button>
-                </form>
-
-                <div className="mt-4 text-center">
-                  <button
-                    type="button"
-                    onClick={navigateToUnlock}
-                    className="text-xs text-[#1E88E5] hover:underline font-bold inline-flex items-center gap-1"
-                  >
-                    <span>Already received your unlock code? Click here to unlock</span>
-                    <ArrowRight className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-              </div>
+          {errorMessage && (
+            <div className="p-3 rounded-xl bg-red-500/20 border border-red-500/50 text-red-200 text-xs flex items-center gap-2">
+              <AlertCircle className="w-4 h-4 shrink-0" />
+              <span>{errorMessage}</span>
             </div>
           )}
 
-          {/* Small WhatsApp Help Link at bottom */}
-          <div className="mt-6 pt-4 border-t border-white/10 text-center">
+          <button
+            type="button"
+            onClick={handleStartTrial}
+            disabled={loading}
+            className="w-full py-4 rounded-xl bg-[#FFB612] hover:bg-yellow-400 disabled:opacity-60 text-black font-black text-base shadow-xl flex items-center justify-center gap-2 cursor-pointer transition-transform hover:scale-[1.01] active:scale-95"
+          >
+            <Sparkles className="w-5 h-5 text-black" />
+            <span>
+              {loading
+                ? 'Connecting Paystack...'
+                : 'Start 2-Day Free Trial - Then R60/month'}
+            </span>
+            <ArrowRight className="w-4 h-4 text-black" />
+          </button>
+
+          <p className="text-center text-xs text-white/60">
+            {isAuthenticated
+              ? 'First payment is scheduled in 2 days. Cancel anytime before then and pay R0.'
+              : 'Create an account or log in first to activate your 2-day free trial.'}
+          </p>
+
+          <div className="pt-4 border-t border-white/10 text-center">
             <a
               href={WHATSAPP_URL}
               target="_blank"
@@ -480,7 +188,7 @@ export const PaywallView: React.FC = () => {
         </div>
       </main>
 
-      {/* Trust Badge Footer */}
+      {/* Footer */}
       <footer className="max-w-4xl mx-auto w-full text-center pt-6 border-t border-white/10 text-xs text-white/60">
         <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
           <div className="flex items-center gap-2 font-mono text-white/80">

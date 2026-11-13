@@ -1,32 +1,33 @@
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
- * 
- * NEXOVIAN - 2-DAY FREE TRIAL & SNAPSCAN UNLOCK PAGE
- * Instant access with SnapScan (no PayFast redirect)
+ *
+ * NEXOVIAN - 2-DAY FREE TRIAL LANDING PAGE
  */
 
 import React, { useState } from 'react';
-import { ArrowLeft, Sparkles, QrCode, CheckCircle2, Unlock } from 'lucide-react';
+import { ArrowLeft, Sparkles, CreditCard, AlertCircle } from 'lucide-react';
+import { useAuth } from '../../context/AuthContext';
 import { useLearning } from '../../context/LearningContext';
+import { startTwoDayFreeTrialCheckout } from '../../services/paystackService';
 
 export const TrialLandingView: React.FC = () => {
+  const { user } = useAuth();
   const { setCurrentTab } = useLearning();
-  const [unlocked, setUnlocked] = useState(false);
-  const [showPrompt, setShowPrompt] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-  const handlePayClick = () => {
-    window.open('https://pos.snapscan.io/qr/NKJJYpV6', '_blank');
-    setTimeout(() => {
-      setShowPrompt(true);
-    }, 10000);
-  };
-
-  const handleUnlockClick = () => {
-    setCurrentTab('unlock');
-    if (typeof window !== 'undefined') {
-      window.history.pushState({}, '', '/unlock');
+  const handleStartTrial = async () => {
+    setLoading(true);
+    setErrorMsg(null);
+    const res = await startTwoDayFreeTrialCheckout({
+      user,
+      onRequireAuth: () => setCurrentTab('login')
+    });
+    if (!res.success && res.error) {
+      setErrorMsg(res.error);
     }
+    setLoading(false);
   };
 
   return (
@@ -34,15 +35,15 @@ export const TrialLandingView: React.FC = () => {
       {/* Return Navigation */}
       <div className="bg-black/90 px-4 py-2.5 flex items-center justify-between text-xs text-white border-b border-gray-800">
         <button
-          onClick={() => setCurrentTab('home')}
+          onClick={() => setCurrentTab('landing')}
           className="inline-flex items-center gap-1.5 text-gray-300 hover:text-white transition-colors cursor-pointer py-1 px-2.5 rounded-lg hover:bg-white/10"
         >
           <ArrowLeft className="w-3.5 h-3.5" />
-          <span>Back to Dashboard</span>
+          <span>Back to Home</span>
         </button>
         <div className="flex items-center gap-2 text-amber-400 font-medium">
           <Sparkles className="w-3.5 h-3.5" />
-          <span>SnapScan Official Merchant</span>
+          <span>2-Day Free Trial &bull; Paystack</span>
         </div>
       </div>
 
@@ -52,71 +53,50 @@ export const TrialLandingView: React.FC = () => {
           NEXOVIAN
         </h1>
         <p className="text-lg sm:text-xl font-medium text-gray-200 mb-1">
-          Grade 4 to University
+          Grade 4 to University &amp; CAPS Study Guides
         </p>
         <p className="text-lg sm:text-xl font-medium text-amber-400">
-          11 South African Languages
+          All 11 Official South African Languages
         </p>
       </div>
 
       {/* Card Section */}
-      <div className="bg-white max-w-[440px] mx-auto -mt-[30px] mb-8 p-6 sm:p-8 rounded-[20px] shadow-[0_10px_30px_rgba(0,0,0,0.1)] text-center border border-gray-100/80">
+      <div className="bg-white max-w-[460px] mx-auto -mt-[30px] mb-8 p-6 sm:p-8 rounded-[20px] shadow-[0_10px_30px_rgba(0,0,0,0.1)] text-center border border-gray-100/80">
         <h2 className="text-2xl font-bold text-gray-900 mb-1 tracking-tight">
           Unlock Full Access
         </h2>
         <p className="text-gray-600 text-sm mb-5">
-          2-Day Free Trial • Then only R60 / month • Cancel anytime
+          2-Day Free Trial &bull; First payment of R60 in 2 days &bull; Cancel anytime for R0
         </p>
 
-        {unlocked ? (
-          <div className="p-5 rounded-2xl bg-emerald-50 border border-emerald-300 text-emerald-900 text-center space-y-2 animate-in fade-in">
-            <CheckCircle2 className="w-10 h-10 text-emerald-600 mx-auto" />
-            <h3 className="font-bold text-base text-emerald-950">Access Granted - Start Learning!</h3>
-            <p className="text-xs text-emerald-800">Welcome to NEXOVIAN Premium! Loading your dashboard...</p>
-          </div>
-        ) : (
-          <div className="space-y-3">
-            <button
-              onClick={handlePayClick}
-              className="w-full py-3.5 px-4 rounded-xl bg-[#0077b6] hover:bg-[#023e8a] text-white font-bold text-base flex items-center justify-center gap-2 transition-all shadow-md active:scale-98 cursor-pointer"
-            >
-              <QrCode className="w-5 h-5" />
-              <span>Pay R60 with SnapScan</span>
-            </button>
-
-            <button
-              onClick={handleUnlockClick}
-              className="w-full py-3.5 px-4 rounded-xl bg-[#ffd700] hover:bg-[#facc15] text-black font-extrabold text-base flex items-center justify-center gap-2 transition-all shadow-md active:scale-98 cursor-pointer"
-            >
-              <Unlock className="w-5 h-5 text-black" />
-              <span>Enter Code to Unlock</span>
-            </button>
+        {errorMsg && (
+          <div className="mb-4 p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs flex items-center gap-2 text-left">
+            <AlertCircle className="w-4 h-4 shrink-0" />
+            <span>{errorMsg}</span>
           </div>
         )}
 
-        {showPrompt && !unlocked && (
-          <div className="mt-4 p-3 rounded-xl bg-amber-50 border border-amber-300 text-amber-950 text-xs flex items-center justify-between gap-2">
-            <span>Payment done? Click <strong>&quot;Enter Code to Unlock&quot;</strong> above!</span>
-            <button
-              onClick={handleUnlockClick}
-              className="px-2.5 py-1 bg-amber-400 font-bold rounded-lg text-black text-[11px] shrink-0"
-            >
-              Enter Code
-            </button>
-          </div>
-        )}
+        <button
+          type="button"
+          onClick={handleStartTrial}
+          disabled={loading}
+          className="w-full py-4 px-4 rounded-xl bg-[#FFD400] hover:bg-yellow-400 text-black font-black text-base flex items-center justify-center gap-2 transition-all shadow-md active:scale-98 cursor-pointer disabled:opacity-60"
+        >
+          <CreditCard className="w-5 h-5" />
+          <span>
+            {loading ? 'Connecting Paystack...' : 'Start 2-Day Free Trial - Then R60/month'}
+          </span>
+        </button>
 
         <p className="text-[13px] text-[#666666] mt-5 leading-relaxed">
-          ✓ Instant Access ✓ All 11 SA Languages ✓ Grade 4 to University<br />
-          Secure payment verified via SnapScan
+          &#10003; 2 Days Free &#10003; All Study Guides &amp; Past Papers &#10003; 11 SA Languages<br />
+          Secure subscription managed via Paystack
         </p>
       </div>
 
-      {/* Trust & Features Footer */}
       <div className="max-w-md mx-auto px-4 text-xs text-gray-500 space-y-2">
-        <p>No card deductions without confirmation • Cancel anytime</p>
-        <p>Supports all 11 official South African languages, CAPS curriculum, TVET NATED, and University modules.</p>
-        <p className="font-semibold text-gray-600">NEXOVIAN (PTY) LTD • Reg: 2026/845572/07 • Level 1 B-BBEE</p>
+        <p>Cancel before 2 days in My Subscription for R0</p>
+        <p className="font-semibold text-gray-600">NEXOVIAN (PTY) LTD &bull; Reg: 2026/845572/07 &bull; Level 1 B-BBEE</p>
       </div>
     </div>
   );

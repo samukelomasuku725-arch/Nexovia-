@@ -1,11 +1,1 @@
-[
-  {
-    "id": "paid_1794472940999",
-    "email": "student_test@nexovian.co.za",
-    "status": "PAID_USER",
-    "trialStartedAt": "2026-11-12T08:42:20.999Z",
-    "paidAt": "2026-11-12T08:42:32.280Z",
-    "paystackReference": "PAY_TEST_REF_1001",
-    "updatedAt": "2026-11-12T08:42:32.280Z"
-  }
-]
+[]

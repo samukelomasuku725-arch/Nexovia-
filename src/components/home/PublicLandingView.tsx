@@ -1,18 +1,12 @@
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
- * 
- * NEXOVIAN - SNAPSCAN AUTOMATED PAYMENT & 30-DAY AUTO-LOCK
- * 
- * BUSINESS SPECIFICATION:
- * - NEXOVIAN (Pty) Ltd | Reg: 2026/234078/07 | nexovian.group
- * - Price: R60 for 30 days access
- * - SnapScan Payment Link: https://pos.snapscan.io/qr/NKJJYpV6
- * - Contact WhatsApp: https://wa.me/27636508381
- * - Color Palette: Deep Navy #0A1F44, Green #007A4D, Gold #FFB612, Sky Blue #1E88E5, Orange #FF6B35
+ *
+ * NEXOVIAN (Pty) Ltd | Reg: 2026/234078/07 | nexovian.group
+ * 2-Day Free Trial -> R60/month via Paystack
  */
 
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   Play,
   Sparkles,
@@ -28,37 +22,20 @@ import {
   ArrowRight,
   BookOpen,
   GraduationCap,
-  Layers,
-  ShieldCheck,
-  QrCode,
-  ExternalLink,
-  Unlock,
-  Clock,
-  School,
-  Briefcase,
-  AlertCircle,
-  KeyRound,
   Search,
-  CreditCard
+  CreditCard,
+  AlertCircle
 } from 'lucide-react';
 import { FULL_PAPERS } from '../papers/PastPapersView';
 import { useLearning } from '../../context/LearningContext';
 import { useAuth } from '../../context/AuthContext';
 import { SALanguageCode } from '../../types';
 import {
-  checkAccess,
-  verifyAndUnlockPayment,
-  verifyOneTimeCode,
-  saveSubscription
-} from '../../services/snapscanSubscriptionService';
-import { startPaystackCheckout } from '../../services/paystackService';
-
-/**
- * SECURITY TOGGLE:
- * When TEST_MODE = true: Simulates payment and reveals access buttons after a 3-second verification delay.
- * When TEST_MODE = false: Enforces real SnapScan verification + one-time code check in database (used=false -> used=true).
- */
-export const TEST_MODE = true;
+  getCachedPaystackStatus,
+  isUserActive,
+  startTwoDayFreeTrialCheckout,
+  syncSubscriptionStatus
+} from '../../services/paystackService';
 
 
 export interface LanguageOption {
@@ -106,7 +83,6 @@ export const ALL_GRADES: GradeOption[] = [
   { id: 'university', name: 'University', level: 'Higher Education', badge: 'Degree', subjectsCount: 24, papersCount: 360 }
 ];
 
-const SNAPSCAN_URL = 'https://pos.snapscan.io/qr/NKJJYpV6';
 const WHATSAPP_URL = 'https://wa.me/27636508381?text=Hi%20Nexovian%2C%20I%20have%20a%20question%20about%20learning%20in%20my%20language';
 
 const MEMO_DEMO_EXPLANATIONS: Record<string, string> = {
@@ -142,22 +118,31 @@ export const PublicLandingView: React.FC = () => {
   const [selectedLang, setSelectedLang] = useState<SALanguageCode>('zu');
   const [selectedGradeId, setSelectedGradeId] = useState<string>('grade-10');
 
-  // Check 30-day access
-  const [access, setAccess] = useState(() => checkAccess(user));
-  const isPaid = access.allow;
+  // Real subscription state (requires Auth + active Paystack trial or monthly subscription)
+  const [hasActiveAccess, setHasActiveAccess] = useState<boolean>(() => isAuthenticated && isUserActive(user));
+  const [subRecord, setSubRecord] = useState(() => (user?.email ? getCachedPaystackStatus(user.email) : null));
+  const [checkoutLoading, setCheckoutLoading] = useState(false);
+  const [checkoutError, setCheckoutError] = useState<string | null>(null);
 
-  // Security Unlock Status:
-  // Requires: localStorage nexovian_unlocked == 'true' AND localStorage nexovian_paid == 'true' AND verified code
-  const [isUnlocked, setIsUnlocked] = useState<boolean>(() => {
-    if (typeof window === 'undefined') return false;
-    const hasUnlocked = localStorage.getItem('nexovian_unlocked') === 'true';
-    const hasPaid = localStorage.getItem('nexovian_paid') === 'true';
-    const hasCode = Boolean(localStorage.getItem('nexovian_verified_code') || localStorage.getItem('nexovian_subscription'));
-    return Boolean(hasUnlocked && hasPaid && hasCode);
-  });
-
-  // Effective full access: ONLY true after payment verified TRUE AND code checked in database AND localStorage nexovian_unlocked == 'true'
-  const isFullPaidAccess = Boolean(isPaid && isUnlocked);
+  useEffect(() => {
+    let mounted = true;
+    const refresh = () => {
+      if (!mounted) return;
+      setHasActiveAccess(Boolean(isAuthenticated && isUserActive(user)));
+      setSubRecord(user?.email ? getCachedPaystackStatus(user.email) : null);
+    };
+    refresh();
+    if (isAuthenticated && user?.email) {
+      syncSubscriptionStatus(user.email, user.id)
+        .then(() => refresh())
+        .catch(() => {});
+    }
+    window.addEventListener('nexovian-subscription-updated', refresh);
+    return () => {
+      mounted = false;
+      window.removeEventListener('nexovian-subscription-updated', refresh);
+    };
+  }, [isAuthenticated, user?.email, user?.id]);
 
   // Memo Demo state
   const [demoLang, setDemoLang] = useState('isiZulu');
@@ -193,7 +178,7 @@ export const PublicLandingView: React.FC = () => {
     setIsSearchModalOpen(true);
   };
 
-  const navigateToPaywall = () => {
+  const persistSelectedContext = () => {
     try {
       localStorage.setItem('nexovian_academy_language', selectedLang);
       localStorage.setItem('nexovian_selected_grade', selectedGradeId);
@@ -207,35 +192,29 @@ export const PublicLandingView: React.FC = () => {
         });
       }
     } catch (_) {}
-
-    setCurrentTab('paywall');
-    if (typeof window !== 'undefined') {
-      window.history.pushState({}, '', '/paywall');
-    }
   };
 
-  const navigateToUnlock = () => {
-    try {
-      localStorage.setItem('nexovian_academy_language', selectedLang);
-      localStorage.setItem('nexovian_selected_grade', selectedGradeId);
-      setActiveLearningLanguage(selectedLang);
-      const gradeObj = ALL_GRADES.find((g) => g.id === selectedGradeId);
-      if (gradeObj) {
-        updateLearningContext({
-          language: selectedLang,
-          gradeOrProgramme: gradeObj.name,
-          educationLevel: gradeObj.level
-        });
+  const handleStartTrial = async () => {
+    persistSelectedContext();
+    setCheckoutError(null);
+    setCheckoutLoading(true);
+    const result = await startTwoDayFreeTrialCheckout({
+      user,
+      onRequireAuth: () => {
+        setCurrentTab('login');
+        if (typeof window !== 'undefined') {
+          window.history.pushState({}, '', '/login');
+        }
       }
-    } catch (_) {}
-
-    setCurrentTab('unlock');
-    if (typeof window !== 'undefined') {
-      window.history.pushState({}, '', '/unlock');
+    });
+    if (!result.success && result.error) {
+      setCheckoutError(result.error);
     }
+    setCheckoutLoading(false);
   };
 
   const handleStartLearning = () => {
+    persistSelectedContext();
     setCurrentTab('home');
     if (typeof window !== 'undefined') {
       window.history.pushState({}, '', '/app');
@@ -338,26 +317,38 @@ export const PublicLandingView: React.FC = () => {
             </a>
 
             {/* Header Action Buttons */}
-            {isFullPaidAccess || access.allow ? (
+            {hasActiveAccess ? (
               <div className="flex items-center gap-2">
-                <div className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-xs font-semibold">
+                <button
+                  onClick={() => setCurrentTab('mySubscription')}
+                  className="hidden sm:flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-xs font-semibold cursor-pointer"
+                >
                   <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
-                  <span>Free Week Active &bull; {access.daysRemaining}d Left</span>
-                </div>
+                  <span>My Subscription</span>
+                </button>
                 <button
                   onClick={handleStartLearning}
                   className="px-4 py-2 rounded-full bg-[#FFB612] hover:bg-yellow-400 text-black font-black text-xs sm:text-sm shadow-md transition-all cursor-pointer transform hover:scale-105 active:scale-95"
                 >
-                  Go to Tutor
+                  Open App
                 </button>
               </div>
             ) : (
               <>
                 {isAuthenticated ? (
-                  <div className="hidden sm:flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/10 border border-white/20 text-xs font-medium text-white/80">
-                    <span className="w-2 h-2 rounded-full bg-amber-400" />
-                    <span>{user?.name || user?.email || 'Logged In'}</span>
-                  </div>
+                  <button
+                    onClick={() => setCurrentTab('mySubscription')}
+                    className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-white/10 hover:bg-white/15 border border-white/20 text-xs font-medium text-white cursor-pointer"
+                  >
+                    <CreditCard className="w-3.5 h-3.5 text-[#FFB612]" />
+                    <span>
+                      {subRecord?.status === 'cancelled'
+                        ? 'Cancelled'
+                        : subRecord?.status === 'expired'
+                        ? 'Trial Expired'
+                        : 'Trial Not Started'}
+                    </span>
+                  </button>
                 ) : (
                   <button
                     onClick={() => setCurrentTab('login')}
@@ -368,19 +359,11 @@ export const PublicLandingView: React.FC = () => {
                 )}
 
                 <button
-                  onClick={navigateToUnlock}
-                  className="px-3.5 py-2 rounded-full border border-[#FFB612]/60 hover:bg-[#FFB612]/10 text-[#FFB612] font-bold text-xs sm:text-sm transition-colors cursor-pointer flex items-center gap-1.5"
-                >
-                  <KeyRound className="w-3.5 h-3.5" />
-                  <span>Enter Code</span>
-                </button>
-
-                <button
-                  onClick={navigateToPaywall}
+                  onClick={handleStartTrial}
                   className="px-4 py-2 sm:px-5 sm:py-2.5 rounded-full bg-[#007A4D] hover:bg-emerald-600 text-white font-black text-xs sm:text-sm shadow-lg shadow-emerald-700/30 transition-all cursor-pointer transform hover:scale-105 active:scale-95 flex items-center gap-1.5"
                 >
-                  <QrCode className="w-4 h-4" />
-                  <span>Unlock for R60</span>
+                  <Sparkles className="w-4 h-4 text-[#FFB612]" />
+                  <span>Start 2-Day Free Trial</span>
                 </button>
               </>
             )}
@@ -463,54 +446,42 @@ export const PublicLandingView: React.FC = () => {
               </a>
             </div>
 
-            {/* SECURITY FIX: Active Unlocked Status Banner ONLY if verified & paid */}
-            {isFullPaidAccess && (
-              <div className="mt-6 inline-flex items-center gap-2.5 px-5 py-2.5 rounded-2xl bg-[#007A4D]/30 border border-[#007A4D] text-emerald-300 font-bold text-sm shadow-lg">
-                <CheckCircle2 className="w-5 h-5 text-emerald-400" />
-                <span>NEXOVIAN Premium Active &bull; {access.daysRemaining} Days Left</span>
-              </div>
-            )}
-
-            {/* ========================================================
-                AUTOMATIC INSTANT ACCESS BOX (STEP 1 & STEP 2)
-               ======================================================== */}
-            {/* Rule 2: If Premium Active / Free Week, HIDE R60 CARD and SHOW FREE WEEK ACCESS CARD */}
-            {isFullPaidAccess || access.allow ? (
+            {/* ACTIVE SUBSCRIPTION CARD OR SINGLE MAIN 2-DAY FREE TRIAL CTA */}
+            {hasActiveAccess ? (
               <div id="instant-unlock" className="mt-10 max-w-3xl mx-auto bg-gradient-to-r from-emerald-950/90 via-[#0A1F44] to-black border-2 border-emerald-400 rounded-3xl p-6 sm:p-8 text-center shadow-2xl relative overflow-hidden">
                 <div className="inline-flex items-center gap-2 px-4 py-1 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 text-xs font-mono font-bold uppercase mb-3">
                   <Sparkles className="w-3.5 h-3.5 text-[#FFB612]" />
-                  <span>Free Week Active &bull; No Payment Needed</span>
+                  <span>
+                    {subRecord?.status === 'trial' ? '2-Day Free Trial Active' : 'Subscription Active'}
+                  </span>
                 </div>
 
                 <h3 className="font-display font-black text-2xl sm:text-3xl text-white tracking-tight">
-                  🎉 FREE WEEK ACTIVE &mdash; You Have Premium Access
+                  Welcome Back &mdash; Full Access Unlocked
                 </h3>
 
-                <p className="mt-2 text-sm sm:text-base text-emerald-200 font-bold">
-                  {access.daysRemaining} Days Left Till Wed 12 Nov 23:59 SAST
-                </p>
-
                 <p className="mt-2 text-xs sm:text-sm text-slate-300 max-w-xl mx-auto leading-relaxed">
-                  No Payment Needed &mdash; Enjoy All Subjects from Grade 4 to University, all 12 Official Languages (including SASL 🤟), DBE past papers, and the Socratic AI tutor.
+                  All Study Guides, Grade 4 to University subjects, 12 official languages (including SASL), DBE past papers, and AI Tutor are unlocked.
                 </p>
 
                 <div className="mt-6 flex flex-col sm:flex-row items-center justify-center gap-3">
                   <button
                     type="button"
-                    onClick={handleStartLearning}
+                    onClick={() => setCurrentTab('studyGuide')}
                     className="w-full sm:w-auto px-8 py-4 rounded-2xl bg-[#FFB612] hover:bg-yellow-400 text-black font-black text-base shadow-[0_0_25px_rgba(255,182,18,0.4)] flex items-center justify-center gap-2.5 cursor-pointer transition-transform active:scale-95"
                   >
-                    <Sparkles className="w-5 h-5 text-black" />
-                    <span>Go to Tutor &mdash; Start Learning</span>
+                    <BookOpen className="w-5 h-5 text-black" />
+                    <span>Open Study Guide</span>
                     <ArrowRight className="w-4 h-4 text-black" />
                   </button>
 
                   <button
                     type="button"
-                    onClick={() => navigateToPastPapers(selectedGradeId)}
+                    onClick={() => setCurrentTab('mySubscription')}
                     className="w-full sm:w-auto px-6 py-4 rounded-2xl bg-white/10 hover:bg-white/20 text-white font-bold text-sm border border-white/20 transition-all cursor-pointer flex items-center justify-center gap-2"
                   >
-                    <span>📚 Browse All Past Papers</span>
+                    <CreditCard className="w-4 h-4" />
+                    <span>My Subscription</span>
                   </button>
                 </div>
               </div>
@@ -518,26 +489,35 @@ export const PublicLandingView: React.FC = () => {
               <div id="instant-unlock" className="mt-10 max-w-3xl mx-auto bg-[#0A1F44] border-2 border-[#FFB612] rounded-3xl p-6 sm:p-8 text-left shadow-2xl relative overflow-hidden">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-5 border-b border-white/10">
                   <div>
-                    <div className="flex items-center gap-2 text-xs font-mono font-bold uppercase text-[#FFB612]">
+                    <div className="flex flex-wrap items-center gap-2 text-xs font-mono font-bold uppercase text-[#FFB612]">
                       <Sparkles className="w-4 h-4 text-[#FFB612]" />
-                      <span>Instant Auto Access &bull; R60 for 30 Days</span>
+                      <span>2-Day Free Trial &bull; First R60 charge in 2 days</span>
+                      {isAuthenticated && (
+                        <span className="px-2.5 py-0.5 rounded-full bg-rose-500/20 border border-rose-400/40 text-rose-300 text-[10px]">
+                          {subRecord?.status === 'cancelled'
+                            ? 'Cancelled'
+                            : subRecord?.status === 'expired'
+                            ? 'Trial Expired'
+                            : 'Trial Not Started'}
+                        </span>
+                      )}
                     </div>
                     <h3 className="font-display font-black text-xl sm:text-2xl text-white mt-1">
-                      Choose Your Language &amp; Grade &mdash; Unlock for R60
+                      Choose Your Language &amp; Grade &mdash; Start Free Trial
                     </h3>
                   </div>
-                  <div className="text-right sm:text-right shrink-0">
-                    <div className="text-2xl font-black text-[#FFB612]">R60</div>
-                    <div className="text-[11px] text-white/60">30 Days Full Access</div>
+                  <div className="text-right shrink-0">
+                    <div className="text-2xl font-black text-[#FFB612]">R0 Today</div>
+                    <div className="text-[11px] text-white/60">Then R60/month &bull; Cancel anytime</div>
                   </div>
                 </div>
 
-                {/* 1. CHOOSE LANGUAGE (12 LANGUAGES INCL SASL) */}
+                {/* 1. CHOOSE LANGUAGE */}
                 <div className="mt-5">
                   <div className="flex items-center justify-between mb-2.5">
                     <span className="text-xs font-mono font-bold uppercase tracking-wider text-white/80 flex items-center gap-1.5">
                       <Languages className="w-4 h-4 text-[#FFB612]" />
-                      <span>1. SELECT YOUR LANGUAGE (ALL 12 incl SASL 🤟):</span>
+                      <span>1. SELECT YOUR LANGUAGE (ALL 12 incl SASL):</span>
                     </span>
                     <span className="text-xs text-[#FFB612] font-bold">
                       {selectedLangObj.name} ({selectedLangObj.native})
@@ -559,14 +539,14 @@ export const PublicLandingView: React.FC = () => {
                           }`}
                         >
                           <span>{lang.name}</span>
-                          {lang.isNativeSpecial && <span className="ml-1 text-[10px]">⭐</span>}
+                          {lang.isNativeSpecial && <span className="ml-1 text-[10px]">&#11088;</span>}
                         </button>
                       );
                     })}
                   </div>
                 </div>
 
-                {/* 2. CHOOSE GRADE (GRADE 4 TO UNIVERSITY) */}
+                {/* 2. CHOOSE GRADE */}
                 <div className="mt-6">
                   <div className="flex items-center justify-between mb-2.5">
                     <span className="text-xs font-mono font-bold uppercase tracking-wider text-white/80 flex items-center gap-1.5">
@@ -599,39 +579,32 @@ export const PublicLandingView: React.FC = () => {
                   </div>
                 </div>
 
-                {/* 3. BUTTONS */}
-                <div className="mt-8 pt-6 border-t border-white/10 space-y-3">
-                  <div className="flex flex-col sm:flex-row items-stretch gap-3">
-                    <button
-                      type="button"
-                      onClick={handleStartLearning}
-                      className="flex-1 py-4 px-5 rounded-2xl bg-[#007A4D] hover:bg-emerald-600 text-white font-black text-sm sm:text-base shadow-xl shadow-emerald-950/40 transition-all transform hover:-translate-y-0.5 active:translate-y-0 flex items-center justify-center gap-2.5 text-center cursor-pointer"
-                    >
-                      <Sparkles className="w-5 h-5 text-[#FFB612] shrink-0" />
-                      <span>Free Access Week &mdash; Start Learning Now</span>
-                      <ArrowRight className="w-4 h-4 shrink-0 ml-0.5" />
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={navigateToUnlock}
-                      className="flex-1 py-4 px-5 rounded-2xl bg-[#FFB612] hover:bg-yellow-400 text-black font-black text-sm sm:text-base shadow-xl shadow-yellow-500/30 transition-all transform hover:-translate-y-0.5 active:translate-y-0 flex items-center justify-center gap-2.5 text-center cursor-pointer"
-                    >
-                      <KeyRound className="w-5 h-5 text-black shrink-0" />
-                      <span>Free Promotion Status</span>
-                    </button>
+                {checkoutError && (
+                  <div className="mt-5 p-3 rounded-xl bg-rose-950/70 border border-rose-500/50 text-rose-200 text-xs flex items-center gap-2">
+                    <AlertCircle className="w-4 h-4 text-rose-400 shrink-0" />
+                    <span>{checkoutError}</span>
                   </div>
+                )}
 
-                  <div>
-                    <button
-                      type="button"
-                      onClick={() => navigateToPastPapers(selectedGradeId)}
-                      className="w-full py-3.5 px-6 rounded-full bg-white hover:bg-slate-100 border-2 border-[#0A1F44] text-[#0A1F44] font-bold text-sm shadow-md transition-all cursor-pointer flex items-center justify-center gap-2"
-                    >
-                      <span>📚 Past Papers &amp; Memos &mdash; FREE Preview</span>
-                      <ArrowRight className="w-4 h-4" />
-                    </button>
-                  </div>
+                {/* ONE MAIN BUTTON ON HOME PAGE */}
+                <div className="mt-8 pt-6 border-t border-white/10">
+                  <button
+                    type="button"
+                    onClick={handleStartTrial}
+                    disabled={checkoutLoading}
+                    className="w-full py-4 px-6 rounded-2xl bg-[#FFB612] hover:bg-yellow-400 text-black font-black text-base shadow-xl shadow-yellow-500/25 transition-all transform hover:-translate-y-0.5 active:translate-y-0 flex items-center justify-center gap-2.5 text-center cursor-pointer disabled:opacity-60"
+                  >
+                    <Sparkles className="w-5 h-5 text-black shrink-0" />
+                    <span>
+                      {checkoutLoading
+                        ? 'Connecting to Paystack...'
+                        : 'Start 2-Day Free Trial - Then R60/month'}
+                    </span>
+                    <ArrowRight className="w-4 h-4 shrink-0 ml-0.5" />
+                  </button>
+                  <p className="mt-2.5 text-center text-[11px] text-white/60">
+                    Create an account or log in &bull; Full access for 2 days free &bull; Cancel before 2 days and pay R0
+                  </p>
                 </div>
               </div>
             )}
@@ -876,68 +849,50 @@ export const PublicLandingView: React.FC = () => {
             </h2>
           </div>
 
-          {isFullPaidAccess || access.allow ? (
+          {hasActiveAccess ? (
             <div className="max-w-xl mx-auto bg-gradient-to-r from-emerald-950/90 via-[#0A1F44] to-black border-2 border-emerald-400 rounded-3xl p-8 sm:p-10 text-center shadow-2xl relative overflow-hidden">
               <div className="inline-block px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 text-xs font-mono font-bold uppercase mb-4">
-                🎉 FREE WEEK ACTIVE &bull; 7 DAYS LEFT &bull; GO TO TUTOR
+                {subRecord?.status === 'trial' ? '2-DAY FREE TRIAL ACTIVE' : 'SUBSCRIPTION ACTIVE'}
               </div>
               <h3 className="font-display font-black text-2xl sm:text-3xl text-white mb-2">
-                🎉 FREE WEEK ACTIVE &mdash; 7 Days Left
+                Full Access Active
               </h3>
               <p className="text-sm text-emerald-200 font-bold mb-6">
-                Free Access Ends: Wed 12 Nov 2026 23:59 SAST &bull; No Payment Needed
+                All Study Guides, AI Tutor &amp; Past Papers Unlocked
               </p>
-              <ul className="text-left text-xs sm:text-sm space-y-3 mb-8 text-white/90">
-                <li className="flex items-center gap-2.5">
-                  <Check className="w-4 h-4 text-emerald-400 shrink-0" />
-                  <span>All grades (Grade 4 to University) 100% Unlocked</span>
-                </li>
-                <li className="flex items-center gap-2.5">
-                  <Check className="w-4 h-4 text-emerald-400 shrink-0" />
-                  <span>All 12 official South African languages (incl SASL 🤟)</span>
-                </li>
-                <li className="flex items-center gap-2.5">
-                  <Check className="w-4 h-4 text-emerald-400 shrink-0" />
-                  <span>4000+ DBE Past Papers with step-by-step memos</span>
-                </li>
-                <li className="flex items-center gap-2.5">
-                  <Check className="w-4 h-4 text-emerald-400 shrink-0" />
-                  <span>Socratic AI Tutor Tisha active in all subjects</span>
-                </li>
-              </ul>
               <button
                 type="button"
-                onClick={handleStartLearning}
+                onClick={() => setCurrentTab('mySubscription')}
                 className="w-full py-4 rounded-xl bg-[#FFB612] hover:bg-yellow-400 text-black font-black text-base shadow-xl shadow-yellow-500/20 transition-all transform hover:-translate-y-0.5 active:translate-y-0 cursor-pointer flex items-center justify-center gap-2"
               >
-                <Sparkles className="w-5 h-5 text-black" />
-                <span>Go to Tutor &mdash; Start Learning</span>
+                <CreditCard className="w-5 h-5 text-black" />
+                <span>Manage My Subscription</span>
                 <ArrowRight className="w-4 h-4 text-black" />
               </button>
             </div>
           ) : (
             <div className="max-w-md mx-auto bg-[#0A1F44] border-2 border-[#007A4D] rounded-3xl p-8 sm:p-10 text-center shadow-2xl relative overflow-hidden">
               <div className="inline-block px-3 py-1 rounded-full bg-[#007A4D] text-white text-xs font-mono font-bold uppercase mb-4">
-                R60 FOR 30 DAYS ACCESS &bull; AUTO-UNLOCK
+                2-DAY FREE TRIAL &bull; THEN R60/MONTH
               </div>
 
               <div className="flex items-baseline justify-center gap-1.5 mb-2">
-                <span className="text-5xl font-display font-black text-[#FFB612]">R60</span>
-                <span className="text-sm font-bold text-white/60">/ 30 days</span>
+                <span className="text-5xl font-display font-black text-[#FFB612]">R0</span>
+                <span className="text-sm font-bold text-white/60">today &bull; then R60/month</span>
               </div>
 
               <p className="text-xs text-white/70 mb-6">
-                Instant Auto-Unlock via SnapScan &bull; No admin wait time
+                First R60 payment charged after 2 days &bull; Cancel anytime before 2 days for R0
               </p>
 
               <ul className="text-left text-xs sm:text-sm space-y-3 mb-8 text-white/90">
                 <li className="flex items-center gap-2.5">
                   <Check className="w-4 h-4 text-[#007A4D] shrink-0" />
-                  <span>All grades (Grade 4 to University)</span>
+                  <span>Full CAPS Grade 12 Study Guides</span>
                 </li>
                 <li className="flex items-center gap-2.5">
                   <Check className="w-4 h-4 text-[#007A4D] shrink-0" />
-                  <span>All 12 official South African languages (incl SASL 🤟)</span>
+                  <span>All 12 official South African languages (incl SASL)</span>
                 </li>
                 <li className="flex items-center gap-2.5">
                   <Check className="w-4 h-4 text-[#007A4D] shrink-0" />
@@ -945,44 +900,24 @@ export const PublicLandingView: React.FC = () => {
                 </li>
                 <li className="flex items-center gap-2.5">
                   <Check className="w-4 h-4 text-[#007A4D] shrink-0" />
-                  <span>Cancel anytime &bull; No lock-in contracts</span>
+                  <span>Cancel anytime before 2 days &bull; R0 charged</span>
                 </li>
               </ul>
 
-              {/* Payment Buttons on Pricing Card */}
-              <div className="space-y-3">
-                <button
-                  type="button"
-                  onClick={() => startPaystackCheckout({ user })}
-                  className="w-full py-4 rounded-xl bg-[#FFB612] hover:bg-yellow-400 text-black font-black text-base shadow-xl shadow-yellow-500/20 transition-all transform hover:-translate-y-0.5 active:translate-y-0 cursor-pointer flex items-center justify-center gap-2"
-                >
-                  <CreditCard className="w-5 h-5 text-black shrink-0" />
-                  <span>Subscribe R60/month</span>
-                  <ArrowRight className="w-4 h-4 text-black shrink-0" />
-                </button>
-
-                <button
-                  type="button"
-                  onClick={navigateToPaywall}
-                  className="w-full py-3.5 rounded-xl bg-[#007A4D] hover:bg-emerald-600 text-white font-bold text-sm shadow-md transition-all transform hover:-translate-y-0.5 active:translate-y-0 cursor-pointer flex items-center justify-center gap-2"
-                >
-                  <QrCode className="w-4 h-4 shrink-0" />
-                  <span>Pay with SnapScan &mdash; 30 Days</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={navigateToUnlock}
-                  className="w-full py-4 rounded-xl bg-[#FFB612] hover:bg-yellow-400 text-black font-black text-base shadow-xl shadow-yellow-500/20 transition-all transform hover:-translate-y-0.5 active:translate-y-0 cursor-pointer flex items-center justify-center gap-2"
-                >
-                  <KeyRound className="w-5 h-5 text-black shrink-0" />
-                  <span>Enter Code to Unlock</span>
-                </button>
-              </div>
-
-              <p className="mt-4 text-[11px] text-white/50 font-mono">
-                Auto-generate your code on /paywall &bull; Unlock instantly on /unlock
-              </p>
+              <button
+                type="button"
+                onClick={handleStartTrial}
+                disabled={checkoutLoading}
+                className="w-full py-4 rounded-xl bg-[#FFB612] hover:bg-yellow-400 text-black font-black text-base shadow-xl shadow-yellow-500/20 transition-all transform hover:-translate-y-0.5 active:translate-y-0 cursor-pointer flex items-center justify-center gap-2 disabled:opacity-60"
+              >
+                <CreditCard className="w-5 h-5 text-black shrink-0" />
+                <span>
+                  {checkoutLoading
+                    ? 'Connecting Paystack...'
+                    : 'Start 2-Day Free Trial - Then R60/month'}
+                </span>
+                <ArrowRight className="w-4 h-4 text-black shrink-0" />
+              </button>
             </div>
           )}
         </section>
@@ -1054,11 +989,14 @@ export const PublicLandingView: React.FC = () => {
                 <span className="text-emerald-400 block">3. Immediate mother-tongue explanation in isiZulu, Sepedi, etc.</span>
               </div>
               <button
-                onClick={navigateToPaywall}
-                className="w-full py-3 bg-[#007A4D] text-white font-bold rounded-xl text-xs hover:bg-emerald-600 flex items-center justify-center gap-2 cursor-pointer"
+                onClick={() => {
+                  setIsDemoModalOpen(false);
+                  handleStartTrial();
+                }}
+                className="w-full py-3 bg-[#FFB612] text-black font-black rounded-xl text-xs hover:bg-yellow-400 flex items-center justify-center gap-2 cursor-pointer"
               >
-                <QrCode className="w-4 h-4" />
-                <span>Pay R60 with SnapScan &bull; 30 Days</span>
+                <Sparkles className="w-4 h-4" />
+                <span>Start 2-Day Free Trial - Then R60/month</span>
               </button>
             </div>
           </div>

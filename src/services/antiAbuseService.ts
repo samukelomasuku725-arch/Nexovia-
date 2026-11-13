@@ -258,8 +258,15 @@ export interface TrialStateResult {
 export function isUserPaidLocally(userId?: string, email?: string): boolean {
   if (typeof window === 'undefined') return false;
   try {
-    if (localStorage.getItem('nexovian_paid') === 'true') {
-      return true;
+    if (email) {
+      const raw = localStorage.getItem(`nexovian_paystack_sub_${email.toLowerCase().trim()}`);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (parsed.has_access && (parsed.status === 'active' || parsed.status === 'trial')) {
+          return true;
+        }
+        return false;
+      }
     }
     if (userId && localStorage.getItem(`nexovian_sub_${userId}`) === 'active') {
       return true;
@@ -274,119 +281,94 @@ export function isUserPaidLocally(userId?: string, email?: string): boolean {
 }
 
 /**
- * Fast synchronous check for immediate UI rendering with 3-Day trial timeline
+ * Fast synchronous check for immediate UI rendering.
+ * Requires authenticated user with an active Paystack trial or active subscription.
  */
 export function checkFastTrialState(user: { id: string; email?: string; createdAt?: string } | null): TrialStateResult {
   const timeline = getTrialTimelineInfo();
 
-  // Instant SnapScan paid check (bypasses all paywalls and restrictions)
-  if (typeof window !== 'undefined' && localStorage.getItem('nexovian_paid') === 'true') {
-    return {
-      isAllowed: true,
-      isSubscribed: true,
-      isTrialActive: false,
-      isTrialExpired: false,
-      hoursRemainingInTrial: 999999,
-      showYellowBox: false,
-      actualTrialEndDate: 'UNLOCKED',
-      smartMessage: 'NEXOVIAN Premium Active',
-      timelineInfo: timeline,
-      isPaidUser: true
-    };
-  }
-
-  // STATE 1: Anonymous visitor (No account / New link click)
+  // STATE 1: Anonymous visitor (No account) -> must create account / login first
   if (!user || !user.email) {
     return {
-      isAllowed: true,
+      isAllowed: false,
       isSubscribed: false,
-      isTrialActive: true,
+      isTrialActive: false,
       isTrialExpired: false,
-      hoursRemainingInTrial: timeline.hoursRemaining,
+      hoursRemainingInTrial: 0,
       showYellowBox: false,
-      actualTrialEndDate: PREMIUM_TRIAL_ENDS_AT,
+      actualTrialEndDate: '',
       smartMessage: '',
       timelineInfo: timeline,
       isAnonymous: true
     };
   }
 
-  // STATE 5: Admin bypass (You)
-  if (isAdminUser(user)) {
-    return {
-      isAllowed: true,
-      isSubscribed: true,
-      isTrialActive: false,
-      isTrialExpired: false,
-      hoursRemainingInTrial: 999,
-      showYellowBox: false,
-      actualTrialEndDate: '',
-      smartMessage: '',
-      timelineInfo: timeline,
-      isAdmin: true
-    };
-  }
-
   const normEmail = user.email.toLowerCase().trim();
 
-  // STATE 4: Paid User
-  if (isUserPaidLocally(user.id, normEmail)) {
-    return {
-      isAllowed: true,
-      isSubscribed: true,
-      isTrialActive: false,
-      isTrialExpired: false,
-      hoursRemainingInTrial: 0,
-      showYellowBox: false,
-      actualTrialEndDate: '',
-      smartMessage: '',
-      timelineInfo: timeline,
-      isPaidUser: true
-    };
+  // Check cached Paystack subscription state
+  try {
+    const raw = typeof window !== 'undefined' ? localStorage.getItem(`nexovian_paystack_sub_${normEmail}`) : null;
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      const now = Date.now();
+      if (parsed.status === 'trial' && parsed.has_access && parsed.trial_end_date) {
+        const endMs = new Date(parsed.trial_end_date).getTime();
+        if (now <= endMs) {
+          const hrs = Math.max(1, Math.round((endMs - now) / (1000 * 60 * 60)));
+          return {
+            isAllowed: true,
+            isSubscribed: false,
+            isTrialActive: true,
+            isTrialExpired: false,
+            hoursRemainingInTrial: hrs,
+            showYellowBox: false,
+            actualTrialEndDate: parsed.trial_end_date,
+            smartMessage: '',
+            timelineInfo: timeline
+          };
+        }
+      }
+      if (parsed.status === 'active' && parsed.has_access) {
+        return {
+          isAllowed: true,
+          isSubscribed: true,
+          isTrialActive: false,
+          isTrialExpired: false,
+          hoursRemainingInTrial: 0,
+          showYellowBox: false,
+          actualTrialEndDate: '',
+          smartMessage: '',
+          timelineInfo: timeline,
+          isPaidUser: true
+        };
+      }
+      if (parsed.status === 'cancelled' || parsed.status === 'expired') {
+        return {
+          isAllowed: false,
+          isSubscribed: false,
+          isTrialActive: false,
+          isTrialExpired: true,
+          hoursRemainingInTrial: 0,
+          showYellowBox: true,
+          actualTrialEndDate: parsed.trial_end_date || '',
+          smartMessage: 'Start your 2-Day Free Trial (then R60/month) via Paystack to unlock full access.',
+          timelineInfo: timeline
+        };
+      }
+    }
+  } catch {
+    // Ignore
   }
 
-  // Check if this specific email was previously marked as trial expired
-  const expiredKey = `nexovian_trial_expired_${normEmail}`;
-  const storedExpiredDate = localStorage.getItem(expiredKey);
-  if (storedExpiredDate) {
-    return {
-      isAllowed: false,
-      isSubscribed: false,
-      isTrialActive: false,
-      isTrialExpired: true,
-      hoursRemainingInTrial: 0,
-      showYellowBox: true,
-      actualTrialEndDate: PREMIUM_TRIAL_ENDS_AT,
-      smartMessage: `Hey! You already used your 2-Day Free Trial. NEXOVIAN is R60/month to support all 11 languages. Pay to continue learning! 🔥`,
-      timelineInfo: timeline
-    };
-  }
-
-  // 3-Day Timeline logic:
-  // If Tuesday 9am or later, or expired, enforce HARD PAYWALL!
-  if (timeline.isHardPaywall) {
-    return {
-      isAllowed: false,
-      isSubscribed: false,
-      isTrialActive: false,
-      isTrialExpired: true,
-      hoursRemainingInTrial: timeline.hoursRemaining,
-      showYellowBox: false,
-      actualTrialEndDate: PREMIUM_TRIAL_ENDS_AT,
-      smartMessage: '',
-      timelineInfo: timeline
-    };
-  }
-
-  // Active 3-Day Trial (Sunday, Monday, Tuesday before 9am)
+  // User is logged in but has not started a Paystack trial/subscription yet
   return {
-    isAllowed: true,
+    isAllowed: false,
     isSubscribed: false,
-    isTrialActive: true,
+    isTrialActive: false,
     isTrialExpired: false,
-    hoursRemainingInTrial: timeline.hoursRemaining,
+    hoursRemainingInTrial: 0,
     showYellowBox: false,
-    actualTrialEndDate: PREMIUM_TRIAL_ENDS_AT,
+    actualTrialEndDate: '',
     smartMessage: '',
     timelineInfo: timeline
   };

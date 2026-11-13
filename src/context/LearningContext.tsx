@@ -37,7 +37,7 @@ import { isTtsSupportedForLanguage } from '../services/voice/languageCapabilitie
 
 import { learnerStrugglesService } from '../services/struggles/learnerStrugglesService';
 
-export type AppTab = 'landing' | 'login' | 'signup' | 'calculator' | 'home' | 'dashboard' | 'explore' | 'learn' | 'school' | 'tvet' | 'higherEd' | 'tracks' | 'tutor' | 'scan' | 'practice' | 'saved' | 'profile' | 'adaptive' | 'assessments' | 'academicVoice' | 'progress' | 'adminBank' | 'about' | 'smartNotes' | 'myStruggles' | 'success' | 'cancel' | 'trial' | 'paywall' | 'subscribe' | 'papers' | 'adminPayments' | 'unlock' | 'adminCodes' | 'terms' | 'refundPolicy' | 'privacyPolicy' | 'contact' | 'studyGuide' | 'studyGuidePhysics' | 'studyGuideLifeSciences' | 'studyGuideChapter';
+export type AppTab = 'landing' | 'login' | 'signup' | 'calculator' | 'home' | 'dashboard' | 'explore' | 'learn' | 'school' | 'tvet' | 'higherEd' | 'tracks' | 'tutor' | 'scan' | 'practice' | 'saved' | 'profile' | 'adaptive' | 'assessments' | 'academicVoice' | 'progress' | 'adminBank' | 'about' | 'smartNotes' | 'myStruggles' | 'success' | 'cancel' | 'trial' | 'paywall' | 'subscribe' | 'mySubscription' | 'papers' | 'adminPayments' | 'unlock' | 'adminCodes' | 'terms' | 'refundPolicy' | 'privacyPolicy' | 'contact' | 'studyGuide' | 'studyGuidePhysics' | 'studyGuideLifeSciences' | 'studyGuideChapter';
 
 export interface GeminiStatusInfo {
   checked: boolean;
@@ -257,6 +257,7 @@ export const pathToTab = (cleanPath: string, search = ''): AppTab => {
   if (cleanPath === '/papers') return 'papers';
   if (cleanPath === '/paywall') return 'paywall';
   if (cleanPath === '/subscribe') return 'subscribe';
+  if (cleanPath === '/my-subscription' || cleanPath === '/subscription') return 'mySubscription';
   if (cleanPath === '/unlock') return 'unlock';
   if (cleanPath === '/admin/payments') return 'adminPayments';
   if (cleanPath === '/admin/codes') return 'adminCodes';
@@ -289,6 +290,7 @@ export const tabToPath = (tab: AppTab): string => {
     case 'papers': return '/papers';
     case 'paywall': return '/paywall';
     case 'subscribe': return '/subscribe';
+    case 'mySubscription': return '/my-subscription';
     case 'unlock': return '/unlock';
     case 'adminPayments': return '/admin/payments';
     case 'adminCodes': return '/admin/codes';

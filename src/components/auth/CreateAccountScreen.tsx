@@ -3,10 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  * 
  * NEXOVIAN - AUTHENTICATION SCREEN
- * Complete Persistent Auth & SnapScan Instant Unlock
- * 
- * TASK 1: Completely removed PayFast form / redirects / errors.
- * TASK 2: Full persistence with nexovian_user, nexovian_logged_in, nexovian_paid.
+ * Email + Password Create Account / Login with Database Persistence & Paystack 2-Day Free Trial Flow
  */
 
 import React, { useState, useEffect } from 'react';
@@ -14,18 +11,17 @@ import {
   Info,
   Eye,
   EyeOff,
-  ChevronDown,
   AlertCircle,
   CheckCircle2,
   ArrowLeft,
-  QrCode,
-  Unlock,
-  Sparkles,
-  GraduationCap,
   Globe
 } from 'lucide-react';
-import { useAuth, checkIsApp } from '../../context/AuthContext';
+import { useAuth } from '../../context/AuthContext';
 import { useLearning } from '../../context/LearningContext';
+import {
+  PENDING_TRIAL_STORAGE_KEY,
+  startTwoDayFreeTrialCheckout
+} from '../../services/paystackService';
 
 type AuthViewMode = 'login' | 'signup' | 'forgot_password';
 
@@ -136,11 +132,6 @@ export const CreateAccountScreen: React.FC<{ initialMode?: 'login' | 'signup' }>
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(true); // Checked by default as requested
 
-  // Payment modal state after sign up
-  const [showSnapScanModal, setShowSnapScanModal] = useState(false);
-  const [hasPaidUnlocked, setHasPaidUnlocked] = useState(false);
-  const [snapScanTimerNotice, setSnapScanTimerNotice] = useState(false);
-
   // State
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -189,6 +180,27 @@ export const CreateAccountScreen: React.FC<{ initialMode?: 'login' | 'signup' }>
     return cleaned.toLowerCase();
   };
 
+  const completeAuthNavigation = async (authedUser: { id?: string; email?: string; name?: string } | null) => {
+    const hasPendingTrial =
+      typeof window !== 'undefined' && sessionStorage.getItem(PENDING_TRIAL_STORAGE_KEY) === 'true';
+
+    if (hasPendingTrial && authedUser?.email) {
+      const checkoutResult = await startTwoDayFreeTrialCheckout({ user: authedUser });
+      if (!checkoutResult.success && checkoutResult.error) {
+        setError(checkoutResult.error);
+        return;
+      }
+      if (checkoutResult.success) {
+        return;
+      }
+    }
+
+    setCurrentTab('landing');
+    if (typeof window !== 'undefined') {
+      window.history.pushState({}, '', '/');
+    }
+  };
+
   // LOGIN SUBMIT HANDLER
   const handleLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -196,72 +208,25 @@ export const CreateAccountScreen: React.FC<{ initialMode?: 'login' | 'signup' }>
     setLoading(true);
 
     try {
-      if (!identifier.trim()) {
-        throw new Error('Please enter your mobile number or email address.');
+      const cleanEmail = identifier.trim().toLowerCase();
+      if (!cleanEmail || !cleanEmail.includes('@')) {
+        throw new Error('Please enter a valid email address.');
       }
       if (!password) {
         throw new Error('Please enter your password.');
       }
 
-      const rawInput = identifier.trim().toLowerCase();
-      const digitsInput = identifier.replace(/[\s\-()]/g, '');
-      const emailToUse = normalizeEmail(identifier);
+      const result = await signInWithEmail(cleanEmail, password, rememberMe);
+      const authedUser = result?.user || { email: cleanEmail };
 
-      // 1. Check localStorage first
-      const savedUserRaw = localStorage.getItem('nexovian_user');
-      let localFound = false;
-
-      if (savedUserRaw) {
-        try {
-          const savedUser = JSON.parse(savedUserRaw);
-          const savedEmail = (savedUser.email || '').toLowerCase();
-          const savedPhone = (savedUser.phone || '').replace(/[\s\-()]/g, '');
-
-          const matches =
-            savedEmail === rawInput ||
-            savedEmail === emailToUse ||
-            (savedPhone && savedPhone === digitsInput);
-
-          if (matches) {
-            localFound = true;
-            if (savedUser.password && savedUser.password !== password) {
-              throw new Error('Incorrect password. Please try again.');
-            }
-            // Password matches stored credentials
-            localStorage.setItem('nexovian_logged_in', 'true');
-            if (savedUser.language) {
-              setActiveLearningLanguage(savedUser.language as any);
-            }
-            setCurrentTab('home');
-            return;
-          }
-        } catch (err: any) {
-          if (err.message?.includes('Incorrect password')) {
-            throw err;
-          }
-        }
+      if (authedUser?.preferredLanguage) {
+        setActiveLearningLanguage(authedUser.preferredLanguage as any);
       }
 
-      // 2. Try Supabase sign in if not matched or as secondary source
-      try {
-        await signInWithEmail(emailToUse, password, rememberMe);
-        localStorage.setItem('nexovian_logged_in', 'true');
-        setCurrentTab('home');
-      } catch (supaErr: any) {
-        if (!localFound) {
-          if (!savedUserRaw) {
-            throw new Error('Create Account first');
-          }
-          const msg = formatAuthError(supaErr);
-          if (msg.toLowerCase().includes('invalid') || msg.toLowerCase().includes('user not found')) {
-            throw new Error('Create Account first');
-          }
-          throw supaErr;
-        }
-      }
+      await completeAuthNavigation(authedUser);
     } catch (err: any) {
       console.error('Login error:', err);
-      setError(err.message || formatAuthError(err));
+      setError(formatAuthError(err));
     } finally {
       setLoading(false);
     }
@@ -277,8 +242,9 @@ export const CreateAccountScreen: React.FC<{ initialMode?: 'login' | 'signup' }>
       if (!fullName.trim()) {
         throw new Error('Please enter your full name.');
       }
-      if (!identifier.trim()) {
-        throw new Error('Please enter your mobile number or email address.');
+      const emailToUse = identifier.trim().toLowerCase();
+      if (!emailToUse || !emailToUse.includes('@')) {
+        throw new Error('Please enter a valid email address.');
       }
       if (!password) {
         throw new Error('Please create a password.');
@@ -290,59 +256,27 @@ export const CreateAccountScreen: React.FC<{ initialMode?: 'login' | 'signup' }>
         throw new Error('Passwords do not match. Please verify your password confirmation.');
       }
 
-      const isEmail = identifier.includes('@');
-      const emailToUse = normalizeEmail(identifier);
-      const phoneToUse = !isEmail ? identifier.trim() : '';
-
-      // Save user profile and login state in localStorage
-      const userData = {
-        name: fullName.trim(),
-        email: emailToUse,
-        phone: phoneToUse,
-        language: selectedLang.code,
-        grade: selectedGrade,
-        password: password
-      };
-
-      localStorage.setItem('nexovian_user', JSON.stringify(userData));
-      localStorage.setItem('nexovian_logged_in', 'true');
-      if (localStorage.getItem('nexovian_paid') !== 'true') {
-        localStorage.setItem('nexovian_paid', 'false');
-      }
-
+      const result = await signUpWithEmail(emailToUse, password, fullName.trim(), selectedLang.code);
       setActiveLearningLanguage(selectedLang.code as any);
 
-      // Attempt background Supabase account registration
-      try {
-        await signUpWithEmail(emailToUse, password, fullName.trim(), selectedLang.code);
-      } catch (supaErr) {
-        console.warn('Supabase profile creation note:', supaErr);
-      }
+      const authedUser = result?.user || { email: emailToUse, name: fullName.trim() };
+      localStorage.setItem(
+        'nexovian_user',
+        JSON.stringify({
+          id: authedUser.id,
+          name: fullName.trim(),
+          email: emailToUse,
+          language: selectedLang.code,
+          grade: selectedGrade
+        })
+      );
 
-      // Open SnapScan in a new tab as requested
-      window.open('https://pos.snapscan.io/qr/NKJJYpV6', '_blank');
-
-      // Show payment completion modal with side-by-side buttons
-      setShowSnapScanModal(true);
-
-      // 10s timer popup: "Payment done? Click Unlock Now"
-      setTimeout(() => {
-        setSnapScanTimerNotice(true);
-      }, 10000);
+      await completeAuthNavigation(authedUser);
     } catch (err: any) {
       console.error('Sign up error:', err);
       setError(formatAuthError(err));
     } finally {
       setLoading(false);
-    }
-  };
-
-  // UNLOCK ACTION - Redirect to /unlock to enter single-use verified code
-  const handleGoToUnlock = () => {
-    setShowSnapScanModal(false);
-    setCurrentTab('unlock');
-    if (typeof window !== 'undefined') {
-      window.history.pushState({}, '', '/unlock');
     }
   };
 
@@ -445,11 +379,11 @@ export const CreateAccountScreen: React.FC<{ initialMode?: 'login' | 'signup' }>
               {/* Input 1: Email or Mobile */}
               <div className="relative">
                 <input
-                  type="text"
+                  type="email"
                   required
                   value={identifier}
                   onChange={(e) => setIdentifier(e.target.value)}
-                  placeholder="Mobile number or email address"
+                  placeholder="Email address"
                   className="w-full h-[52px] bg-white text-[#0f172a] placeholder:text-[#94a3b8] border border-[#d1d5db] rounded-2xl px-5 pr-11 text-[15px] font-medium focus:border-[#facc15] focus:ring-2 focus:ring-[#facc15]/30 outline-none shadow-xs"
                 />
                 <button
@@ -461,7 +395,7 @@ export const CreateAccountScreen: React.FC<{ initialMode?: 'login' | 'signup' }>
                 </button>
                 {showInfoTooltip && (
                   <div className="absolute z-20 left-0 right-0 -top-12 bg-slate-900 text-white text-[11px] p-2 rounded-lg shadow-lg">
-                    Enter your registered email address or mobile number.
+                    Enter your registered email address.
                   </div>
                 )}
               </div>
@@ -575,14 +509,14 @@ export const CreateAccountScreen: React.FC<{ initialMode?: 'login' | 'signup' }>
                 />
               </div>
 
-              {/* Field 2: Phone / Email */}
+              {/* Field 2: Email Address */}
               <div className="relative">
                 <input
-                  type="text"
+                  type="email"
                   required
                   value={identifier}
                   onChange={(e) => setIdentifier(e.target.value)}
-                  placeholder="Phone number or email address"
+                  placeholder="Email address"
                   className="w-full h-[50px] bg-white text-[#0f172a] placeholder:text-[#94a3b8] border border-[#d1d5db] rounded-2xl px-4 pr-10 text-[14px] font-medium focus:border-[#facc15] focus:ring-2 focus:ring-[#facc15]/30 outline-none shadow-xs"
                 />
                 <button
@@ -696,7 +630,7 @@ export const CreateAccountScreen: React.FC<{ initialMode?: 'login' | 'signup' }>
                   disabled={loading}
                   className="w-full h-[48px] rounded-[25px] bg-[#facc15] hover:bg-[#eab308] text-[#0F172A] font-bold text-[16px] shadow-sm hover:shadow transition-all transform active:scale-[0.99] flex items-center justify-center cursor-pointer disabled:opacity-60"
                 >
-                  {loading ? 'Creating account...' : 'Create Account - Instant Access'}
+                  {loading ? 'Creating account...' : 'Create Account - Start 2-Day Free Trial'}
                 </button>
               </div>
 
@@ -788,89 +722,6 @@ export const CreateAccountScreen: React.FC<{ initialMode?: 'login' | 'signup' }>
           </div>
         )}
       </div>
-
-      {/* ========================================================
-          SNAPSCAN PAYMENT & UNLOCK MODAL (ON ACCOUNT CREATION)
-         ======================================================== */}
-      {showSnapScanModal && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="w-full max-w-md bg-white rounded-3xl p-6 sm:p-8 shadow-2xl text-center space-y-5 animate-in zoom-in-95">
-            <div className="w-16 h-16 mx-auto rounded-2xl bg-amber-400/20 text-amber-500 flex items-center justify-center border border-amber-400/40">
-              <Sparkles className="w-8 h-8" />
-            </div>
-
-            <div>
-              <span className="text-[11px] font-mono font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300">
-                Account Created Successfully
-              </span>
-              <h3 className="text-2xl font-black text-slate-950 font-display mt-2">
-                Unlock NEXOVIAN Premium
-              </h3>
-              <p className="text-xs text-slate-600 mt-1.5 leading-relaxed">
-                Pay R60 with SnapScan for full instant access to Grade 4 to University in all 11 official South African languages.
-              </p>
-            </div>
-
-            {hasPaidUnlocked ? (
-              <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-300 text-emerald-950 text-center space-y-1 animate-in fade-in">
-                <CheckCircle2 className="w-8 h-8 text-emerald-600 mx-auto" />
-                <h4 className="font-bold text-sm">Access Granted - Start Learning!</h4>
-                <p className="text-xs text-emerald-800">Opening your personalized dashboard now...</p>
-              </div>
-            ) : (
-              <div className="space-y-3 pt-1">
-                {/* Button 1: Pay R60 with SnapScan */}
-                <button
-                  type="button"
-                  onClick={() => window.open('https://pos.snapscan.io/qr/NKJJYpV6', '_blank')}
-                  className="w-full py-3.5 px-4 rounded-2xl bg-[#007A4D] hover:bg-emerald-600 text-white font-bold text-base flex items-center justify-center gap-2 shadow-md transition-all active:scale-98 cursor-pointer"
-                >
-                  <QrCode className="w-5 h-5" />
-                  <span>Pay R60 with SnapScan</span>
-                </button>
-
-                {/* Button 2: Enter Code to Unlock */}
-                <button
-                  type="button"
-                  onClick={handleGoToUnlock}
-                  className="w-full py-3.5 px-4 rounded-2xl bg-[#FFB612] hover:bg-yellow-400 text-black font-extrabold text-base flex items-center justify-center gap-2 shadow-md transition-all active:scale-98 cursor-pointer"
-                >
-                  <Unlock className="w-5 h-5 text-black" />
-                  <span>Enter Code to Unlock</span>
-                </button>
-
-                {/* Button 3: Continue to Dashboard (if trial allowed) */}
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowSnapScanModal(false);
-                    setCurrentTab('home');
-                  }}
-                  className="w-full py-2.5 text-xs text-slate-600 hover:text-slate-900 font-semibold underline cursor-pointer"
-                >
-                  Start 2-Day Free Trial (Go to Dashboard)
-                </button>
-              </div>
-            )}
-
-            {snapScanTimerNotice && !hasPaidUnlocked && (
-              <div className="p-3 rounded-xl bg-amber-50 border border-amber-300 text-amber-950 text-xs flex items-center justify-between gap-2">
-                <span>Payment done? Click <strong>&quot;Enter Code to Unlock&quot;</strong> to start!</span>
-                <button
-                  onClick={handleGoToUnlock}
-                  className="px-2.5 py-1 bg-amber-400 font-bold rounded-lg text-black text-[11px] shrink-0"
-                >
-                  Enter Code
-                </button>
-              </div>
-            )}
-
-            <div className="text-[11px] text-slate-500 pt-1">
-              ✓ 11 SA Languages ✓ Past Papers &amp; Memos ✓ CAPS &amp; TVET Aligned
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Bottom Footer Trust Line */}
       <footer className="w-full py-4 text-center text-[11px] text-slate-600 font-medium">

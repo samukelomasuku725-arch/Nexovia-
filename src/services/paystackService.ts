@@ -1,70 +1,41 @@
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
- * 
- * NEXOVIAN PAYSTACK SUBSCRIPTION SERVICE
- * 
- * Pricing & States:
- * - Price: R60 / learner / month (6000 cents)
- * - Plan: "NEXOVIAN R60 Learner"
- * - Paystack Reference: "NEXOVIAN_" + user.id + (optional timestamp for uniqueness)
- * - Metadata: company: "NEXOVIAN", user_id: user.id
- * 
- * Implements 5 User States:
- * - State 1: Anonymous visitor (no account) -> No paywall, no blocking
- * - State 2: New account (first time email) -> 2-Day Free Trial (48h), full access
- * - State 3: Expired trial -> Fire paywall card. Yellow box ONLY if email in used_trial_emails DB.
- * - State 4: Paid user -> Full access, no paywall
- * - State 5: Admin bypass -> Email in admin list or localStorage NEXOVIAN_ADMIN = MPUMALANGA2026 -> Full access always
+ *
+ * NEXOVIAN PAYSTACK 2-DAY FREE TRIAL & SUBSCRIPTION SERVICE
+ *
+ * All Paystack keys and plan codes stay strictly on the server via env vars
+ * (PAYSTACK_SECRET_KEY & PAYSTACK_PLAN_CODE). Frontend never hardcodes secrets or plan codes.
  */
 
-import { supabase } from '../supabase';
 import {
   checkFastTrialState,
-  checkDeepTrialState,
   recordPaymentSuccess,
-  isAdminUser,
-  formatSouthAfricanDate,
   TrialStateResult,
   TrialTimelineInfo,
   PREMIUM_TRIAL_ENDS_AT_ISO,
   PREMIUM_TRIAL_ENDS_AT
 } from './antiAbuseService';
 
-declare global {
-  interface Window {
-    PaystackPop?: {
-      setup: (options: {
-        key: string;
-        email: string;
-        amount: number;
-        currency: string;
-        ref: string;
-        plan?: string;
-        metadata?: any;
-        callback: (response: { reference: string; status: string; trans?: string }) => void;
-        onClose: () => void;
-      }) => {
-        openIframe: () => void;
-      };
-    };
-  }
-}
-
-export const PAYSTACK_PUBLIC_KEY =
-  (import.meta as any).env?.VITE_PAYSTACK_PUBLIC_KEY ||
-  (import.meta as any).env?.NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY ||
-  (typeof process !== 'undefined' ? (process.env?.NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY || process.env?.VITE_PAYSTACK_PUBLIC_KEY) : '') ||
-  '';
-
-export const PAYSTACK_PLAN_CODE = 'PLN_suslgrc1q9rtsfi';
-export const PAYSTACK_PLAN_NAME = 'Nexovian Monthly';
 export const SUBSCRIPTION_PLAN_NAME = 'Nexovian Monthly';
-export const PAYSTACK_PAYMENT_PAGE = 'https://paystack.shop/pay/2vrisypa3i';
-export const PAYSTACK_SUCCESS_URL = 'https://nexovian.group/success';
+export const PAYSTACK_SUCCESS_URL =
+  typeof window !== 'undefined' ? `${window.location.origin}/success` : 'https://nexovian.group/success';
+export const SUBSCRIPTION_AMOUNT_CENTS = 6000; // R60/month after 2-day free trial
+export const SUBSCRIPTION_AMOUNT_ZAR = 60;
 
-export const SUBSCRIPTION_AMOUNT_CENTS = 6000; // R60 in cents
-export const SUBSCRIPTION_AMOUNT_ZAR = 60; // R60
+export const PENDING_TRIAL_STORAGE_KEY = 'nexovian_pending_trial';
+
+export interface PaystackSubscriptionRecord {
+  status: 'none' | 'trial' | 'active' | 'cancelled' | 'expired' | 'anonymous';
+  has_access: boolean;
+  trial_end_date: string | null;
+  next_payment_date: string | null;
+  subscription_code: string | null;
+  days_remaining: number;
+  hours_remaining: number;
+  is_admin?: boolean;
+  cancelled_at?: string | null;
+}
 
 export interface SubscriptionStatus {
   isSubscribed: boolean;
@@ -81,202 +52,326 @@ export interface SubscriptionStatus {
   isAdmin?: boolean;
 }
 
-/**
- * Checks if the user has an active subscription or if their 2-day free trial is active/expired.
- */
-export function checkUserSubscription(user: { id: string; email?: string; createdAt?: string } | null): SubscriptionStatus {
-  const trialState: TrialStateResult = checkFastTrialState(user);
-  const trialExpiresAt = new Date(PREMIUM_TRIAL_ENDS_AT_ISO);
-
-  return {
-    isSubscribed: trialState.isSubscribed,
-    isTrialActive: trialState.isTrialActive,
-    isTrialExpired: trialState.isTrialExpired,
-    hoursRemainingInTrial: trialState.hoursRemainingInTrial,
-    trialExpiresAt,
-    subscriptionPlan: SUBSCRIPTION_PLAN_NAME,
-    showYellowBox: trialState.showYellowBox,
-    actualTrialEndDate: trialState.actualTrialEndDate || PREMIUM_TRIAL_ENDS_AT,
-    smartBlockMessage: trialState.smartMessage,
-    timelineInfo: trialState.timelineInfo,
-    isAdmin: trialState.isAdmin
-  };
+function getCacheKey(email: string): string {
+  return `nexovian_paystack_sub_${email.trim().toLowerCase()}`;
 }
 
-/**
- * Activates subscription for user locally and syncs to Supabase profiles & used_trial_emails table as PAID_USER.
- */
-export async function markUserSubscribed(
-  userId: string,
-  reference: string,
-  email?: string
-): Promise<void> {
-  const localKey = `nexovian_sub_${userId}`;
-  localStorage.setItem(localKey, 'active');
-  localStorage.setItem(`nexovian_ref_${userId}`, reference);
+export function getCachedPaystackStatus(email?: string | null): PaystackSubscriptionRecord | null {
+  if (typeof window === 'undefined' || !email) return null;
+  try {
+    const raw = localStorage.getItem(getCacheKey(email));
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as PaystackSubscriptionRecord;
+    const now = Date.now();
+    if (parsed.status === 'trial' && parsed.trial_end_date && now > new Date(parsed.trial_end_date).getTime()) {
+      parsed.status = 'expired';
+      parsed.has_access = false;
+    } else if (
+      parsed.status === 'active' &&
+      parsed.next_payment_date &&
+      now > new Date(parsed.next_payment_date).getTime()
+    ) {
+      parsed.status = 'expired';
+      parsed.has_access = false;
+    }
+    return parsed;
+  } catch {
+    return null;
+  }
+}
 
-  if (email) {
-    await recordPaymentSuccess(email, reference, userId);
+export function saveCachedPaystackStatus(email: string, state: PaystackSubscriptionRecord): void {
+  if (typeof window === 'undefined' || !email) return;
+  try {
+    const normEmail = email.trim().toLowerCase();
+    localStorage.setItem(getCacheKey(normEmail), JSON.stringify(state));
+    if (state.has_access && (state.status === 'trial' || state.status === 'active')) {
+      localStorage.setItem('nexovian_paystack_active', 'true');
+      localStorage.setItem(`nexovian_paid_status_${normEmail}`, state.status === 'active' ? 'PAID_USER' : 'TRIAL');
+    } else {
+      localStorage.removeItem('nexovian_paystack_active');
+      localStorage.removeItem('nexovian_paid');
+      localStorage.removeItem('isPremium');
+      localStorage.removeItem('nexovian_premium');
+      localStorage.removeItem('nexovian_unlocked');
+      localStorage.removeItem(`nexovian_paid_status_${normEmail}`);
+    }
+    window.dispatchEvent(new CustomEvent('nexovian-subscription-updated', { detail: state }));
+  } catch {
+    // Ignore storage errors
+  }
+}
+
+export function clearCachedPaystackFlags(userId?: string, email?: string): void {
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.removeItem('nexovian_paystack_active');
+    localStorage.removeItem('nexovian_paid');
+    localStorage.removeItem('isPremium');
+    localStorage.removeItem('nexovian_premium');
+    localStorage.removeItem('nexovian_unlocked');
+    localStorage.removeItem('nexovian_subscription');
+    if (userId) {
+      localStorage.removeItem(`nexovian_sub_${userId}`);
+    }
+    if (email) {
+      const normEmail = email.trim().toLowerCase();
+      localStorage.removeItem(`nexovian_paid_status_${normEmail}`);
+    }
+  } catch {
+    // Ignore
+  }
+}
+
+export async function syncSubscriptionStatus(
+  email?: string | null,
+  userId?: string | null
+): Promise<PaystackSubscriptionRecord> {
+  if (!email) {
+    return {
+      status: 'anonymous',
+      has_access: false,
+      trial_end_date: null,
+      next_payment_date: null,
+      subscription_code: null,
+      days_remaining: 0,
+      hours_remaining: 0
+    };
   }
 
   try {
-    await supabase.from('profiles').update({
-      subscription_status: 'PAID_USER',
-      subscription_plan: SUBSCRIPTION_PLAN_NAME,
-      subscription_ref: reference,
-      subscription_date: new Date().toISOString()
-    }).eq('id', userId);
-  } catch (err) {
-    console.warn('Note: could not update remote subscription profile:', err);
-  }
-}
-
-/**
- * Initiates Paystack inline payment popup.
- * Fallback to modal confirmation if Paystack script is blocked or offline.
- */
-export function openPaystackPayment({
-  user,
-  onSuccess,
-  onClose
-}: {
-  user: { id: string; email: string };
-  onSuccess: (reference: string) => void;
-  onClose?: () => void;
-}) {
-  const ref = `NEXOVIAN_${user.id}_${Date.now()}`;
-
-  if (typeof window !== 'undefined' && window.PaystackPop) {
-    const handler = window.PaystackPop.setup({
-      key: PAYSTACK_PUBLIC_KEY,
-      email: user.email,
-      amount: SUBSCRIPTION_AMOUNT_CENTS, // 6000 cents = R60
-      currency: 'ZAR',
-      ref,
-      plan: SUBSCRIPTION_PLAN_NAME,
-      metadata: {
-        company: 'NEXOVIAN',
-        user_id: user.id,
-        custom_fields: [
-          {
-            display_name: 'Company',
-            variable_name: 'company',
-            value: 'NEXOVIAN'
-          },
-          {
-            display_name: 'Platform',
-            variable_name: 'platform',
-            value: 'nexovian.ai.studio'
-          },
-          {
-            display_name: 'Status',
-            variable_name: 'status',
-            value: 'PAID_USER'
-          }
-        ]
-      },
-      callback: (response) => {
-        const finalRef = response.reference || ref;
-        markUserSubscribed(user.id, finalRef, user.email);
-        onSuccess(finalRef);
-      },
-      onClose: () => {
-        if (onClose) onClose();
-      }
-    });
-
-    handler.openIframe();
-  } else {
-    console.info('Paystack Inline script not loaded directly; applying demo subscription');
-    const confirmed = window.confirm(
-      `NEXOVIAN Payment (Paystack R60/month)\n\nAmount: R60 (6000 cents)\nPlan: NEXOVIAN R60 Learner\nRef: ${ref}\nStatus: PAID_USER\nCompany: NEXOVIAN\n\nClick OK to simulate successful Paystack payment.`
-    );
-    if (confirmed) {
-      markUserSubscribed(user.id, ref, user.email);
-      onSuccess(ref);
-    } else {
-      if (onClose) onClose();
+    const params = new URLSearchParams({ email: email.trim().toLowerCase() });
+    if (userId) params.set('userId', userId);
+    const res = await fetch(`/api/paystack/status?${params.toString()}`);
+    if (res.ok) {
+      const data = await res.json();
+      const record: PaystackSubscriptionRecord = {
+        status: data.status || 'none',
+        has_access: Boolean(data.has_access),
+        trial_end_date: data.trial_end_date || null,
+        next_payment_date: data.next_payment_date || null,
+        subscription_code: data.subscription_code || null,
+        days_remaining: Number(data.days_remaining || 0),
+        hours_remaining: Number(data.hours_remaining || 0),
+        is_admin: Boolean(data.is_admin),
+        cancelled_at: data.record?.cancelled_at || null
+      };
+      saveCachedPaystackStatus(email, record);
+      return record;
     }
+  } catch (err) {
+    console.warn('[Paystack Status Sync Warning]:', err);
   }
+
+  return (
+    getCachedPaystackStatus(email) || {
+      status: 'none',
+      has_access: false,
+      trial_end_date: null,
+      next_payment_date: null,
+      subscription_code: null,
+      days_remaining: 0,
+      hours_remaining: 0
+    }
+  );
 }
 
 /**
- * Starts official Paystack checkout for Plan PLN_suslgrc1q9rtsfi (Nexovian Monthly - R60/month).
- * Redirects user to Paystack checkout, then back to nexovian.group/success.
+ * Starts the 2-Day Free Trial Paystack flow.
+ * - If logged out, sets pending trial intent and invokes onRequireAuth (or redirects to /login).
+ * - If logged in, calls POST /api/paystack/subscribe (server uses env vars only) and redirects to Paystack checkout.
  */
-export async function startPaystackCheckout({
+export async function startTwoDayFreeTrialCheckout({
   user,
-  returnUrl
+  onRequireAuth
 }: {
   user?: { id?: string; email?: string; name?: string } | null;
-  returnUrl?: string;
-} = {}): Promise<void> {
-  const finalEmail = user?.email || (typeof window !== 'undefined' ? localStorage.getItem('nexovian_last_email') || '' : '') || 'learner@nexovian.group';
-  const targetCallback = returnUrl || (typeof window !== 'undefined' ? `${window.location.origin}/success` : PAYSTACK_SUCCESS_URL);
+  onRequireAuth?: () => void;
+} = {}): Promise<{ success: boolean; redirectedToAuth?: boolean; error?: string }> {
+  const email = user?.email?.trim();
+  if (!email) {
+    if (typeof window !== 'undefined') {
+      sessionStorage.setItem(PENDING_TRIAL_STORAGE_KEY, 'true');
+    }
+    if (onRequireAuth) {
+      onRequireAuth();
+    } else if (typeof window !== 'undefined') {
+      window.history.pushState({}, '', '/login');
+      window.dispatchEvent(new PopStateEvent('popstate'));
+    }
+    return { success: true, redirectedToAuth: true };
+  }
+
+  const targetCallback =
+    typeof window !== 'undefined' ? `${window.location.origin}/success` : PAYSTACK_SUCCESS_URL;
 
   try {
-    const res = await fetch('/api/paystack/initialize', {
+    const res = await fetch('/api/paystack/subscribe', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        email: finalEmail,
-        userId: user?.id,
+        email,
+        userId: user?.id || '',
         callbackUrl: targetCallback
       })
     });
 
     const data = await res.json();
-    if (data?.authorization_url) {
-      if (typeof window !== 'undefined') {
-        window.location.href = data.authorization_url;
-        return;
-      }
+    if (!res.ok || !data?.authorization_url) {
+      return {
+        success: false,
+        error: data?.error || 'Could not start Paystack 2-day free trial checkout. Please try again.'
+      };
     }
-  } catch (err) {
-    console.warn('[Paystack Checkout API failed, falling back to direct payment page]:', err);
-  }
 
-  // Fallback direct redirect to official Paystack payment page
-  if (typeof window !== 'undefined') {
-    window.location.href = PAYSTACK_PAYMENT_PAGE;
+    if (typeof window !== 'undefined') {
+      sessionStorage.removeItem(PENDING_TRIAL_STORAGE_KEY);
+      window.location.href = data.authorization_url;
+    }
+    return { success: true };
+  } catch (err: any) {
+    return {
+      success: false,
+      error: err?.message || 'Network error while connecting to Paystack.'
+    };
   }
 }
 
+export async function startPaystackCheckout({
+  user,
+  onRequireAuth
+}: {
+  user?: { id?: string; email?: string; name?: string } | null;
+  returnUrl?: string;
+  onRequireAuth?: () => void;
+} = {}): Promise<{ success: boolean; redirectedToAuth?: boolean; error?: string }> {
+  return startTwoDayFreeTrialCheckout({ user, onRequireAuth });
+}
+
+export async function cancelUserSubscription(
+  email: string,
+  userId?: string
+): Promise<{ success: boolean; message: string }> {
+  const res = await fetch('/api/paystack/cancel', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email, userId })
+  });
+  const data = await res.json();
+  if (!res.ok || !data?.success) {
+    return {
+      success: false,
+      message: data?.error || data?.message || 'Unable to cancel subscription right now.'
+    };
+  }
+
+  clearCachedPaystackFlags(userId, email);
+  saveCachedPaystackStatus(email, {
+    status: 'cancelled',
+    has_access: false,
+    trial_end_date: data.record?.trial_end_date || null,
+    next_payment_date: null,
+    subscription_code: data.record?.paystack_subscription_code || null,
+    days_remaining: 0,
+    hours_remaining: 0,
+    cancelled_at: data.record?.cancelled_at || new Date().toISOString()
+  });
+
+  return {
+    success: true,
+    message: data.message || 'Subscription cancelled. R0 will be charged.'
+  };
+}
+
+export async function markUserSubscribed(
+  userId: string,
+  reference: string,
+  email?: string,
+  status: 'trial' | 'active' = 'trial',
+  trialEndDate?: string | null,
+  nextPaymentDate?: string | null,
+  subscriptionCode?: string | null
+): Promise<void> {
+  if (email) {
+    saveCachedPaystackStatus(email, {
+      status,
+      has_access: true,
+      trial_end_date: trialEndDate || null,
+      next_payment_date: nextPaymentDate || trialEndDate || null,
+      subscription_code: subscriptionCode || null,
+      days_remaining: status === 'trial' ? 2 : 30,
+      hours_remaining: status === 'trial' ? 48 : 720
+    });
+    if (status === 'active') {
+      await recordPaymentSuccess(email, reference, userId);
+    }
+  }
+}
+
+export function checkUserSubscription(
+  user: { id: string; email?: string; createdAt?: string } | null
+): SubscriptionStatus {
+  const trialState: TrialStateResult = checkFastTrialState(user);
+  const cached = user?.email ? getCachedPaystackStatus(user.email) : null;
+  const trialExpiresAt = cached?.trial_end_date
+    ? new Date(cached.trial_end_date)
+    : new Date(PREMIUM_TRIAL_ENDS_AT_ISO);
+
+  if (cached) {
+    return {
+      isSubscribed: cached.status === 'active' && cached.has_access,
+      isTrialActive: cached.status === 'trial' && cached.has_access,
+      isTrialExpired: cached.status === 'expired' || cached.status === 'cancelled',
+      hoursRemainingInTrial: cached.hours_remaining || 0,
+      trialExpiresAt,
+      subscriptionPlan: SUBSCRIPTION_PLAN_NAME,
+      showYellowBox: cached.status === 'expired',
+      actualTrialEndDate: cached.trial_end_date || PREMIUM_TRIAL_ENDS_AT,
+      smartBlockMessage: trialState.smartMessage,
+      timelineInfo: trialState.timelineInfo,
+      isAdmin: false
+    };
+  }
+
+  return {
+    isSubscribed: false,
+    isTrialActive: false,
+    isTrialExpired: false,
+    hoursRemainingInTrial: 0,
+    trialExpiresAt,
+    subscriptionPlan: SUBSCRIPTION_PLAN_NAME,
+    showYellowBox: false,
+    actualTrialEndDate: '',
+    smartBlockMessage: '',
+    timelineInfo: trialState.timelineInfo,
+    isAdmin: false
+  };
+}
+
 /**
- * Checks whether the current user is ACTIVE (subscribed, active trial, or admin).
- * Used to protect Tutor, Scan & Understand, and Voice Docs.
+ * Authoritative access check for protected routes: Study Guide, AI Tutor, Scan & Understand, Voice Docs.
+ * Strictly requires logged-in user AND confirmed Paystack 2-day trial or active monthly subscription.
+ * Never grants fake Active status before Paystack card/bank payment confirmation.
  */
 export function isUserActive(user?: any): boolean {
-  if (typeof window === 'undefined') return true;
+  if (typeof window === 'undefined') return false;
 
-  // 1. Direct local payment tokens
-  if (
-    localStorage.getItem('nexovian_paid') === 'true' ||
-    localStorage.getItem('isPremium') === 'true' ||
-    localStorage.getItem('nexovian_premium') === 'active' ||
-    localStorage.getItem('nexovian_unlocked') === 'true' ||
-    localStorage.getItem('nexovian_paystack_active') === 'true'
-  ) {
-    return true;
+  if (!user || !user.email) {
+    return false;
   }
 
-  // 2. Admin email bypass
-  if (user && isAdminUser(user)) {
-    return true;
+  const cached = getCachedPaystackStatus(user.email);
+  if (!cached || !cached.has_access) {
+    return false;
   }
 
-  // 3. Check fast trial & subscription state
-  const sub = checkUserSubscription(user || null);
-  if (sub.isSubscribed) {
-    return true;
+  if (cached.status === 'trial' && cached.trial_end_date) {
+    return Date.now() <= new Date(cached.trial_end_date).getTime();
   }
 
-  if (sub.isTrialActive && !sub.isTrialExpired) {
-    return true;
+  if (cached.status === 'active') {
+    return !cached.next_payment_date || Date.now() <= new Date(cached.next_payment_date).getTime();
   }
 
   return false;
 }
-

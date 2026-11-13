@@ -1,78 +1,82 @@
 /**
  * Vercel Serverless Function: /api/paystack/webhook
- * 
- * Handles Paystack webhooks:
- * - charge.success -> mark user ACTIVE
- * - subscription.disable -> mark user INACTIVE
+ *
+ * Verifies Paystack webhook signature (HMAC SHA-512 with PAYSTACK_SECRET_KEY)
+ * and updates user subscription status in database:
+ * - charge.success -> 'trial' (if 2-day trial auth) or 'active' (for R60 recurring charges)
+ * - subscription.create -> stores subscription_code & email_token, preserves/sets 'trial' or 'active'
+ * - subscription.disable / subscription.not_renew -> marks user 'cancelled'
  */
 
 import crypto from 'crypto';
 import fs from 'fs';
 import path from 'path';
+import { createClient } from '@supabase/supabase-js';
 
-const DB_DIR = path.resolve(process.cwd(), 'data');
-const DB_FILE = path.resolve(DB_DIR, 'user_subscriptions.json');
+const SUPABASE_URL = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || 'https://elvzpyksawrpdzfdnwsj.supabase.co';
+const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY || 'sb_publishable_Qvje6uGCD42PcmnFypO89g__TuoqTxR';
+const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
-function ensureDbFile(): void {
+function getDbFile(): string {
+  const localDir = path.resolve(process.cwd(), 'data');
   try {
-    if (!fs.existsSync(DB_DIR)) {
-      fs.mkdirSync(DB_DIR, { recursive: true });
+    if (!fs.existsSync(localDir)) {
+      fs.mkdirSync(localDir, { recursive: true });
     }
-    if (!fs.existsSync(DB_FILE)) {
-      fs.writeFileSync(DB_FILE, JSON.stringify([], null, 2), 'utf-8');
+    const localFile = path.resolve(localDir, 'user_subscriptions.json');
+    if (!fs.existsSync(localFile)) {
+      fs.writeFileSync(localFile, JSON.stringify([], null, 2), 'utf-8');
     }
-  } catch (err) {
-    console.error('[Webhook DB] Error ensuring DB file:', err);
+    fs.accessSync(localFile, fs.constants.W_OK);
+    return localFile;
+  } catch {
+    const tmpFile = '/tmp/nexovian_user_subscriptions.json';
+    if (!fs.existsSync(tmpFile)) {
+      fs.writeFileSync(tmpFile, JSON.stringify([], null, 2), 'utf-8');
+    }
+    return tmpFile;
   }
 }
 
-function updateUserStatus(email: string, status: 'active' | 'expired', reference?: string, userId?: string): void {
+function readRecords(): any[] {
   try {
-    ensureDbFile();
-    const normEmail = (email || '').trim().toLowerCase();
-    if (!normEmail) return;
+    const raw = fs.readFileSync(getDbFile(), 'utf-8');
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
 
-    let records: any[] = [];
-    try {
-      const raw = fs.readFileSync(DB_FILE, 'utf-8');
-      records = JSON.parse(raw);
-      if (!Array.isArray(records)) records = [];
-    } catch {
-      records = [];
-    }
-
-    const now = new Date();
-    const thirtyDaysLater = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
-
-    let found = records.find((r) => r.email && r.email.toLowerCase() === normEmail);
-
-    if (found) {
-      found.subscription_status = status;
-      found.updated_at = now.toISOString();
-      if (status === 'active') {
-        found.subscription_end_date = thirtyDaysLater.toISOString();
-        if (reference) found.paystack_reference = reference;
-      }
-    } else {
-      records.push({
-        user_id: userId || `usr_${Date.now()}`,
-        email: normEmail,
-        trial_start_date: now.toISOString(),
-        trial_end_date: now.toISOString(),
-        subscription_status: status,
-        subscription_end_date: status === 'active' ? thirtyDaysLater.toISOString() : null,
-        paystack_reference: reference || null,
-        created_at: now.toISOString(),
-        updated_at: now.toISOString()
-      });
-    }
-
-    const tmp = `${DB_FILE}.tmp`;
+function writeRecords(records: any[]): void {
+  try {
+    const dbFile = getDbFile();
+    const tmp = `${dbFile}.tmp`;
     fs.writeFileSync(tmp, JSON.stringify(records, null, 2), 'utf-8');
-    fs.renameSync(tmp, DB_FILE);
-    console.log(`[Paystack Webhook] User ${normEmail} status updated to ${status}`);
+    fs.renameSync(tmp, dbFile);
   } catch (err) {
-    console.error('[Webhook DB Update Error]:', err);
+    console.warn('[Webhook DB write warning]:', err);
+  }
+}
+
+async function syncProfile(record: any): Promise<void> {
+  try {
+    if (!record?.email) return;
+    await supabase.from('profiles').upsert(
+      {
+        id: record.user_id,
+        email: record.email,
+        trial_start_date: record.trial_start_date,
+        trial_end_date: record.trial_end_date,
+        subscription_status: record.subscription_status,
+        subscription_end_date: record.subscription_end_date,
+        paystack_reference: record.paystack_reference,
+        updated_at: record.updated_at
+      },
+      { onConflict: 'email' }
+    );
+  } catch {
+    // Non-blocking
   }
 }
 
@@ -90,54 +94,157 @@ export default async function handler(req: any, res: any) {
   }
 
   try {
-    const secretKey = process.env.PAYSTACK_SECRET_KEY;
+    const secretKey = (process.env.PAYSTACK_SECRET_KEY || '').trim();
+    const planCode = (process.env.PAYSTACK_PLAN_CODE || '').trim();
     const signature = req.headers['x-paystack-signature'];
 
-    // Verify signature if secret key is provided
     if (secretKey && signature) {
-      try {
-        const bodyStr = typeof req.body === 'string' ? req.body : JSON.stringify(req.body);
-        const hash = crypto.createHmac('sha512', secretKey.trim()).update(bodyStr).digest('hex');
-        if (hash !== signature) {
-          console.warn('[Paystack Webhook] Invalid signature mismatch');
-          // We still process in test/preview if signature format differs
-        }
-      } catch (sigErr) {
-        console.warn('[Paystack Webhook] Signature verification warning:', sigErr);
+      const bodyStr = typeof req.body === 'string' ? req.body : JSON.stringify(req.body);
+      const hash = crypto.createHmac('sha512', secretKey).update(bodyStr).digest('hex');
+      if (hash !== signature) {
+        return res.status(401).json({ error: 'Invalid Paystack webhook signature' });
       }
     }
 
     const event = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
     const eventType = event?.event;
     const data = event?.data;
-
-    console.log(`[Paystack Webhook Received]: ${eventType}`);
+    const now = new Date();
+    const nowIso = now.toISOString();
 
     if (eventType === 'charge.success') {
-      // Mark user ACTIVE
-      const customerEmail = data?.customer?.email || data?.metadata?.email || data?.email;
-      const reference = data?.reference;
+      const customerEmail = (data?.customer?.email || data?.metadata?.email || data?.email || '').trim().toLowerCase();
+      const reference = data?.reference || `PAY_${Date.now()}`;
       const userId = data?.metadata?.user_id;
+      const isTrialInit = data?.metadata?.type === 'two_day_trial';
+      const customerCode = data?.customer?.customer_code || null;
+      const authorizationCode = data?.authorization?.authorization_code || null;
 
       if (customerEmail) {
-        updateUserStatus(customerEmail, 'active', reference, userId);
+        const records = readRecords();
+        let found = records.find((r) => r.email?.toLowerCase() === customerEmail);
+        const startDateIso = data?.metadata?.start_date || new Date(now.getTime() + 2 * 24 * 60 * 60 * 1000).toISOString();
+
+        let subscriptionCode = found?.paystack_subscription_code || null;
+        let emailToken = found?.paystack_email_token || null;
+
+        if (isTrialInit && secretKey && planCode && customerCode && !subscriptionCode) {
+          try {
+            const subRes = await fetch('https://api.paystack.co/subscription', {
+              method: 'POST',
+              headers: {
+                Authorization: `Bearer ${secretKey}`,
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify({
+                customer: customerCode,
+                plan: planCode,
+                authorization: authorizationCode,
+                start_date: startDateIso
+              })
+            });
+            const subData: any = await subRes.json();
+            if (subData?.status && subData?.data?.subscription_code) {
+              subscriptionCode = subData.data.subscription_code;
+              emailToken = subData.data.email_token || emailToken;
+            }
+          } catch (err) {
+            console.warn('[Webhook subscription create error]:', err);
+          }
+        }
+
+        const nextDateIso = isTrialInit ? startDateIso : new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000).toISOString();
+        const statusToSet = isTrialInit ? 'trial' : 'active';
+
+        if (found) {
+          found.subscription_status = statusToSet;
+          if (isTrialInit) {
+            found.trial_start_date = found.trial_start_date || nowIso;
+            found.trial_end_date = startDateIso;
+          }
+          found.subscription_end_date = nextDateIso;
+          found.next_payment_date = nextDateIso;
+          found.paystack_reference = reference;
+          if (subscriptionCode) found.paystack_subscription_code = subscriptionCode;
+          if (emailToken) found.paystack_email_token = emailToken;
+          if (customerCode) found.paystack_customer_code = customerCode;
+          if (authorizationCode) found.paystack_authorization_code = authorizationCode;
+          found.cancelled_at = null;
+          found.updated_at = nowIso;
+        } else {
+          found = {
+            user_id: userId || `usr_${Date.now()}`,
+            email: customerEmail,
+            trial_start_date: nowIso,
+            trial_end_date: isTrialInit ? startDateIso : nowIso,
+            subscription_status: statusToSet,
+            subscription_end_date: nextDateIso,
+            next_payment_date: nextDateIso,
+            paystack_reference: reference,
+            paystack_subscription_code: subscriptionCode,
+            paystack_email_token: emailToken,
+            paystack_customer_code: customerCode,
+            paystack_authorization_code: authorizationCode,
+            cancelled_at: null,
+            created_at: nowIso,
+            updated_at: nowIso
+          };
+          records.push(found);
+        }
+
+        writeRecords(records);
+        await syncProfile(found);
       }
 
-      return res.status(200).json({ status: 'success', message: 'User marked active' });
+      return res.status(200).json({ status: 'success', message: 'Charge processed' });
     }
 
-    if (eventType === 'subscription.disable') {
-      // Mark user INACTIVE
-      const customerEmail = data?.customer?.email || data?.email;
+    if (eventType === 'subscription.create') {
+      const customerEmail = (data?.customer?.email || '').trim().toLowerCase();
+      const subscriptionCode = data?.subscription_code || null;
+      const emailToken = data?.email_token || null;
+      const nextPaymentDate = data?.next_payment_date || null;
 
       if (customerEmail) {
-        updateUserStatus(customerEmail, 'expired');
+        const records = readRecords();
+        let found = records.find((r) => r.email?.toLowerCase() === customerEmail);
+        if (found) {
+          if (subscriptionCode) found.paystack_subscription_code = subscriptionCode;
+          if (emailToken) found.paystack_email_token = emailToken;
+          if (nextPaymentDate) {
+            found.next_payment_date = nextPaymentDate;
+            found.subscription_end_date = nextPaymentDate;
+          }
+          if (found.subscription_status === 'none') {
+            found.subscription_status = 'trial';
+            found.trial_start_date = found.trial_start_date || nowIso;
+            found.trial_end_date = nextPaymentDate || new Date(now.getTime() + 2 * 24 * 60 * 60 * 1000).toISOString();
+          }
+          found.updated_at = nowIso;
+          writeRecords(records);
+          await syncProfile(found);
+        }
       }
-
-      return res.status(200).json({ status: 'success', message: 'User marked inactive' });
+      return res.status(200).json({ status: 'success', message: 'Subscription recorded' });
     }
 
-    // Acknowledge all other events
+    if (eventType === 'subscription.disable' || eventType === 'subscription.not_renew') {
+      const customerEmail = (data?.customer?.email || data?.email || '').trim().toLowerCase();
+      if (customerEmail) {
+        const records = readRecords();
+        const found = records.find((r) => r.email?.toLowerCase() === customerEmail);
+        if (found) {
+          found.subscription_status = 'cancelled';
+          found.next_payment_date = null;
+          found.cancelled_at = nowIso;
+          found.updated_at = nowIso;
+          writeRecords(records);
+          await syncProfile(found);
+        }
+      }
+      return res.status(200).json({ status: 'success', message: 'Subscription marked cancelled' });
+    }
+
     return res.status(200).json({ status: 'success', received: true });
   } catch (err: any) {
     console.error('[Paystack Webhook Error]:', err);

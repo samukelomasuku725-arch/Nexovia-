@@ -2,39 +2,43 @@
  * @license
  * SPDX-License-Identifier: Apache-2.0
  * 
- * NEXOVIAN AUTH & TRIAL AUTO-LOCK SYSTEM
+ * NEXOVIAN PAYSTACK 2-DAY FREE TRIAL & SUBSCRIPTION SERVICE
  * 
- * Database User Fields:
- * - trial_start_date: datetime, default now() on register
- * - trial_end_date: trial_start_date + 2 days
- * - subscription_status: enum 'trial' | 'active' | 'expired' (default 'trial')
- * - subscription_end_date: datetime nullable
+ * Database User Subscription Fields:
+ * - subscription_status: 'none' | 'trial' | 'active' | 'cancelled' | 'expired'
+ * - trial_start_date: ISO datetime nullable
+ * - trial_end_date: ISO datetime nullable (NOW + 2 days when trial starts)
+ * - subscription_end_date: ISO datetime nullable
+ * - next_payment_date: ISO datetime nullable (equals trial_end_date during trial, or +30d when active)
  * - paystack_reference: nullable string
- * 
- * Logic on every protected route:
- * - Get user from DB (not localStorage only)
- * - Calculate days: now() - trial_start_date
- * - IF subscription_status == 'trial' AND now() > trial_end_date -> redirect to /paywall?reason=trial_expired
- * - IF subscription_status == 'active' AND now() > subscription_end_date -> set status 'expired' and redirect to /paywall?reason=subscription_expired
- * - IF status == 'expired' -> redirect to /paywall
- * - Otherwise allow.
+ * - paystack_subscription_code: nullable string
+ * - paystack_email_token: nullable string
+ * - paystack_customer_code: nullable string
+ * - paystack_authorization_code: nullable string
+ * - cancelled_at: ISO datetime nullable
  */
 
 import fs from 'fs';
 import path from 'path';
 import { supabase } from '../src/supabase.js';
 
-export type SubscriptionStatusEnum = 'trial' | 'active' | 'expired';
+export type SubscriptionStatusEnum = 'none' | 'trial' | 'active' | 'cancelled' | 'expired';
 
 export interface UserSubscriptionRecord {
   user_id: string;
   email: string;
   full_name?: string;
-  trial_start_date: string;
-  trial_end_date: string;
+  trial_start_date: string | null;
+  trial_end_date: string | null;
   subscription_status: SubscriptionStatusEnum;
   subscription_end_date: string | null;
+  next_payment_date: string | null;
   paystack_reference: string | null;
+  paystack_subscription_code?: string | null;
+  paystack_email_token?: string | null;
+  paystack_customer_code?: string | null;
+  paystack_authorization_code?: string | null;
+  cancelled_at?: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -42,7 +46,7 @@ export interface UserSubscriptionRecord {
 const DB_DIR = path.resolve(process.cwd(), 'data');
 const DB_FILE = path.resolve(DB_DIR, 'user_subscriptions.json');
 
-const ADMIN_EMAILS = [
+export const ADMIN_EMAILS = [
   'samukelomasuku725@gmail.com',
   'admin@nexovian.co.za',
   'admin@nexovian.ai',
@@ -87,8 +91,8 @@ export function writeAllUserSubscriptions(records: UserSubscriptionRecord[]): vo
 }
 
 /**
- * Register or get a user's subscription record.
- * Sets 2-Day free trial on first registration.
+ * Finds or initializes a user's subscription record with default status 'none'
+ * (User must initiate the 2-day free trial via Paystack checkout to unlock access).
  */
 export async function getOrCreateUserSubscription({
   email,
@@ -105,23 +109,23 @@ export async function getOrCreateUserSubscription({
   const nowIso = now.toISOString();
 
   let existing = records.find(
-    (r) => r.email.toLowerCase() === normEmail || (userId && r.user_id === userId)
+    (r) => (normEmail && r.email.toLowerCase() === normEmail) || (userId && r.user_id === userId)
   );
 
   if (existing) {
     let changed = false;
 
-    // Check expiration if on trial
-    if (existing.subscription_status === 'trial') {
+    if (existing.subscription_status === 'trial' && existing.trial_end_date) {
       const trialEnd = new Date(existing.trial_end_date);
       if (now.getTime() > trialEnd.getTime()) {
+        // If they have a Paystack subscription code and it hasn't been cancelled, keep checking or wait for webhook;
+        // locally mark expired until active charge.success arrives.
         existing.subscription_status = 'expired';
         existing.updated_at = nowIso;
         changed = true;
       }
     }
 
-    // Check expiration if on active subscription
     if (existing.subscription_status === 'active' && existing.subscription_end_date) {
       const subEnd = new Date(existing.subscription_end_date);
       if (now.getTime() > subEnd.getTime()) {
@@ -135,6 +139,10 @@ export async function getOrCreateUserSubscription({
       existing.user_id = userId;
       changed = true;
     }
+    if (fullName && !existing.full_name) {
+      existing.full_name = fullName;
+      changed = true;
+    }
 
     if (changed) {
       writeAllUserSubscriptions(records);
@@ -144,17 +152,21 @@ export async function getOrCreateUserSubscription({
     return existing;
   }
 
-  // Create new user subscription with 2-day trial
-  const twoDaysLater = new Date(now.getTime() + 2 * 24 * 60 * 60 * 1000);
   const newRecord: UserSubscriptionRecord = {
     user_id: userId || `usr_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
     email: normEmail,
     full_name: fullName || '',
-    trial_start_date: nowIso,
-    trial_end_date: twoDaysLater.toISOString(),
-    subscription_status: 'trial',
+    trial_start_date: null,
+    trial_end_date: null,
+    subscription_status: 'none',
     subscription_end_date: null,
+    next_payment_date: null,
     paystack_reference: null,
+    paystack_subscription_code: null,
+    paystack_email_token: null,
+    paystack_customer_code: null,
+    paystack_authorization_code: null,
+    cancelled_at: null,
     created_at: nowIso,
     updated_at: nowIso
   };
@@ -167,8 +179,7 @@ export async function getOrCreateUserSubscription({
 }
 
 /**
- * Validates subscription access for a protected route.
- * Returns whether access is allowed or redirect is required.
+ * Validates subscription access for a protected route (Study Guide, AI Tutor, Scan, Voice Docs).
  */
 export async function checkSubscriptionAccess({
   email,
@@ -179,8 +190,11 @@ export async function checkSubscriptionAccess({
 }): Promise<{
   allow: boolean;
   status: SubscriptionStatusEnum | 'anonymous';
-  reason?: 'trial_expired' | 'subscription_expired' | 'expired' | 'unauthenticated';
+  reason?: 'trial_expired' | 'subscription_expired' | 'expired' | 'cancelled' | 'no_subscription' | 'unauthenticated';
   record?: UserSubscriptionRecord;
+  trial_end_date?: string | null;
+  next_payment_date?: string | null;
+  subscription_code?: string | null;
   daysRemaining?: number;
   hoursRemaining?: number;
   isAdmin?: boolean;
@@ -195,24 +209,47 @@ export async function checkSubscriptionAccess({
 
   const normEmail = (email || '').trim().toLowerCase();
 
-  // Admin bypass
-  if (normEmail && ADMIN_EMAILS.includes(normEmail)) {
-    return {
-      allow: true,
-      status: 'active',
-      isAdmin: true
-    };
-  }
-
-  const record = await getOrCreateUserSubscription({
+  let record = await getOrCreateUserSubscription({
     email: normEmail,
     userId
   });
 
-  const now = new Date();
+  // Fallback check on Supabase profiles if local record shows 'none'
+  if (record.subscription_status === 'none' && normEmail) {
+    try {
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('email', normEmail)
+        .maybeSingle();
+      if (profile && profile.subscription_status && profile.subscription_status !== 'none' && profile.paystack_reference) {
+        record.subscription_status = profile.subscription_status;
+        record.trial_start_date = profile.trial_start_date || null;
+        record.trial_end_date = profile.trial_end_date || null;
+        record.subscription_end_date = profile.subscription_end_date || null;
+        record.next_payment_date = profile.trial_end_date || profile.subscription_end_date || null;
+        record.paystack_reference = profile.paystack_reference;
+      }
+    } catch {
+      // Non-blocking
+    }
+  }
 
-  // 1. IF trial has passed trial_end_date
+  const now = new Date();
+  const hasPaystackProof = Boolean(
+    record.paystack_reference || record.paystack_subscription_code || record.paystack_authorization_code
+  );
+
   if (record.subscription_status === 'trial') {
+    if (!hasPaystackProof || !record.trial_end_date) {
+      return {
+        allow: false,
+        status: 'none',
+        reason: 'no_subscription',
+        record
+      };
+    }
+
     const trialEnd = new Date(record.trial_end_date);
     if (now.getTime() > trialEnd.getTime()) {
       record.subscription_status = 'expired';
@@ -227,7 +264,10 @@ export async function checkSubscriptionAccess({
         allow: false,
         status: 'expired',
         reason: 'trial_expired',
-        record
+        record,
+        trial_end_date: record.trial_end_date,
+        next_payment_date: record.next_payment_date,
+        subscription_code: record.paystack_subscription_code
       };
     }
 
@@ -239,13 +279,23 @@ export async function checkSubscriptionAccess({
       allow: true,
       status: 'trial',
       record,
+      trial_end_date: record.trial_end_date,
+      next_payment_date: record.next_payment_date || record.trial_end_date,
+      subscription_code: record.paystack_subscription_code,
       daysRemaining,
       hoursRemaining
     };
   }
 
-  // 2. IF active subscription has passed subscription_end_date
   if (record.subscription_status === 'active') {
+    if (!hasPaystackProof) {
+      return {
+        allow: false,
+        status: 'none',
+        reason: 'no_subscription',
+        record
+      };
+    }
     if (record.subscription_end_date) {
       const subEnd = new Date(record.subscription_end_date);
       if (now.getTime() > subEnd.getTime()) {
@@ -261,7 +311,10 @@ export async function checkSubscriptionAccess({
           allow: false,
           status: 'expired',
           reason: 'subscription_expired',
-          record
+          record,
+          trial_end_date: record.trial_end_date,
+          next_payment_date: record.next_payment_date,
+          subscription_code: record.paystack_subscription_code
         };
       }
     }
@@ -269,38 +322,139 @@ export async function checkSubscriptionAccess({
     return {
       allow: true,
       status: 'active',
-      record
+      record,
+      trial_end_date: record.trial_end_date,
+      next_payment_date: record.next_payment_date || record.subscription_end_date,
+      subscription_code: record.paystack_subscription_code
     };
   }
 
-  // 3. IF status is already expired
+  if (record.subscription_status === 'cancelled') {
+    return {
+      allow: false,
+      status: 'cancelled',
+      reason: 'cancelled',
+      record,
+      trial_end_date: record.trial_end_date,
+      next_payment_date: null,
+      subscription_code: record.paystack_subscription_code
+    };
+  }
+
+  if (record.subscription_status === 'none') {
+    return {
+      allow: false,
+      status: 'none',
+      reason: 'no_subscription',
+      record,
+      trial_end_date: null,
+      next_payment_date: null,
+      subscription_code: null
+    };
+  }
+
   return {
     allow: false,
     status: 'expired',
     reason: 'expired',
-    record
+    record,
+    trial_end_date: record.trial_end_date,
+    next_payment_date: record.next_payment_date,
+    subscription_code: record.paystack_subscription_code
   };
 }
 
 /**
- * Verifies and activates payment via Paystack:
- * - sets subscription_status = 'active'
- * - sets subscription_end_date = now() + 30 days
- * - saves paystack_reference
+ * Activates a 2-Day Free Trial after Paystack card authorization and subscription creation (start_date = NOW + 2 days).
  */
-export async function verifyAndActivatePaystackPayment({
-  reference,
+export async function activatePaystackTrial({
   email,
-  userId
+  userId,
+  reference,
+  startDateIso,
+  subscriptionCode,
+  emailToken,
+  customerCode,
+  authorizationCode
 }: {
-  reference: string;
   email: string;
   userId?: string;
+  reference: string;
+  startDateIso?: string;
+  subscriptionCode?: string | null;
+  emailToken?: string | null;
+  customerCode?: string | null;
+  authorizationCode?: string | null;
 }): Promise<UserSubscriptionRecord> {
   const normEmail = (email || '').trim().toLowerCase();
   const records = readAllUserSubscriptions();
   const now = new Date();
-  const thirtyDaysLater = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+  const twoDaysLater = startDateIso ? new Date(startDateIso) : new Date(now.getTime() + 2 * 24 * 60 * 60 * 1000);
+  const trialEndIso = twoDaysLater.toISOString();
+
+  let existing = records.find(
+    (r) => r.email.toLowerCase() === normEmail || (userId && r.user_id === userId)
+  );
+
+  if (!existing) {
+    existing = await getOrCreateUserSubscription({ email: normEmail, userId });
+  }
+
+  existing.subscription_status = 'trial';
+  existing.trial_start_date = existing.trial_start_date || now.toISOString();
+  existing.trial_end_date = trialEndIso;
+  existing.next_payment_date = trialEndIso;
+  existing.subscription_end_date = trialEndIso;
+  existing.paystack_reference = reference;
+  if (subscriptionCode) existing.paystack_subscription_code = subscriptionCode;
+  if (emailToken) existing.paystack_email_token = emailToken;
+  if (customerCode) existing.paystack_customer_code = customerCode;
+  if (authorizationCode) existing.paystack_authorization_code = authorizationCode;
+  existing.cancelled_at = null;
+  existing.updated_at = now.toISOString();
+
+  const idx = records.findIndex((r) => r.email.toLowerCase() === normEmail);
+  if (idx !== -1) {
+    records[idx] = existing;
+  } else {
+    records.push(existing);
+  }
+  writeAllUserSubscriptions(records);
+  await syncToSupabaseProfile(existing);
+  return existing;
+}
+
+/**
+ * Verifies and activates recurring monthly R60 payment via Paystack:
+ * - sets subscription_status = 'active'
+ * - sets subscription_end_date & next_payment_date = now() + 30 days
+ * - saves paystack_reference & optional subscription details
+ */
+export async function verifyAndActivatePaystackPayment({
+  reference,
+  email,
+  userId,
+  subscriptionCode,
+  emailToken,
+  customerCode,
+  authorizationCode,
+  nextPaymentDate
+}: {
+  reference: string;
+  email: string;
+  userId?: string;
+  subscriptionCode?: string | null;
+  emailToken?: string | null;
+  customerCode?: string | null;
+  authorizationCode?: string | null;
+  nextPaymentDate?: string | null;
+}): Promise<UserSubscriptionRecord> {
+  const normEmail = (email || '').trim().toLowerCase();
+  const records = readAllUserSubscriptions();
+  const now = new Date();
+  const thirtyDaysLater = nextPaymentDate
+    ? new Date(nextPaymentDate)
+    : new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
 
   let existing = records.find(
     (r) => r.email.toLowerCase() === normEmail || (userId && r.user_id === userId)
@@ -312,7 +466,13 @@ export async function verifyAndActivatePaystackPayment({
 
   existing.subscription_status = 'active';
   existing.subscription_end_date = thirtyDaysLater.toISOString();
+  existing.next_payment_date = thirtyDaysLater.toISOString();
   existing.paystack_reference = reference;
+  if (subscriptionCode) existing.paystack_subscription_code = subscriptionCode;
+  if (emailToken) existing.paystack_email_token = emailToken;
+  if (customerCode) existing.paystack_customer_code = customerCode;
+  if (authorizationCode) existing.paystack_authorization_code = authorizationCode;
+  existing.cancelled_at = null;
   existing.updated_at = now.toISOString();
 
   const idx = records.findIndex((r) => r.email.toLowerCase() === normEmail);
@@ -328,33 +488,38 @@ export async function verifyAndActivatePaystackPayment({
 }
 
 /**
- * Deactivates user subscription when subscription.disable webhook event is received.
- * Sets subscription_status = 'expired'.
+ * Marks a user subscription as 'cancelled' (e.g., cancelled before 2 days -> R0 charged, or subscription.disable webhook).
  */
-export async function deactivateUserSubscription(email: string): Promise<UserSubscriptionRecord | null> {
+export async function markSubscriptionCancelled(email: string): Promise<UserSubscriptionRecord | null> {
   const normEmail = (email || '').trim().toLowerCase();
+  if (!normEmail) return null;
   const records = readAllUserSubscriptions();
-  const now = new Date();
+  const nowIso = new Date().toISOString();
 
-  let existing = records.find(
-    (r) => r.email.toLowerCase() === normEmail
-  );
-
-  if (!existing) {
+  const idx = records.findIndex((r) => r.email.toLowerCase() === normEmail);
+  if (idx === -1) {
     return null;
   }
 
-  existing.subscription_status = 'expired';
-  existing.updated_at = now.toISOString();
+  records[idx].subscription_status = 'cancelled';
+  records[idx].next_payment_date = null;
+  records[idx].cancelled_at = nowIso;
+  records[idx].updated_at = nowIso;
 
-  const idx = records.findIndex((r) => r.email.toLowerCase() === normEmail);
-  if (idx !== -1) {
-    records[idx] = existing;
-    writeAllUserSubscriptions(records);
-    await syncToSupabaseProfile(existing);
-  }
+  writeAllUserSubscriptions(records);
+  await syncToSupabaseProfile(records[idx]);
+  return records[idx];
+}
 
-  return existing;
+export async function deactivateUserSubscription(email: string): Promise<UserSubscriptionRecord | null> {
+  return markSubscriptionCancelled(email);
+}
+
+export async function getUserSubscriptionRecord(email: string): Promise<UserSubscriptionRecord | null> {
+  const normEmail = (email || '').trim().toLowerCase();
+  if (!normEmail) return null;
+  const records = readAllUserSubscriptions();
+  return records.find((r) => r.email.toLowerCase() === normEmail) || null;
 }
 
 async function syncToSupabaseProfile(record: UserSubscriptionRecord): Promise<void> {
@@ -374,7 +539,7 @@ async function syncToSupabaseProfile(record: UserSubscriptionRecord): Promise<vo
       },
       { onConflict: 'email' }
     );
-  } catch (err) {
+  } catch {
     // Non-blocking sync
   }
 }

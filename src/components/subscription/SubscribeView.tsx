@@ -1,18 +1,12 @@
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
- * 
+ *
  * NEXOVIAN SUBSCRIBE VIEW (/subscribe)
- * 
- * Plan Details:
- * - Plan Code: PLN_suslgrc1q9rtsfi
- * - Plan Name: Nexovian Monthly
- * - Amount: R60/month, Interval: Monthly, Currency: ZAR
- * - Paystack Payment Page: https://paystack.shop/pay/2vrisypa3i
- * 
- * Protects Tutor, Scan & Understand, Voice Docs:
- * If user not ACTIVE, shows this Subscribe page.
- * If ACTIVE, allows access.
+ *
+ * Protects Study Guide, AI Tutor, Scan & Understand, and Voice Docs:
+ * - User must log in / create an account first.
+ * - Starts a 2-Day Free Trial via POST /api/paystack/subscribe (R0 today, first R60 billing in 2 days).
  */
 
 import React, { useState } from 'react';
@@ -21,45 +15,48 @@ import {
   CheckCircle2,
   Lock,
   ArrowRight,
-  ShieldCheck,
   CreditCard,
   MessageCircle,
-  ExternalLink,
-  KeyRound,
   Zap,
-  Globe
+  Globe,
+  AlertCircle
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useLearning } from '../../context/LearningContext';
 import {
-  startPaystackCheckout,
-  PAYSTACK_PLAN_CODE,
-  PAYSTACK_PLAN_NAME,
-  PAYSTACK_PAYMENT_PAGE
+  startTwoDayFreeTrialCheckout,
+  SUBSCRIPTION_PLAN_NAME
 } from '../../services/paystackService';
 import { WHATSAPP_REMIND_URL } from '../../services/antiAbuseService';
 
 interface SubscribeViewProps {
-  protectedFeature?: 'AI Tutor' | 'Scan & Understand' | 'Voice Docs' | string;
+  protectedFeature?: 'Study Guide' | 'AI Tutor' | 'Scan & Understand' | 'Voice Docs' | string;
 }
 
 export const SubscribeView: React.FC<SubscribeViewProps> = ({ protectedFeature }) => {
-  const { user } = useAuth();
+  const { user, isAuthenticated } = useAuth();
   const { setCurrentTab } = useLearning();
   const [isRedirecting, setIsRedirecting] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-  const handleSubscribe = async () => {
+  const handleStartTrial = async () => {
     setIsRedirecting(true);
+    setErrorMsg(null);
     try {
-      await startPaystackCheckout({
+      const result = await startTwoDayFreeTrialCheckout({
         user,
-        returnUrl: typeof window !== 'undefined' ? `${window.location.origin}/success` : 'https://nexovian.group/success'
+        onRequireAuth: () => {
+          setCurrentTab('login');
+          if (typeof window !== 'undefined') {
+            window.history.pushState({}, '', '/login');
+          }
+        }
       });
-    } catch (err) {
-      console.error('Subscription redirect error:', err);
-      if (typeof window !== 'undefined') {
-        window.location.href = PAYSTACK_PAYMENT_PAGE;
+      if (!result.success && result.error) {
+        setErrorMsg(result.error);
       }
+    } catch (err: any) {
+      setErrorMsg(err?.message || 'Unable to connect to Paystack checkout.');
     } finally {
       setIsRedirecting(false);
     }
@@ -67,29 +64,33 @@ export const SubscribeView: React.FC<SubscribeViewProps> = ({ protectedFeature }
 
   return (
     <div className="min-h-[85vh] flex items-center justify-center px-4 py-10 bg-[#0a0a0a] text-white">
-      <div className="w-full max-w-2xl bg-[#0F172A] border border-gray-700/80 rounded-[28px] p-6 sm:p-10 shadow-2xl relative overflow-hidden space-y-6 animate-in fade-in zoom-in-95">
-        
-        {/* Top Glow Accent */}
+      <div className="w-full max-w-2xl bg-[#0F172A] border border-gray-700/80 rounded-[28px] p-6 sm:p-10 shadow-2xl relative overflow-hidden space-y-6">
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-3/4 h-24 bg-amber-500/10 blur-3xl rounded-full pointer-events-none" />
 
-        {/* Badge & Lock Header */}
+        {/* Badge & Status Header */}
         <div className="flex flex-col sm:flex-row items-center justify-between gap-3 text-center sm:text-left">
           <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider bg-amber-400/15 text-[#fbbf24] border border-amber-400/30 font-mono">
             <Lock className="w-3.5 h-3.5 text-[#fbbf24]" />
-            <span>Subscription Required</span>
+            <span>2-Day Free Trial Required</span>
           </div>
 
-          <div className="text-xs text-slate-400 font-mono">
-            Plan Code: <span className="text-amber-300 font-bold">{PAYSTACK_PLAN_CODE}</span>
-          </div>
+          {isAuthenticated && (
+            <button
+              type="button"
+              onClick={() => setCurrentTab('mySubscription')}
+              className="text-xs text-amber-300 hover:underline font-semibold cursor-pointer"
+            >
+              Manage My Subscription &rarr;
+            </button>
+          )}
         </div>
 
-        {/* Feature Notice if redirected from protected page */}
+        {/* Feature Notice */}
         {protectedFeature && (
           <div className="p-3.5 rounded-xl bg-amber-500/10 border border-amber-400/30 text-amber-200 text-xs sm:text-sm font-medium flex items-center gap-2.5">
             <Sparkles className="w-4 h-4 text-amber-400 shrink-0" />
             <span>
-              To access <strong className="text-white font-bold">{protectedFeature}</strong>, an active Nexovian subscription is required.
+              To access <strong className="text-white font-bold">{protectedFeature}</strong>, activate your 2-day free trial (then R60/month). Cancel anytime before 2 days for R0.
             </span>
           </div>
         )}
@@ -97,34 +98,34 @@ export const SubscribeView: React.FC<SubscribeViewProps> = ({ protectedFeature }
         {/* Main Title & Value Proposition */}
         <div className="text-center sm:text-left space-y-2">
           <h1 className="text-2xl sm:text-3xl font-black text-white font-display tracking-tight leading-tight">
-            Unlock Full Access with {PAYSTACK_PLAN_NAME}
+            Unlock Full Access with {SUBSCRIPTION_PLAN_NAME}
           </h1>
           <p className="text-sm text-slate-300 leading-relaxed">
-            Full access to South Africa&apos;s leading AI educational platform calibrated for CAPS Grade 4 to 12, TVET Colleges, and University courses in all 11 official languages.
+            Full access to South Africa&apos;s leading AI educational platform calibrated for CAPS Grade 4 to 12, Study Guides, TVET Colleges, and University courses in all 11 official languages.
           </p>
         </div>
 
         {/* Plan Pricing Card */}
         <div className="p-5 sm:p-6 rounded-2xl bg-[#0a0a0a] border-2 border-amber-400/40 shadow-inner flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="space-y-1 text-center sm:text-left">
-            <span className="text-[11px] font-mono text-amber-400 font-bold uppercase tracking-widest block">
-              Monthly Recurring Access
+            <span className="text-[11px] font-mono text-emerald-400 font-bold uppercase tracking-widest block">
+              2-Day Free Trial Included
             </span>
             <div className="text-3xl sm:text-4xl font-black text-white font-display">
-              R60 <span className="text-base sm:text-lg font-medium text-slate-400">/ month</span>
+              R60 <span className="text-base sm:text-lg font-medium text-slate-400">/ month after trial</span>
             </div>
             <p className="text-xs text-slate-400">
-              Billed monthly via Paystack • Cancel anytime • Zero hidden fees
+              First R60 payment scheduled in 2 days &bull; Cancel before 2 days for R0
             </p>
           </div>
 
           <div className="flex flex-col items-center sm:items-end gap-1.5 shrink-0">
             <span className="inline-flex items-center gap-1 text-xs text-emerald-400 font-bold bg-emerald-950/60 border border-emerald-500/30 px-3 py-1 rounded-full font-mono">
               <Zap className="w-3.5 h-3.5" />
-              <span>Instant Auto-Activation</span>
+              <span>Instant Full Access</span>
             </span>
             <span className="text-[11px] text-slate-500 font-mono">
-              Currency: ZAR (South Africa)
+              Currency: ZAR (Paystack)
             </span>
           </div>
         </div>
@@ -133,88 +134,66 @@ export const SubscribeView: React.FC<SubscribeViewProps> = ({ protectedFeature }
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 py-3 border-y border-gray-800 text-xs sm:text-sm text-slate-200">
           <div className="flex items-center gap-2.5">
             <CheckCircle2 className="w-4 h-4 text-amber-400 shrink-0" />
+            <span>Full CAPS Grade 12 Study Guides</span>
+          </div>
+          <div className="flex items-center gap-2.5">
+            <CheckCircle2 className="w-4 h-4 text-amber-400 shrink-0" />
             <span>Socratic AI Tutor in all 11 SA Languages</span>
           </div>
           <div className="flex items-center gap-2.5">
             <CheckCircle2 className="w-4 h-4 text-amber-400 shrink-0" />
-            <span>Scan &amp; Understand handwritten math &amp; memos</span>
+            <span>Scan &amp; Understand homework &amp; memos</span>
           </div>
           <div className="flex items-center gap-2.5">
             <CheckCircle2 className="w-4 h-4 text-amber-400 shrink-0" />
-            <span>Voice-to-Document academic note generation</span>
+            <span>Voice-to-Document academic notes</span>
           </div>
           <div className="flex items-center gap-2.5">
             <CheckCircle2 className="w-4 h-4 text-amber-400 shrink-0" />
-            <span>Grade 4 to University &amp; TVET N1–N6 coverage</span>
+            <span>Official CAPS &amp; NSC Exam Memos</span>
           </div>
           <div className="flex items-center gap-2.5">
             <CheckCircle2 className="w-4 h-4 text-amber-400 shrink-0" />
-            <span>Official CAPS &amp; NSC Exam Memos unlocked</span>
-          </div>
-          <div className="flex items-center gap-2.5">
-            <CheckCircle2 className="w-4 h-4 text-amber-400 shrink-0" />
-            <span>Secure 256-bit encrypted Paystack billing</span>
+            <span>One-click cancellation in My Subscription</span>
           </div>
         </div>
 
-        {/* Action Buttons: Subscribe & Start 2-Day Free Trial */}
+        {errorMsg && (
+          <div className="p-3.5 rounded-xl bg-rose-950/60 border border-rose-500/40 text-rose-200 text-xs flex items-center gap-2">
+            <AlertCircle className="w-4 h-4 text-rose-400 shrink-0" />
+            <span>{errorMsg}</span>
+          </div>
+        )}
+
+        {/* Single Main Action Button */}
         <div className="space-y-3 pt-1">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {/* Button 1: Subscribe R60/month */}
-            <button
-              type="button"
-              onClick={handleSubscribe}
-              disabled={isRedirecting}
-              className="w-full h-[52px] rounded-2xl bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-sm sm:text-base flex items-center justify-center gap-2 shadow-lg shadow-amber-400/20 transition-all active:scale-98 cursor-pointer disabled:opacity-60"
-            >
-              <CreditCard className="w-4 h-4" />
-              <span>{isRedirecting ? 'Connecting Paystack...' : 'Subscribe R60/month'}</span>
-              <ArrowRight className="w-4 h-4" />
-            </button>
+          <button
+            type="button"
+            onClick={handleStartTrial}
+            disabled={isRedirecting}
+            className="w-full h-[56px] rounded-2xl bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-base flex items-center justify-center gap-2 shadow-lg shadow-amber-400/20 transition-all active:scale-98 cursor-pointer disabled:opacity-60"
+          >
+            <CreditCard className="w-5 h-5" />
+            <span>
+              {isRedirecting
+                ? 'Connecting Paystack...'
+                : 'Start 2-Day Free Trial - Then R60/month'}
+            </span>
+            <ArrowRight className="w-4 h-4" />
+          </button>
 
-            {/* Button 2: Start 2-Day Free Trial */}
-            <button
-              type="button"
-              onClick={handleSubscribe}
-              disabled={isRedirecting}
-              className="w-full h-[52px] rounded-2xl bg-slate-800 hover:bg-slate-700 border border-amber-400/50 text-amber-300 font-extrabold text-sm sm:text-base flex items-center justify-center gap-2 transition-all active:scale-98 cursor-pointer disabled:opacity-60"
-            >
-              <Sparkles className="w-4 h-4 text-amber-400" />
-              <span>Start 2-Day Free Trial</span>
-            </button>
-          </div>
-
-          {/* Secondary Actions: Direct Paystack link & Unlock code */}
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-2.5 pt-2 text-xs text-slate-400 font-medium">
-            <a
-              href={PAYSTACK_PAYMENT_PAGE}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="hover:text-amber-300 flex items-center gap-1 underline underline-offset-4"
-            >
-              <span>Or pay directly on Paystack Checkout Page</span>
-              <ExternalLink className="w-3 h-3" />
-            </a>
-
-            <button
-              type="button"
-              onClick={() => {
-                setCurrentTab('unlock');
-                if (typeof window !== 'undefined') window.history.pushState({}, '', '/unlock');
-              }}
-              className="hover:text-white flex items-center gap-1.5 text-slate-300"
-            >
-              <KeyRound className="w-3.5 h-3.5 text-amber-400" />
-              <span>Have an Unlock Code?</span>
-            </button>
-          </div>
+          {!isAuthenticated && (
+            <p className="text-center text-xs text-slate-400">
+              You will be asked to create an account or log in first before starting your 2-day free trial.
+            </p>
+          )}
         </div>
 
         {/* Footer Support Info */}
         <div className="pt-2 border-t border-gray-800 flex flex-col sm:flex-row items-center justify-between gap-2 text-[11px] text-gray-400">
           <div className="flex items-center gap-1.5">
             <Globe className="w-3.5 h-3.5 text-amber-400" />
-            <span>NEXOVIAN (PTY) LTD • Mpumalanga, South Africa</span>
+            <span>NEXOVIAN (PTY) LTD &bull; Mpumalanga, South Africa</span>
           </div>
 
           <a

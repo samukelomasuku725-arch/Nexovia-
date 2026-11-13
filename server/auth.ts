@@ -86,8 +86,12 @@ export function registerUser(params: {
     throw new Error('An account with this email address already exists.');
   }
 
+  if (!params.password || params.password.length < 6) {
+    throw new Error('Password must be at least 6 characters.');
+  }
+
   const salt = crypto.randomBytes(16).toString('hex');
-  const password = params.password || 'TemporaryDemoPass123!';
+  const password = params.password;
   const passwordHash = hashPassword(password, salt);
   const id = `usr_${Date.now()}_${crypto.randomBytes(4).toString('hex')}`;
 
@@ -132,11 +136,13 @@ export function loginUser(params: {
     throw new Error('Invalid email or password.');
   }
 
-  if (params.password) {
-    const computedHash = hashPassword(params.password, user.salt);
-    if (computedHash !== user.passwordHash) {
-      throw new Error('Invalid email or password.');
-    }
+  if (!params.password) {
+    throw new Error('Password is required.');
+  }
+
+  const computedHash = hashPassword(params.password, user.salt);
+  if (computedHash !== user.passwordHash) {
+    throw new Error('Invalid email or password.');
   }
 
   const token = `bp_tok_${crypto.randomBytes(24).toString('hex')}`;

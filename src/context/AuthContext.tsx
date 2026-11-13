@@ -16,6 +16,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { supabase } from '../supabase';
 import type { User, Session } from '@supabase/supabase-js';
+import { syncSubscriptionStatus, clearCachedPaystackFlags } from '../services/paystackService';
 
 export interface UserProfile {
   id: string;
@@ -279,57 +280,141 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
   }, []);
 
-  // Sign up with Email + Password + Full Name + Language preference
+  // Sync Paystack subscription status whenever user email changes
+  useEffect(() => {
+    if (user?.email) {
+      syncSubscriptionStatus(user.email, user.id).catch(() => {});
+    }
+  }, [user?.email, user?.id]);
+
+  // Sign up with Email + Password + Full Name + Language preference (persists to DB + Supabase)
   const signUpWithEmail = async (
     email: string,
     password: string,
     fullName = '',
     preferredLanguage = 'en'
   ) => {
-    const displayName = fullName.trim() || email.split('@')[0];
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: {
-          full_name: displayName,
-          language_preference: preferredLanguage
-        }
+    const cleanEmail = email.trim().toLowerCase();
+    const displayName = fullName.trim() || cleanEmail.split('@')[0];
+
+    let backendUser: UserProfile | null = null;
+    try {
+      const apiRes = await fetch('/api/auth/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: displayName,
+          email: cleanEmail,
+          password,
+          preferredLanguage
+        })
+      });
+      const apiData = await apiRes.json();
+      if (!apiRes.ok || !apiData?.success) {
+        throw new Error(apiData?.message || 'Registration failed.');
       }
-    });
-
-    if (error) {
-      throw error;
+      if (apiData.data?.token) {
+        localStorage.setItem('nexovian_auth_token', apiData.data.token);
+      }
+      if (apiData.data?.user) {
+        backendUser = {
+          id: apiData.data.user.id,
+          email: apiData.data.user.email,
+          name: apiData.data.user.name,
+          preferredLanguage: apiData.data.user.preferredLanguage || preferredLanguage,
+          createdAt: apiData.data.user.createdAt
+        };
+      }
+    } catch (backendErr: any) {
+      if (backendErr?.message && !backendErr.message.includes('Failed to fetch')) {
+        throw backendErr;
+      }
     }
 
-    if (data.user) {
-      await syncUserProfileToSupabase(data.user, displayName, preferredLanguage);
-
-      const profile: UserProfile = {
-        id: data.user.id,
-        email: data.user.email || email,
-        name: displayName,
-        preferredLanguage,
-        createdAt: data.user.created_at
-      };
-      setUser(profile);
-      setSupabaseUser(data.user);
-      localStorage.setItem(LOCAL_USER_KEY, JSON.stringify(profile));
-      sessionStorage.setItem(TAB_SESSION_KEY, 'true');
+    // Attempt Supabase registration alongside backend DB persistence
+    let supaData: any = null;
+    try {
+      const { data, error } = await supabase.auth.signUp({
+        email: cleanEmail,
+        password,
+        options: {
+          data: {
+            full_name: displayName,
+            language_preference: preferredLanguage
+          }
+        }
+      });
+      if (!error && data?.user) {
+        supaData = data;
+        await syncUserProfileToSupabase(data.user, displayName, preferredLanguage);
+      }
+    } catch {
+      // Non-blocking
     }
 
-    return data;
+    const profile: UserProfile = backendUser || {
+      id: supaData?.user?.id || `usr_${Date.now()}`,
+      email: cleanEmail,
+      name: displayName,
+      preferredLanguage,
+      createdAt: supaData?.user?.created_at || new Date().toISOString()
+    };
+
+    setUser(profile);
+    if (supaData?.user) setSupabaseUser(supaData.user);
+    localStorage.setItem(LOCAL_USER_KEY, JSON.stringify(profile));
+    localStorage.setItem('nexovian_logged_in', 'true');
+    localStorage.setItem('nexovian_last_email', cleanEmail);
+    sessionStorage.setItem(TAB_SESSION_KEY, 'true');
+
+    await syncSubscriptionStatus(profile.email, profile.id);
+    return { user: profile, supabase: supaData };
   };
 
-  // Sign in with Email + Password
+  // Sign in with Email + Password (verifies against backend DB first, falls back to Supabase)
   const signInWithEmail = async (email: string, password: string, rememberMe = false) => {
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email,
-      password
-    });
+    const cleanEmail = email.trim().toLowerCase();
+    let backendUser: UserProfile | null = null;
+    let backendError: Error | null = null;
 
-    if (error) {
-      throw error;
+    try {
+      const apiRes = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: cleanEmail, password })
+      });
+      const apiData = await apiRes.json();
+      if (apiRes.ok && apiData?.success && apiData.data?.user) {
+        if (apiData.data.token) {
+          localStorage.setItem('nexovian_auth_token', apiData.data.token);
+        }
+        backendUser = {
+          id: apiData.data.user.id,
+          email: apiData.data.user.email,
+          name: apiData.data.user.name,
+          preferredLanguage: apiData.data.user.preferredLanguage || 'en',
+          createdAt: apiData.data.user.createdAt
+        };
+      } else if (apiRes.status === 401 || apiRes.status === 400) {
+        backendError = new Error(apiData?.message || 'Invalid email or password.');
+      }
+    } catch {
+      // Fallback to Supabase below
+    }
+
+    let supaData: any = null;
+    if (!backendUser) {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: cleanEmail,
+        password
+      });
+      if (error || !data?.user) {
+        throw backendError || error || new Error('Invalid email or password.');
+      }
+      supaData = data;
+      const lang = data.user.user_metadata?.language_preference || 'en';
+      const name = data.user.user_metadata?.full_name || cleanEmail.split('@')[0];
+      await syncUserProfileToSupabase(data.user, name, lang);
     }
 
     if (rememberMe) {
@@ -339,24 +424,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
     sessionStorage.setItem(TAB_SESSION_KEY, 'true');
 
-    if (data.user) {
-      const lang = data.user.user_metadata?.language_preference || 'en';
-      const name = data.user.user_metadata?.full_name || email.split('@')[0];
-      await syncUserProfileToSupabase(data.user, name, lang);
+    const profile: UserProfile = backendUser || {
+      id: supaData.user.id,
+      email: supaData.user.email || cleanEmail,
+      name: supaData.user.user_metadata?.full_name || cleanEmail.split('@')[0],
+      preferredLanguage: supaData.user.user_metadata?.language_preference || 'en',
+      createdAt: supaData.user.created_at
+    };
 
-      const profile: UserProfile = {
-        id: data.user.id,
-        email: data.user.email || email,
-        name,
-        preferredLanguage: lang,
-        createdAt: data.user.created_at
-      };
-      setUser(profile);
-      setSupabaseUser(data.user);
-      localStorage.setItem(LOCAL_USER_KEY, JSON.stringify(profile));
-    }
+    setUser(profile);
+    if (supaData?.user) setSupabaseUser(supaData.user);
+    localStorage.setItem(LOCAL_USER_KEY, JSON.stringify(profile));
+    localStorage.setItem('nexovian_logged_in', 'true');
+    localStorage.setItem('nexovian_last_email', cleanEmail);
 
-    return data;
+    await syncSubscriptionStatus(profile.email, profile.id);
+    return { user: profile, supabase: supaData };
   };
 
   // Reset password
@@ -406,6 +489,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // Logout / SignOut
   const logout = async () => {
+    const prevUser = user;
     try {
       await supabase.auth.signOut();
     } catch (err) {
@@ -414,11 +498,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setSession(null);
       setSupabaseUser(null);
       setUser(null);
+      clearCachedPaystackFlags(prevUser?.id, prevUser?.email);
       localStorage.removeItem('nexovian_logged_in');
+      localStorage.removeItem('nexovian_auth_token');
+      localStorage.removeItem('nexovian_user');
       localStorage.removeItem(LOCAL_USER_KEY);
       localStorage.removeItem(REMEMBER_ME_KEY);
       sessionStorage.removeItem(TAB_SESSION_KEY);
-      // NOTE: Deliberately KEEP 'nexovian_user' so their details prefill next time!
     }
   };
 
@@ -428,7 +514,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const register = async (data: any): Promise<any> => {
-    return signUpWithEmail(data.email, data.password || 'TemporaryPassword123!', data.name || '', data.preferredLanguage || 'en');
+    return signUpWithEmail(data.email, data.password || '', data.name || '', data.preferredLanguage || 'en');
   };
 
   const updateProfile = async (updates: Partial<UserProfile>): Promise<UserProfile> => {

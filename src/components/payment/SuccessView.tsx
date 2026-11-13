@@ -1,158 +1,265 @@
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
- * 
- * NEXOVIAN PAYMENT SUCCESS PAGE (/success) — DAY 1 DARK GOLD THEME
- * 
- * Calls generateNextCode() from the 200k code pool, displays:
- * "✅ R60 Paid! Your code: NEX-XXXXXX"
- * Provides instant unlock & copy buttons.
+ *
+ * NEXOVIAN PAYSTACK CHECKOUT SUCCESS PAGE (/success)
+ * Verifies the Paystack reference against /api/paystack/verify, creates/activates
+ * the 2-Day Free Trial subscription (first R60 charge in 2 days), and unlocks full access.
  */
 
 import React, { useState, useEffect } from 'react';
-import { CheckCircle2, Copy, Check, ArrowRight, Sparkles, BookOpen } from 'lucide-react';
+import {
+  CheckCircle2,
+  ArrowRight,
+  Sparkles,
+  BookOpen,
+  CreditCard,
+  Loader2,
+  AlertCircle
+} from 'lucide-react';
+import { useAuth } from '../../context/AuthContext';
 import { useLearning } from '../../context/LearningContext';
-import { generateNextCode } from '../../lib/codeGenerator';
-import { saveSubscription } from '../../services/snapscanSubscriptionService';
+import {
+  saveCachedPaystackStatus,
+  startTwoDayFreeTrialCheckout
+} from '../../services/paystackService';
+
+interface VerifyState {
+  status: 'verifying' | 'success' | 'error';
+  message: string;
+  trialEndDate: string | null;
+  nextPaymentDate: string | null;
+  subscriptionCode: string | null;
+  subStatus: 'trial' | 'active';
+}
+
+function formatDateZA(isoDate?: string | null): string {
+  if (!isoDate) return 'In 2 days';
+  const d = new Date(isoDate);
+  if (Number.isNaN(d.getTime())) return 'In 2 days';
+  return d.toLocaleDateString('en-ZA', {
+    weekday: 'short',
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  });
+}
 
 export const SuccessView: React.FC = () => {
+  const { user } = useAuth();
   const { setCurrentTab } = useLearning();
-  const [assignedCode, setAssignedCode] = useState<string>('NEX-100004');
-  const [isCopied, setIsCopied] = useState(false);
+
+  const [verifyState, setVerifyState] = useState<VerifyState>({
+    status: 'verifying',
+    message: 'Verifying your Paystack 2-day free trial...',
+    trialEndDate: null,
+    nextPaymentDate: null,
+    subscriptionCode: null,
+    subStatus: 'trial'
+  });
 
   useEffect(() => {
-    // Generate next unique one-time code from 200k pool
-    const code = generateNextCode();
-    setAssignedCode(code);
+    let active = true;
 
-    // Auto activate locally
-    const now = Date.now();
-    const expiry = now + 30 * 24 * 60 * 60 * 1000;
-    localStorage.setItem('nexovian_premium', 'active');
-    localStorage.setItem('nexovian_code', code);
-    localStorage.setItem('isPremium', 'true');
-    localStorage.setItem('nexovian_unlocked', 'true');
-    localStorage.setItem('nexovian_paid', 'true');
-    localStorage.setItem('nexovian_paystack_active', 'true');
-    localStorage.setItem('nexovian_logged_in', 'true');
-    localStorage.setItem(`used_${code}`, 'true');
-    localStorage.setItem('premium_expiry', String(expiry));
-
-    // Check URL query parameters for Paystack reference callback
-    if (typeof window !== 'undefined') {
+    async function verifyReference() {
+      if (typeof window === 'undefined') return;
       const params = new URLSearchParams(window.location.search);
       const ref = params.get('reference') || params.get('trxref');
-      if (ref) {
-        localStorage.setItem('nexovian_paystack_ref', ref);
-        fetch(`/api/paystack/verify?reference=${encodeURIComponent(ref)}`)
-          .then((r) => r.json())
-          .catch((err) => console.warn('Paystack verify background call notice:', err));
+
+      if (!ref) {
+        setVerifyState({
+          status: 'error',
+          message: 'No Paystack transaction reference was found in the URL.',
+          trialEndDate: null,
+          nextPaymentDate: null,
+          subscriptionCode: null,
+          subStatus: 'trial'
+        });
+        return;
+      }
+
+      try {
+        const query = new URLSearchParams({ reference: ref });
+        if (user?.email) query.set('email', user.email);
+        if (user?.id) query.set('userId', user.id);
+
+        const res = await fetch(`/api/paystack/verify?${query.toString()}`);
+        const data = await res.json();
+
+        if (!active) return;
+
+        if (res.ok && data?.success) {
+          const emailToCache = data.email || data.record?.email || user?.email;
+          const rawStatus = data.subscription_status || data.status;
+          const recordStatus: 'trial' | 'active' = rawStatus === 'active' ? 'active' : 'trial';
+
+          if (emailToCache) {
+            saveCachedPaystackStatus(emailToCache, {
+              status: recordStatus,
+              has_access: true,
+              trial_end_date: data.trial_end_date || null,
+              next_payment_date: data.next_payment_date || data.trial_end_date || null,
+              subscription_code: data.subscription_code || null,
+              days_remaining: recordStatus === 'trial' ? 2 : 30,
+              hours_remaining: recordStatus === 'trial' ? 48 : 720
+            });
+          }
+
+          setVerifyState({
+            status: 'success',
+            message:
+              recordStatus === 'active'
+                ? 'Active — Your monthly R60 Nexovian subscription is confirmed!'
+                : 'Active — Your 2-Day Free Trial is now confirmed! First R60 payment is scheduled on your trial end date.',
+            trialEndDate: data.trial_end_date || null,
+            nextPaymentDate: data.next_payment_date || data.trial_end_date || null,
+            subscriptionCode: data.subscription_code || null,
+            subStatus: recordStatus
+          });
+        } else {
+          setVerifyState({
+            status: 'error',
+            message: data?.error || 'Could not verify Paystack authorization. Please contact support or retry.',
+            trialEndDate: null,
+            nextPaymentDate: null,
+            subscriptionCode: null,
+            subStatus: 'trial'
+          });
+        }
+      } catch (err: any) {
+        if (!active) return;
+        setVerifyState({
+          status: 'error',
+          message: err?.message || 'Network error verifying Paystack transaction.',
+          trialEndDate: null,
+          nextPaymentDate: null,
+          subscriptionCode: null,
+          subStatus: 'trial'
+        });
       }
     }
 
-    saveSubscription({
-      access_code: code,
-      payment_phone: '0820000000',
-      payment_reference: 'PAYSTACK-R60-MONTHLY',
-      payment_status: 'paid',
-      subscription_status: 'active',
-      subscription_start: now,
-      subscription_end: expiry,
-      last_payment_date: now
-    });
-  }, []);
-
-  const handleCopy = async () => {
-    try {
-      await navigator.clipboard.writeText(assignedCode);
-      setIsCopied(true);
-      setTimeout(() => setIsCopied(false), 2000);
-    } catch (_) {
-      setIsCopied(true);
-    }
-  };
+    verifyReference();
+    return () => {
+      active = false;
+    };
+  }, [user?.email, user?.id]);
 
   return (
     <div className="min-h-[85vh] flex items-center justify-center px-4 py-12 bg-[#0a0a0a] text-white">
       <div className="w-full max-w-xl bg-[#1a1a1a] border-2 border-[#fbbf24] rounded-3xl p-6 sm:p-10 shadow-[0_0_40px_rgba(251,191,36,0.25)] text-center space-y-6">
-        
-        {/* Animated Celebration Icon */}
-        <div className="w-20 h-20 mx-auto rounded-3xl bg-[#fbbf24]/20 text-[#fbbf24] flex items-center justify-center border border-[#fbbf24] shadow-[0_0_25px_rgba(251,191,36,0.4)]">
-          <CheckCircle2 className="w-10 h-10 animate-bounce text-[#fbbf24]" />
-        </div>
-
-        {/* Heading */}
-        <div>
-          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-[#fbbf24]/20 text-[#fbbf24] border border-[#fbbf24]/40 font-mono mb-3">
-            Payment Confirmed • 30 Days Unlocked
-          </span>
-          <h1 className="text-2xl sm:text-3xl font-black text-white font-display tracking-tight">
-            ✅ R60 Paid!
-          </h1>
-          <p className="mt-2 text-sm text-slate-300">
-            Welcome to NEXOVIAN Premium. Your unique one-time code has been generated and activated:
-          </p>
-        </div>
-
-        {/* Code Display Box */}
-        <div className="p-5 rounded-2xl bg-[#0a0a0a] border-2 border-[#fbbf24] space-y-3">
-          <span className="text-[11px] font-mono text-[#fbbf24] uppercase tracking-wider font-bold block">
-            Your One-Time Unlock Code
-          </span>
-          <div className="font-mono text-3xl sm:text-4xl font-black text-white tracking-widest selection:bg-[#fbbf24]">
-            {assignedCode}
+        {verifyState.status === 'verifying' ? (
+          <div className="py-10 space-y-4">
+            <Loader2 className="w-12 h-12 animate-spin text-[#fbbf24] mx-auto" />
+            <h1 className="text-xl font-black text-white font-display">
+              Activating Your 2-Day Free Trial...
+            </h1>
+            <p className="text-xs text-slate-400">
+              Confirming your Paystack card setup and setting your first payment date to 2 days from now.
+            </p>
           </div>
-          <div className="flex items-center justify-center gap-2 pt-1">
-            <button
-              onClick={handleCopy}
-              className="px-4 py-2 rounded-xl bg-[#262626] hover:bg-[#333] text-xs font-bold text-white flex items-center gap-1.5 transition-colors cursor-pointer"
-            >
-              {isCopied ? (
-                <>
-                  <Check className="w-4 h-4 text-emerald-400" />
-                  <span className="text-emerald-400">Copied!</span>
-                </>
-              ) : (
-                <>
-                  <Copy className="w-4 h-4 text-[#fbbf24]" />
-                  <span>Copy Code</span>
-                </>
-              )}
-            </button>
+        ) : verifyState.status === 'error' ? (
+          <div className="space-y-5">
+            <div className="w-16 h-16 mx-auto rounded-2xl bg-rose-500/15 border border-rose-500/40 text-rose-400 flex items-center justify-center">
+              <AlertCircle className="w-8 h-8" />
+            </div>
+            <h1 className="text-2xl font-black text-white font-display">Verification Issue</h1>
+            <p className="text-sm text-rose-200">{verifyState.message}</p>
+            <div className="flex flex-col sm:flex-row gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() =>
+                  startTwoDayFreeTrialCheckout({
+                    user,
+                    onRequireAuth: () => setCurrentTab('login')
+                  })
+                }
+                className="flex-1 py-3.5 px-5 rounded-xl bg-[#fbbf24] hover:bg-yellow-400 text-black font-black text-sm cursor-pointer"
+              >
+                Start 2-Day Free Trial - Then R60/month
+              </button>
+              <button
+                type="button"
+                onClick={() => setCurrentTab('mySubscription')}
+                className="py-3.5 px-5 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-bold text-sm cursor-pointer"
+              >
+                My Subscription
+              </button>
+            </div>
           </div>
-          <p className="text-[11px] text-slate-400 font-mono">
-            Write it down. One code • One use • Valid 30 days
-          </p>
-        </div>
+        ) : (
+          <>
+            <div className="w-20 h-20 mx-auto rounded-3xl bg-emerald-500/15 text-emerald-400 flex items-center justify-center border border-emerald-400/40 shadow-[0_0_25px_rgba(16,185,129,0.3)]">
+              <CheckCircle2 className="w-10 h-10 text-emerald-400" />
+            </div>
 
-        {/* Action Buttons */}
-        <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
-          <button
-            onClick={() => {
-              setCurrentTab('tutor');
-              if (typeof window !== 'undefined') window.history.pushState({}, '', '/app');
-            }}
-            className="w-full sm:w-auto px-6 py-3.5 bg-[#fbbf24] hover:bg-yellow-400 text-black font-black text-sm rounded-xl shadow-[0_0_20px_rgba(251,191,36,0.4)] flex items-center justify-center gap-2 cursor-pointer transition-transform active:scale-95"
-          >
-            <Sparkles className="w-4 h-4 text-black" />
-            <span>Open AI Tutor</span>
-            <ArrowRight className="w-4 h-4 text-black" />
-          </button>
+            <div>
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 font-mono mb-3">
+                {verifyState.subStatus === 'active'
+                  ? 'Subscription Active • R60/month'
+                  : '2-Day Free Trial Activated'}
+              </span>
+              <h1 className="text-2xl sm:text-3xl font-black text-white font-display tracking-tight">
+                {verifyState.subStatus === 'active'
+                  ? 'Welcome to Nexovian!'
+                  : '2-Day Free Trial Started!'}
+              </h1>
+              <p className="mt-2 text-sm text-slate-300">{verifyState.message}</p>
+            </div>
 
-          <button
-            onClick={() => {
-              setCurrentTab('scan');
-              if (typeof window !== 'undefined') window.history.pushState({}, '', '/app');
-            }}
-            className="w-full sm:w-auto px-5 py-3.5 bg-slate-800 hover:bg-slate-700 text-white font-bold text-sm rounded-xl border border-slate-700 flex items-center justify-center gap-2 cursor-pointer transition-colors"
-          >
-            <BookOpen className="w-4 h-4 text-amber-400" />
-            <span>Scan &amp; Understand</span>
-          </button>
-        </div>
+            <div className="p-5 rounded-2xl bg-[#0a0a0a] border border-slate-800 space-y-2.5 text-left text-xs">
+              <div className="flex items-center justify-between">
+                <span className="text-slate-400">Trial ends on</span>
+                <span className="font-bold text-white">{formatDateZA(verifyState.trialEndDate)}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-slate-400">Next payment R60 on</span>
+                <span className="font-bold text-[#fbbf24]">
+                  {formatDateZA(verifyState.nextPaymentDate || verifyState.trialEndDate)}
+                </span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-slate-400">Cancel before 2 days</span>
+                <span className="font-bold text-emerald-400">R0 charged</span>
+              </div>
+            </div>
+
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() => setCurrentTab('studyGuide')}
+                className="w-full sm:w-auto px-6 py-3.5 bg-[#fbbf24] hover:bg-yellow-400 text-black font-black text-sm rounded-xl shadow-[0_0_20px_rgba(251,191,36,0.4)] flex items-center justify-center gap-2 cursor-pointer transition-transform active:scale-95"
+              >
+                <BookOpen className="w-4 h-4 text-black" />
+                <span>Open Study Guide</span>
+                <ArrowRight className="w-4 h-4 text-black" />
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setCurrentTab('tutor')}
+                className="w-full sm:w-auto px-5 py-3.5 bg-slate-800 hover:bg-slate-700 text-white font-bold text-sm rounded-xl border border-slate-700 flex items-center justify-center gap-2 cursor-pointer transition-colors"
+              >
+                <Sparkles className="w-4 h-4 text-amber-400" />
+                <span>Open AI Tutor</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setCurrentTab('mySubscription')}
+                className="w-full sm:w-auto px-5 py-3.5 bg-slate-900 hover:bg-slate-800 text-slate-200 font-bold text-sm rounded-xl border border-slate-700 flex items-center justify-center gap-2 cursor-pointer transition-colors"
+              >
+                <CreditCard className="w-4 h-4 text-emerald-400" />
+                <span>My Subscription</span>
+              </button>
+            </div>
+          </>
+        )}
 
         <p className="text-xs text-slate-500 pt-2 font-mono">
-          Need help? WhatsApp 063 650 8381 • NEXOVIAN (PTY) LTD
+          Need help? WhatsApp 063 650 8381 &bull; NEXOVIAN (PTY) LTD
         </p>
       </div>
     </div>

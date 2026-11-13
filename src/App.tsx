@@ -50,7 +50,7 @@ import { StudyGuideHubPage } from './components/study-guide/StudyGuideHubPage';
 import { PhysicsGrade12Page } from './components/study-guide/PhysicsGrade12Page';
 import { LifeSciencesGrade12Page } from './components/study-guide/LifeSciencesGrade12Page';
 import { StudyGuideChapterPage } from './components/study-guide/StudyGuideChapterPage';
-import { checkAccess } from './services/snapscanSubscriptionService';
+import { StudyGuideGuard } from './components/study-guide/StudyGuideGuard';
 import { LessonPlayerModal } from './components/player/LessonPlayerModal';
 import { Analytics } from '@vercel/analytics/react';
 import { SearchModal } from './components/search/SearchModal';
@@ -63,6 +63,7 @@ import { useAuth } from './context/AuthContext';
 import { CreateAccountScreen } from './components/auth/CreateAccountScreen';
 import { SubscriptionBanner } from './components/subscription/SubscriptionBanner';
 import { SubscribeView } from './components/subscription/SubscribeView';
+import { MySubscriptionView } from './components/subscription/MySubscriptionView';
 import { isUserActive } from './services/paystackService';
 import { isAdminUser } from './services/antiAbuseService';
 import { LogoIcon } from './components/common/LogoIcon';
@@ -91,61 +92,23 @@ const MainLayout: React.FC = () => {
   const { isAuthenticated, isLoading, user, logout } = useAuth();
   const { t } = useTranslation();
 
-  // Protected Route Subscription / 30-Day Auto-Lock & 2-Day Trial Guard
+  // Guard protected/auth/admin tabs cleanly inside useEffect (never call setCurrentTab during render)
   useEffect(() => {
     if (isLoading) return;
 
-    // Free routes (no lock): / (homepage), /papers, /learn, /login, /signup, /trial, /calculator, /about, /paywall, /unlock, /terms, /refund-policy, /privacy-policy, /contact, /study-guide
-    const isPublicTab = ['landing', 'login', 'signup', 'calculator', 'learn', 'about', 'success', 'cancel', 'trial', 'paywall', 'papers', 'adminPayments', 'unlock', 'adminCodes', 'terms', 'refundPolicy', 'privacyPolicy', 'contact', 'studyGuide', 'studyGuidePhysics', 'studyGuideLifeSciences', 'studyGuideChapter'].includes(currentTab);
-    if (isPublicTab) return;
-
-    if (isAdminUser(user)) return;
-
-    // Rule 3: If current date < FREE_TILL_DATE, set isPremium = true automatically for everyone
-    const FREE_TILL_DATE = new Date("2026-11-12T21:59:59Z");
-    const isFreePromotionActive = Date.now() < FREE_TILL_DATE.getTime();
-
-    // 2-Day Free Trial Logic: trial_start in localStorage, after 2 days redirect to /unlock
-    const isUnlocked = isFreePromotionActive || (typeof window !== 'undefined' && (
-      localStorage.getItem('nexovian_premium') === 'active' || 
-      localStorage.getItem('nexovian_paid') === 'true' || 
-      localStorage.getItem('isPremium') === 'true'
-    ));
-
-    if (isFreePromotionActive && typeof window !== 'undefined') {
-      localStorage.setItem('isPremium', 'true');
-    }
-
-    if (!isUnlocked) {
-      let trialStart = localStorage.getItem('trial_start');
-      if (!trialStart) {
-        trialStart = String(Date.now());
-        localStorage.setItem('trial_start', trialStart);
+    if (currentTab === 'adminBank' && !isAdminUser(user)) {
+      setCurrentTab('home');
+      if (typeof window !== 'undefined' && window.location.pathname.startsWith('/admin')) {
+        window.history.replaceState({}, '', '/');
       }
-      const twoDaysMs = 2 * 24 * 60 * 60 * 1000;
-      if (Date.now() - Number(trialStart) > twoDaysMs) {
-        if (typeof window !== 'undefined') {
-          window.history.pushState({}, '', '/unlock');
-        }
-        setCurrentTab('unlock');
-        return;
-      }
-    }
-
-    // 30-Day Auto-lock check for active subscribers
-    const access = checkAccess(user);
-    if (!access.allow && !isUnlocked) {
-      if (typeof window !== 'undefined') {
-        window.history.pushState({}, '', '/unlock');
-      }
-      setCurrentTab('unlock');
       return;
     }
 
-    if (currentTab === 'paywall' && access.allow) {
+    const active = isAuthenticated && isUserActive(user);
+    if ((currentTab === 'paywall' || currentTab === 'login' || currentTab === 'signup') && active) {
       setCurrentTab('home');
     }
-  }, [currentTab, user, isLoading, setCurrentTab]);
+  }, [currentTab, user, isAuthenticated, isLoading, setCurrentTab]);
 
   // If initial auth session is being checked, show dark gold splash
   if (isLoading) {
@@ -159,88 +122,67 @@ const MainLayout: React.FC = () => {
     );
   }
 
-  // 1. Route /: Render <PublicLandingView /> NOT login
+  // 1. Route /: Render <PublicLandingView />
   if (currentTab === 'landing') {
     return <PublicLandingView />;
   }
 
-  // 1b. Route /papers: Past Papers & Memos (First 2 questions free, rest blurred + SnapScan unlock)
+  // 1b. Route /papers: Past Papers & Memos preview + 2-Day Free Trial CTA
   if (currentTab === 'papers') {
     return <PastPapersView />;
   }
 
-  // 1c. Route /admin/payments: Admin Payments Management (Password protected)
+  // 1c. Route /admin/payments & /admin/codes
   if (currentTab === 'adminPayments') {
-    return <AdminCodesView />;
+    return <AdminPaymentsView />;
   }
 
-  // 1d. Route /admin/codes: Admin Unlock Codes Registry (Password protected)
   if (currentTab === 'adminCodes') {
     return <AdminCodesView />;
   }
 
-  // 1e. Route /unlock: Enter One-Time Unlock Code
+  // 1e. Route /unlock
   if (currentTab === 'unlock') {
     return <UnlockCodeView />;
   }
 
-  // 2. Route /login: Render login screen (or skip to dashboard ONLY IF fully paid & unlocked)
+  // 2. Route /login: Auth screen (if already logged in & active, effect redirects to home)
   if (currentTab === 'login') {
-    if (
-      typeof window !== 'undefined' &&
-      localStorage.getItem('nexovian_logged_in') === 'true' &&
-      localStorage.getItem('nexovian_unlocked') === 'true' &&
-      localStorage.getItem('nexovian_paid') === 'true'
-    ) {
-      setCurrentTab('home');
+    if (isAuthenticated && isUserActive(user)) {
       return null;
     }
     return <CreateAccountScreen initialMode="login" />;
   }
 
-  // 3. Route /signup: Render signup screen (or skip to dashboard ONLY IF fully paid & unlocked)
+  // 3. Route /signup: Signup screen (if already logged in & active, effect redirects to home)
   if (currentTab === 'signup') {
-    if (
-      typeof window !== 'undefined' &&
-      localStorage.getItem('nexovian_logged_in') === 'true' &&
-      localStorage.getItem('nexovian_unlocked') === 'true' &&
-      localStorage.getItem('nexovian_paid') === 'true'
-    ) {
-      setCurrentTab('home');
+    if (isAuthenticated && isUserActive(user)) {
       return null;
     }
     return <CreateAccountScreen initialMode="signup" />;
   }
 
-  // 4. Route /paywall: Render Paywall screen (R60/month, SnapScan, reasons)
+  // 4. Route /paywall: 2-Day Free Trial screen (if already logged in & active, effect redirects to home)
   if (currentTab === 'paywall') {
-    if (
-      typeof window !== 'undefined' &&
-      localStorage.getItem('nexovian_unlocked') === 'true' &&
-      localStorage.getItem('nexovian_paid') === 'true'
-    ) {
-      setCurrentTab('home');
+    if (isAuthenticated && isUserActive(user)) {
       return null;
     }
     return <PaywallView />;
   }
 
-  // 5. Route /trial: Render 2-Day Free Trial SnapScan unlock page
+  // 5. Route /trial: 2-Day Free Trial landing page
   if (currentTab === 'trial') {
     return <TrialLandingView />;
   }
 
-  // 6. Auth-protected personal pages: require login if trying to access private account profile
+  // 6. Auth-protected personal pages
   if (!isAuthenticated && (currentTab === 'profile' || currentTab === 'myStruggles')) {
     return <CreateAccountScreen initialMode="login" />;
   }
 
-  // Admin route guard: /admin /adminBank only accessible if admin, else redirect to home
+  // Admin route guard: /admin /adminBank only accessible if admin (effect redirects to home)
   if (currentTab === 'adminBank' && !isAdminUser(user)) {
-    setCurrentTab('home');
-    if (typeof window !== 'undefined' && window.location.pathname.startsWith('/admin')) {
-      window.history.replaceState({}, '', '/');
-    }
+    return null;
   }
 
   return (
@@ -654,16 +596,17 @@ const MainLayout: React.FC = () => {
         {currentTab === 'higherEd' && <HigherEdPathwayView />}
 
         {/* Existing Functional Views */}
-        {currentTab === 'tutor' && (isUserActive(user) ? <AITutorView /> : <SubscribeView protectedFeature="AI Tutor" />)}
-        {currentTab === 'scan' && (isUserActive(user) ? <ScanAndLearnView /> : <SubscribeView protectedFeature="Scan & Understand" />)}
+        {currentTab === 'tutor' && (isAuthenticated && isUserActive(user) ? <AITutorView /> : <SubscribeView protectedFeature="AI Tutor" />)}
+        {currentTab === 'scan' && (isAuthenticated && isUserActive(user) ? <ScanAndLearnView /> : <SubscribeView protectedFeature="Scan & Understand" />)}
         {currentTab === 'tracks' && <TrackCatalog />}
         {currentTab === 'practice' && <FlashcardPractice />}
         {currentTab === 'saved' && <SavedLearningArea />}
         {currentTab === 'profile' && <UserProfileView />}
         {currentTab === 'adaptive' && <AdaptiveDashboardView />}
         {currentTab === 'assessments' && <AssessmentHubView />}
-        {currentTab === 'academicVoice' && (isUserActive(user) ? <AcademicVoiceView /> : <SubscribeView protectedFeature="Voice Docs" />)}
+        {currentTab === 'academicVoice' && (isAuthenticated && isUserActive(user) ? <AcademicVoiceView /> : <SubscribeView protectedFeature="Voice Docs" />)}
         {currentTab === 'subscribe' && <SubscribeView />}
+        {currentTab === 'mySubscription' && <MySubscriptionView />}
         {currentTab === 'smartNotes' && <SmartNotesView />}
         {currentTab === 'myStruggles' && <LearnerStrugglesView />}
         {currentTab === 'adminBank' && <AdminQuestionBankView />}
@@ -675,10 +618,26 @@ const MainLayout: React.FC = () => {
         {currentTab === 'refundPolicy' && <RefundPolicyPage />}
         {currentTab === 'privacyPolicy' && <PrivacyPolicyPage />}
         {currentTab === 'contact' && <ContactPage />}
-        {currentTab === 'studyGuide' && <StudyGuideHubPage />}
-        {currentTab === 'studyGuidePhysics' && <PhysicsGrade12Page />}
-        {currentTab === 'studyGuideLifeSciences' && <LifeSciencesGrade12Page />}
-        {currentTab === 'studyGuideChapter' && <StudyGuideChapterPage />}
+        {currentTab === 'studyGuide' && (
+          <StudyGuideGuard>
+            <StudyGuideHubPage />
+          </StudyGuideGuard>
+        )}
+        {currentTab === 'studyGuidePhysics' && (
+          <StudyGuideGuard>
+            <PhysicsGrade12Page />
+          </StudyGuideGuard>
+        )}
+        {currentTab === 'studyGuideLifeSciences' && (
+          <StudyGuideGuard>
+            <LifeSciencesGrade12Page />
+          </StudyGuideGuard>
+        )}
+        {currentTab === 'studyGuideChapter' && (
+          <StudyGuideGuard>
+            <StudyGuideChapterPage />
+          </StudyGuideGuard>
+        )}
       </main>
 
       {/* Global Footer (shown on all tabs except immersive tutor chat and scan view) */}
