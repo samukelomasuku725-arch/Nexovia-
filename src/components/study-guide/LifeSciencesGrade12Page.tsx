@@ -1,174 +1,161 @@
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
- * 
- * NEXOVIAN STUDY GUIDE - LIFE SCIENCES GRADE 12 (/study-guide/life-sciences-grade-12)
- * SA CAPS Grade 12 Only
+ *
+ * GRADE 12 LIFE SCIENCES STUDY GUIDE CHAPTER LIST (/study-guide/life-sciences-grade-12)
  */
 
 import React from 'react';
-import { ArrowLeft, ChevronRight, Dna, BookOpen, Clock, FileText, CheckCircle2 } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Lock, Sparkles, CheckCircle2 } from 'lucide-react';
+import { useAuth } from '../../context/AuthContext';
 import { useLearning } from '../../context/LearningContext';
-
-export interface LifeSciencesChapter {
-  id: string;
-  slug: string;
-  chapterNumber: number;
-  title: string;
-  strand: string;
-  marksEst: string;
-  summary: string;
-}
-
-export const LIFE_SCIENCES_CHAPTERS: LifeSciencesChapter[] = [
-  {
-    id: 'ls-1',
-    slug: 'dna-protein-synthesis',
-    chapterNumber: 1,
-    title: 'DNA & Protein Synthesis',
-    strand: 'Life at the Molecular Level',
-    marksEst: '27-30 Marks (Paper 2)',
-    summary: 'Structure of DNA and RNA, DNA replication in the nucleus, transcription to mRNA, and translation at ribosomes into polypeptide chains.'
-  },
-  {
-    id: 'ls-2',
-    slug: 'meiosis-reproduction',
-    chapterNumber: 2,
-    title: 'Meiosis & Reproduction',
-    strand: 'Life Processes in Plants & Animals',
-    marksEst: '21-25 Marks (Paper 1 & 2)',
-    summary: 'Meiosis I and II, crossing over and random assortment generating genetic variation, non-disjunction (Down syndrome), and human reproductive systems.'
-  },
-  {
-    id: 'ls-3',
-    slug: 'genetics-inheritance',
-    chapterNumber: 3,
-    title: 'Genetics & Inheritance',
-    strand: 'Life at the Molecular Level',
-    marksEst: '45-48 Marks (Paper 2)',
-    summary: 'Monohybrid and dihybrid crosses, Mendel’s laws, sex-linked inheritance (haemophilia, colour blindness), blood group alleles, and pedigree diagrams.'
-  },
-  {
-    id: 'ls-4',
-    slug: 'evolution',
-    chapterNumber: 4,
-    title: 'Evolution',
-    strand: 'Diversity, Change & Continuity',
-    marksEst: '64-66 Marks (Paper 2)',
-    summary: 'Evidence for evolution (fossil records, biogeography, genetics), Lamarckism vs Darwinism, speciation through geographic isolation, and human evolution hominid fossil sites.'
-  },
-  {
-    id: 'ls-5',
-    slug: 'human-impact-environment',
-    chapterNumber: 5,
-    title: 'Human Impact on Environment',
-    strand: 'Environmental Studies',
-    marksEst: 'Paper 1 Section',
-    summary: 'Water availability and quality, food security, loss of biodiversity, solid waste management, and greenhouse effect global warming.'
-  }
-];
+import { LIFE_SCIENCES_CHAPTERS } from '../../data/studyGuideContent';
+import { isUserActive, startTwoDayFreeTrialCheckout } from '../../services/paystackService';
+import { useStudyGuideProgress } from '../../utils/studyGuideProgress';
 
 export const LifeSciencesGrade12Page: React.FC = () => {
   const { setCurrentTab } = useLearning();
+  const { user, isAuthenticated } = useAuth();
+  const hasAccess = isAuthenticated && isUserActive(user);
+  const { progress } = useStudyGuideProgress();
+  const completedInSubject = LIFE_SCIENCES_CHAPTERS.filter((ch) =>
+    progress.completedSlugs.includes(ch.slug)
+  ).length;
 
-  const handleNavigate = (path: string, tab: any) => {
+  const navigate = (
+    tab: 'studyGuide' | 'studyGuideChapter' | 'studyGuideExamTips' | 'login',
+    path: string
+  ) => {
     if (typeof window !== 'undefined') {
       window.history.pushState({}, '', path);
-      window.dispatchEvent(new PopStateEvent('popstate'));
-      window.scrollTo({ top: 0, behavior: 'instant' });
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     }
     setCurrentTab(tab);
   };
 
+  const handleStartTrial = () => {
+    startTwoDayFreeTrialCheckout({
+      user,
+      onRequireAuth: () => navigate('login', '/login')
+    });
+  };
+
   return (
-    <div className="min-h-screen bg-[#0A0A0A] text-white font-sans antialiased pb-20">
-      {/* Top Breadcrumb & Return Bar */}
-      <div className="bg-[#141414] border-b border-[#262626] px-4 py-3 sticky top-0 z-30 backdrop-blur-md">
-        <div className="max-w-5xl mx-auto flex items-center justify-between">
+    <div className="min-h-screen bg-gradient-to-b from-[#061128] via-[#0A1F44] to-[#050D1E] text-white py-8 sm:py-10 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-4xl mx-auto">
+        {/* Top Navigation */}
+        <div className="flex flex-wrap items-center justify-between gap-3 mb-7">
           <a
             href="/study-guide"
             onClick={(e) => {
               e.preventDefault();
-              handleNavigate('/study-guide', 'studyGuide');
+              navigate('studyGuide', '/study-guide');
             }}
-            className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-bold text-slate-300 hover:text-[#FFD400] transition-colors cursor-pointer py-1 px-2.5 rounded-lg hover:bg-white/5"
+            className="inline-flex items-center gap-2 min-h-[44px] px-3 py-2 rounded-xl bg-[#0D1E42] border border-[#1E3A6E] hover:border-[#FFD400] text-xs sm:text-sm font-bold text-slate-200 hover:text-[#FFD400] transition-colors cursor-pointer"
           >
-            <ArrowLeft className="w-4 h-4 text-[#FFD400]" />
-            <span>&larr; Back to Study Guides</span>
+            <ArrowLeft className="w-4 h-4 shrink-0" />
+            <span>Back to Study Guide Home</span>
           </a>
 
-          <div className="flex items-center gap-2">
-            <span className="text-[11px] font-mono font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-300 border border-emerald-500/40">
-              Grade 12 Life Sciences • CAPS
-            </span>
-          </div>
+          <a
+            href="/study-guide/matric-exam-tips"
+            onClick={(e) => {
+              e.preventDefault();
+              navigate('studyGuideExamTips', '/study-guide/matric-exam-tips');
+            }}
+            className="inline-flex items-center min-h-[44px] px-3.5 py-2 rounded-xl bg-[#0D1E42] border border-[#FFD400]/40 hover:border-[#FFD400] text-xs sm:text-sm font-bold text-[#FFD400] transition-colors cursor-pointer"
+          >
+            Matric Exam Tips
+          </a>
         </div>
-      </div>
 
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 pt-8 sm:pt-12">
         {/* Header */}
-        <div className="mb-8 sm:mb-10">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#1A1A1A] border border-emerald-500/40 mb-3 text-xs font-mono text-emerald-400">
-            <Dna className="w-3.5 h-3.5 text-emerald-400" />
-            <span>SA CAPS Grade 12 Syllabus</span>
-          </div>
-
-          <h1 className="font-display font-black text-2xl sm:text-4xl text-white tracking-tight flex flex-wrap items-center gap-3">
-            <span>🧬 Life Sciences Grade 12</span>
-            <span className="text-xs sm:text-sm font-mono font-bold px-3 py-1 bg-[#007A4D] text-white rounded-xl">
-              5 Core Strands
+        <div className="bg-[#0D1E42] border border-[#FFD400]/40 rounded-3xl p-6 sm:p-8 mb-8 shadow-xl">
+          <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
+            <span className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-[#FFD400]/15 border border-[#FFD400]/50 text-[#FFD400] text-xs font-bold uppercase tracking-wider">
+              <span>🧬 Grade 12 Life Sciences</span>
             </span>
+            <span className="text-xs font-semibold text-slate-300">
+              {completedInSubject}/{LIFE_SCIENCES_CHAPTERS.length} Completed
+            </span>
+          </div>
+          <h1 className="font-display font-black text-3xl sm:text-4xl text-white mb-2">
+            Life Sciences Chapters
           </h1>
-
-          <p className="mt-2 text-slate-300 text-xs sm:text-sm max-w-2xl leading-relaxed">
-            Select a chapter below for high-yield CAPS revision notes, biological process diagrams, genetics cross templates, and Matric final exam questions.
+          <p className="text-sm text-slate-300">
+            Select a chapter below for simple summary notes, key diagrams, worked example, and 5 practice questions with answers.
           </p>
+
+          {!hasAccess && (
+            <div className="mt-5 p-4 rounded-2xl bg-[#071530] border border-[#FFD400]/50 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div className="flex items-center gap-2.5 text-sm text-slate-200">
+                <Lock className="w-4 h-4 text-[#FFD400] shrink-0" />
+                <span>Start 2-Day Free Trial to unlock all Life Sciences chapters.</span>
+              </div>
+              <button
+                type="button"
+                onClick={handleStartTrial}
+                className="w-full sm:w-auto min-h-[48px] inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-[#FFD400] hover:bg-yellow-400 text-black font-black text-sm whitespace-nowrap cursor-pointer shadow-md"
+              >
+                <Sparkles className="w-4 h-4 shrink-0" />
+                <span>Start 2-Day Free Trial to unlock</span>
+              </button>
+            </div>
+          )}
         </div>
 
-        {/* Chapters List */}
-        <div className="space-y-3 sm:space-y-4">
-          {LIFE_SCIENCES_CHAPTERS.map((ch) => {
-            const chapterUrl = `/study-guide/life-sciences-grade-12/${ch.slug}`;
-
+        {/* Chapters List (1 to 4) */}
+        <div className="space-y-4">
+          {LIFE_SCIENCES_CHAPTERS.map((chapter) => {
+            const path = `/study-guide/life-sciences-grade-12/${chapter.slug}`;
+            const isCompleted = progress.completedSlugs.includes(chapter.slug);
             return (
-              <div
-                key={ch.id}
-                onClick={() => handleNavigate(chapterUrl, 'studyGuideChapter')}
-                className="group bg-[#141414] hover:bg-[#1A1A1A] border-2 border-[#262626] hover:border-[#FFD400]/50 rounded-2xl p-4 sm:p-5 transition-all duration-200 cursor-pointer flex flex-col sm:flex-row sm:items-center justify-between gap-4"
+              <a
+                key={chapter.slug}
+                href={path}
+                onClick={(e) => {
+                  e.preventDefault();
+                  navigate('studyGuideChapter', path);
+                }}
+                className="group block bg-[#0D1E42] hover:bg-[#122859] border border-[#1E3A6E] hover:border-[#FFD400] rounded-2xl p-5 sm:p-6 transition-all duration-200 shadow-md cursor-pointer"
               >
-                <div className="flex items-start gap-4">
-                  <div className="w-10 h-10 rounded-xl bg-[#007A4D] text-white font-black flex items-center justify-center text-sm shrink-0 shadow-sm group-hover:scale-105 transition-transform">
-                    {ch.chapterNumber}
-                  </div>
-
-                  <div>
-                    <div className="flex flex-wrap items-center gap-2 mb-1">
-                      <h2 className="font-display font-bold text-base sm:text-lg text-white group-hover:text-[#FFD400] transition-colors">
-                        Chapter {ch.chapterNumber}: {ch.title}
-                      </h2>
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                  <div className="space-y-1.5 min-w-0">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="px-2.5 py-0.5 rounded-md bg-[#FFD400]/15 text-[#FFD400] font-mono text-xs font-bold border border-[#FFD400]/30">
+                        Chapter {chapter.chapterNumber}
+                      </span>
+                      {isCompleted ? (
+                        <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-300">
+                          <CheckCircle2 className="w-3.5 h-3.5" />
+                          <span>Completed</span>
+                        </span>
+                      ) : hasAccess ? (
+                        <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-300">
+                          <CheckCircle2 className="w-3.5 h-3.5" />
+                          <span>Unlocked</span>
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-amber-300">
+                          <Lock className="w-3 h-3" />
+                          <span>Start 2-Day Free Trial to unlock</span>
+                        </span>
+                      )}
                     </div>
-
-                    <p className="text-xs text-slate-400 line-clamp-2 max-w-2xl leading-relaxed">
-                      {ch.summary}
+                    <h2 className="font-display font-bold text-lg sm:text-xl text-white group-hover:text-[#FFD400] transition-colors break-words">
+                      Chapter {chapter.chapterNumber}: {chapter.title}
+                    </h2>
+                    <p className="text-xs sm:text-sm text-slate-300 break-words">
+                      {chapter.shortDescription}
                     </p>
+                  </div>
 
-                    <div className="flex flex-wrap items-center gap-3 mt-2 text-[11px] font-mono text-slate-400">
-                      <span className="text-emerald-400">{ch.strand}</span>
-                      <span>&bull;</span>
-                      <span>{ch.marksEst}</span>
-                    </div>
+                  <div className="w-full sm:w-auto min-h-[48px] inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-[#FFD400] group-hover:bg-yellow-400 text-black font-black text-sm whitespace-nowrap shrink-0 shadow-sm">
+                    <span>{hasAccess ? 'Open Chapter' : 'Unlock Chapter'}</span>
+                    <ArrowRight className="w-4 h-4 shrink-0" />
                   </div>
                 </div>
-
-                <div className="shrink-0 flex items-center gap-2 self-end sm:self-center">
-                  <span className="text-xs font-bold text-[#FFD400] group-hover:underline">
-                    Study Chapter
-                  </span>
-                  <div className="w-7 h-7 rounded-full bg-[#262626] group-hover:bg-[#FFD400] text-slate-300 group-hover:text-black flex items-center justify-center transition-colors">
-                    <ChevronRight className="w-4 h-4" />
-                  </div>
-                </div>
-              </div>
+              </a>
             );
           })}
         </div>

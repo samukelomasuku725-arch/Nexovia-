@@ -4,12 +4,12 @@
  *
  * NEXOVIAN STUDY GUIDE ACCESS GUARD
  * Only logged-in users with an Active 2-Day Free Trial or Active Monthly Subscription
- * can view the Study Guide (/study-guide and all chapter pages).
- * Logged-out or inactive users see ONLY the "Start 2-Day Free Trial - Then R60/month" CTA.
+ * can open Study Guide chapters.
+ * Non-subscribed users see "Start 2-Day Free Trial to unlock".
  */
 
 import React, { useEffect, useState } from 'react';
-import { Lock, Sparkles, ArrowRight, Loader2, AlertCircle } from 'lucide-react';
+import { Lock, Sparkles, ArrowRight, Loader2, AlertCircle, ArrowLeft } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useLearning } from '../../context/LearningContext';
 import {
@@ -74,8 +74,8 @@ export const StudyGuideGuard: React.FC<StudyGuideGuardProps> = ({ children }) =>
 
   if (isLoading || checking) {
     return (
-      <div className="min-h-[80vh] bg-[#0a0a0a] text-white flex items-center justify-center p-4">
-        <div className="flex flex-col items-center gap-3 text-slate-300 text-sm">
+      <div className="min-h-[80vh] bg-[#061128] text-white flex items-center justify-center p-4">
+        <div className="flex flex-col items-center gap-3 text-slate-200 text-sm">
           <Loader2 className="w-7 h-7 animate-spin text-[#FFD400]" />
           <span>Checking Study Guide access...</span>
         </div>
@@ -106,23 +106,26 @@ export const StudyGuideGuard: React.FC<StudyGuideGuardProps> = ({ children }) =>
   };
 
   return (
-    <div className="min-h-[85vh] bg-[#0a0a0a] text-white flex items-center justify-center px-4 py-12">
-      <div className="max-w-lg w-full bg-[#111111] border-2 border-[#FFD400]/50 rounded-3xl p-8 sm:p-10 text-center shadow-2xl space-y-6">
-        <div className="w-16 h-16 rounded-2xl bg-[#FFD400]/15 border border-[#FFD400]/40 text-[#FFD400] flex items-center justify-center mx-auto">
+    <div className="min-h-[85vh] bg-gradient-to-b from-[#061128] via-[#0A1F44] to-[#050D1E] text-white flex items-center justify-center px-4 py-12">
+      <div className="max-w-lg w-full bg-[#0A1F44]/90 border-2 border-[#FFD400]/60 rounded-3xl p-8 sm:p-10 text-center shadow-[0_0_40px_rgba(255,212,0,0.12)] space-y-6">
+        <div className="w-16 h-16 rounded-2xl bg-[#FFD400]/15 border border-[#FFD400]/50 text-[#FFD400] flex items-center justify-center mx-auto">
           <Lock className="w-8 h-8" />
         </div>
 
         <div className="space-y-2">
           <h1 className="font-display font-black text-2xl sm:text-3xl text-white">
-            Nexovian Study Guide
+            Start 2-Day Free Trial to unlock
           </h1>
-          <p className="text-sm text-slate-300 leading-relaxed">
-            Create an account and activate your 2-day free trial to unlock all CAPS Grade 12 Physics and Life Sciences Study Guides. Cancel before 2 days for R0.
+          <p className="text-sm text-slate-200 leading-relaxed">
+            Unlock all Grade 12 CAPS, 36 TVET N1–N6, and 12 Degree Study Guide chapters, formulas, worked examples, and practice questions inside Nexovian.
+          </p>
+          <p className="text-xs text-[#FFD400] font-semibold">
+            2 days free • Then R60/month • Cancel before 2 days for R0
           </p>
         </div>
 
         {errorMsg && (
-          <div className="p-3.5 rounded-xl bg-rose-950/60 border border-rose-500/40 text-rose-200 text-xs flex items-center gap-2 text-left">
+          <div className="p-3.5 rounded-xl bg-rose-950/70 border border-rose-500/40 text-rose-200 text-xs flex items-center gap-2 text-left">
             <AlertCircle className="w-4 h-4 text-rose-400 shrink-0" />
             <span>{errorMsg}</span>
           </div>
@@ -132,20 +135,17 @@ export const StudyGuideGuard: React.FC<StudyGuideGuardProps> = ({ children }) =>
           type="button"
           onClick={handleStartTrial}
           disabled={startingCheckout}
-          className="w-full py-4 px-6 rounded-2xl bg-[#FFD400] hover:bg-yellow-400 text-black font-black text-base shadow-[0_0_25px_rgba(255,212,0,0.35)] transition-all transform hover:-translate-y-0.5 active:scale-95 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60"
+          className="w-full min-h-[52px] py-4 px-6 rounded-2xl bg-[#FFD400] hover:bg-yellow-400 text-black font-black text-base shadow-[0_0_25px_rgba(255,212,0,0.35)] transition-all transform hover:-translate-y-0.5 active:scale-95 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60"
         >
           <Sparkles className="w-5 h-5 text-black shrink-0" />
           <span>
-            {startingCheckout
-              ? 'Connecting to Paystack...'
-              : 'Start 2-Day Free Trial - Then R60/month'}
+            {startingCheckout ? 'Connecting to Paystack...' : 'Start 2-Day Free Trial to unlock'}
           </span>
           <ArrowRight className="w-4 h-4 text-black shrink-0" />
         </button>
 
-        {!isAuthenticated && (
-          <p className="text-xs text-slate-400">
-            Already have an account?{' '}
+        <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-1 text-xs">
+          {!isAuthenticated && (
             <button
               type="button"
               onClick={() => {
@@ -154,10 +154,22 @@ export const StudyGuideGuard: React.FC<StudyGuideGuardProps> = ({ children }) =>
               }}
               className="text-[#FFD400] font-bold hover:underline cursor-pointer"
             >
-              Log in here
+              Already have an account? Log in
             </button>
-          </p>
-        )}
+          )}
+          <a
+            href="/study-guide"
+            onClick={(e) => {
+              e.preventDefault();
+              setCurrentTab('studyGuide');
+              if (typeof window !== 'undefined') window.history.pushState({}, '', '/study-guide');
+            }}
+            className="inline-flex items-center gap-1.5 text-slate-300 hover:text-white transition-colors"
+          >
+            <ArrowLeft className="w-3.5 h-3.5" />
+            <span>Back to Grade 12 Study Guide</span>
+          </a>
+        </div>
       </div>
     </div>
   );

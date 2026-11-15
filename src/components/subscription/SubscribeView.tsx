@@ -63,14 +63,14 @@ export const SubscribeView: React.FC<SubscribeViewProps> = ({ protectedFeature }
   };
 
   return (
-    <div className="min-h-[85vh] flex items-center justify-center px-4 py-10 bg-[#0a0a0a] text-white">
-      <div className="w-full max-w-2xl bg-[#0F172A] border border-gray-700/80 rounded-[28px] p-6 sm:p-10 shadow-2xl relative overflow-hidden space-y-6">
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-3/4 h-24 bg-amber-500/10 blur-3xl rounded-full pointer-events-none" />
+    <div className="min-h-[85vh] flex items-center justify-center px-4 py-10 bg-gradient-to-b from-[#061128] via-[#0A1F44] to-[#050D1E] text-white overflow-x-hidden">
+      <div className="w-full max-w-2xl bg-[#0D1E42] border-2 border-[#FFD400]/50 rounded-[28px] p-5 sm:p-10 shadow-2xl relative overflow-hidden space-y-6">
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-3/4 h-24 bg-[#FFD400]/10 blur-3xl rounded-full pointer-events-none" />
 
         {/* Badge & Status Header */}
         <div className="flex flex-col sm:flex-row items-center justify-between gap-3 text-center sm:text-left">
-          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider bg-amber-400/15 text-[#fbbf24] border border-amber-400/30 font-mono">
-            <Lock className="w-3.5 h-3.5 text-[#fbbf24]" />
+          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider bg-[#FFD400]/15 text-[#FFD400] border border-[#FFD400]/40 font-mono">
+            <Lock className="w-3.5 h-3.5 text-[#FFD400]" />
             <span>2-Day Free Trial Required</span>
           </div>
 
@@ -78,7 +78,7 @@ export const SubscribeView: React.FC<SubscribeViewProps> = ({ protectedFeature }
             <button
               type="button"
               onClick={() => setCurrentTab('mySubscription')}
-              className="text-xs text-amber-300 hover:underline font-semibold cursor-pointer"
+              className="text-xs text-[#FFD400] hover:underline font-semibold cursor-pointer"
             >
               Manage My Subscription &rarr;
             </button>
@@ -87,8 +87,8 @@ export const SubscribeView: React.FC<SubscribeViewProps> = ({ protectedFeature }
 
         {/* Feature Notice */}
         {protectedFeature && (
-          <div className="p-3.5 rounded-xl bg-amber-500/10 border border-amber-400/30 text-amber-200 text-xs sm:text-sm font-medium flex items-center gap-2.5">
-            <Sparkles className="w-4 h-4 text-amber-400 shrink-0" />
+          <div className="p-3.5 rounded-xl bg-[#061128] border border-[#FFD400]/40 text-amber-100 text-xs sm:text-sm font-medium flex items-center gap-2.5">
+            <Sparkles className="w-4 h-4 text-[#FFD400] shrink-0" />
             <span>
               To access <strong className="text-white font-bold">{protectedFeature}</strong>, activate your 2-day free trial (then R60/month). Cancel anytime before 2 days for R0.
             </span>
@@ -100,21 +100,21 @@ export const SubscribeView: React.FC<SubscribeViewProps> = ({ protectedFeature }
           <h1 className="text-2xl sm:text-3xl font-black text-white font-display tracking-tight leading-tight">
             Unlock Full Access with {SUBSCRIPTION_PLAN_NAME}
           </h1>
-          <p className="text-sm text-slate-300 leading-relaxed">
-            Full access to South Africa&apos;s leading AI educational platform calibrated for CAPS Grade 4 to 12, Study Guides, TVET Colleges, and University courses in all 11 official languages.
+          <p className="text-sm text-slate-200 leading-relaxed">
+            Full access to South Africa&apos;s leading AI educational platform calibrated for CAPS Grade 4 to 12, Study Guides, all 36 TVET N1–N6 subjects, and University courses in all 12 official languages.
           </p>
         </div>
 
         {/* Plan Pricing Card */}
-        <div className="p-5 sm:p-6 rounded-2xl bg-[#0a0a0a] border-2 border-amber-400/40 shadow-inner flex flex-col sm:flex-row items-center justify-between gap-4">
+        <div className="p-5 sm:p-6 rounded-2xl bg-[#061128] border-2 border-[#FFD400]/50 shadow-inner flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="space-y-1 text-center sm:text-left">
             <span className="text-[11px] font-mono text-emerald-400 font-bold uppercase tracking-widest block">
               2-Day Free Trial Included
             </span>
             <div className="text-3xl sm:text-4xl font-black text-white font-display">
-              R60 <span className="text-base sm:text-lg font-medium text-slate-400">/ month after trial</span>
+              R60 <span className="text-base sm:text-lg font-medium text-slate-300">/ month after trial</span>
             </div>
-            <p className="text-xs text-slate-400">
+            <p className="text-xs text-slate-300">
               First R60 payment scheduled in 2 days &bull; Cancel before 2 days for R0
             </p>
           </div>
@@ -124,36 +124,36 @@ export const SubscribeView: React.FC<SubscribeViewProps> = ({ protectedFeature }
               <Zap className="w-3.5 h-3.5" />
               <span>Instant Full Access</span>
             </span>
-            <span className="text-[11px] text-slate-500 font-mono">
+            <span className="text-[11px] text-slate-400 font-mono">
               Currency: ZAR (Paystack)
             </span>
           </div>
         </div>
 
         {/* Feature Check List */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 py-3 border-y border-gray-800 text-xs sm:text-sm text-slate-200">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 py-3 border-y border-[#1E3A6E] text-xs sm:text-sm text-slate-100">
           <div className="flex items-center gap-2.5">
-            <CheckCircle2 className="w-4 h-4 text-amber-400 shrink-0" />
-            <span>Full CAPS Grade 12 Study Guides</span>
+            <CheckCircle2 className="w-4 h-4 text-[#FFD400] shrink-0" />
+            <span>Grade 12, 36 TVET &amp; 12 Degree Guides</span>
           </div>
           <div className="flex items-center gap-2.5">
-            <CheckCircle2 className="w-4 h-4 text-amber-400 shrink-0" />
-            <span>Socratic AI Tutor in all 11 SA Languages</span>
+            <CheckCircle2 className="w-4 h-4 text-[#FFD400] shrink-0" />
+            <span>Socratic AI Tutor in all 12 SA Languages</span>
           </div>
           <div className="flex items-center gap-2.5">
-            <CheckCircle2 className="w-4 h-4 text-amber-400 shrink-0" />
+            <CheckCircle2 className="w-4 h-4 text-[#FFD400] shrink-0" />
             <span>Scan &amp; Understand homework &amp; memos</span>
           </div>
           <div className="flex items-center gap-2.5">
-            <CheckCircle2 className="w-4 h-4 text-amber-400 shrink-0" />
+            <CheckCircle2 className="w-4 h-4 text-[#FFD400] shrink-0" />
             <span>Voice-to-Document academic notes</span>
           </div>
           <div className="flex items-center gap-2.5">
-            <CheckCircle2 className="w-4 h-4 text-amber-400 shrink-0" />
+            <CheckCircle2 className="w-4 h-4 text-[#FFD400] shrink-0" />
             <span>Official CAPS &amp; NSC Exam Memos</span>
           </div>
           <div className="flex items-center gap-2.5">
-            <CheckCircle2 className="w-4 h-4 text-amber-400 shrink-0" />
+            <CheckCircle2 className="w-4 h-4 text-[#FFD400] shrink-0" />
             <span>One-click cancellation in My Subscription</span>
           </div>
         </div>
@@ -171,15 +171,15 @@ export const SubscribeView: React.FC<SubscribeViewProps> = ({ protectedFeature }
             type="button"
             onClick={handleStartTrial}
             disabled={isRedirecting}
-            className="w-full h-[56px] rounded-2xl bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-base flex items-center justify-center gap-2 shadow-lg shadow-amber-400/20 transition-all active:scale-98 cursor-pointer disabled:opacity-60"
+            className="w-full min-h-[56px] px-4 rounded-2xl bg-[#FFD400] hover:bg-yellow-400 text-black font-black text-sm sm:text-base flex items-center justify-center gap-2 shadow-lg shadow-[#FFD400]/20 transition-all active:scale-95 cursor-pointer disabled:opacity-60"
           >
-            <CreditCard className="w-5 h-5" />
+            <CreditCard className="w-5 h-5 shrink-0" />
             <span>
               {isRedirecting
                 ? 'Connecting Paystack...'
                 : 'Start 2-Day Free Trial - Then R60/month'}
             </span>
-            <ArrowRight className="w-4 h-4" />
+            <ArrowRight className="w-4 h-4 shrink-0" />
           </button>
 
           {!isAuthenticated && (
@@ -190,9 +190,9 @@ export const SubscribeView: React.FC<SubscribeViewProps> = ({ protectedFeature }
         </div>
 
         {/* Footer Support Info */}
-        <div className="pt-2 border-t border-gray-800 flex flex-col sm:flex-row items-center justify-between gap-2 text-[11px] text-gray-400">
+        <div className="pt-2 border-t border-[#1E3A6E] flex flex-col sm:flex-row items-center justify-between gap-2 text-[11px] text-slate-300">
           <div className="flex items-center gap-1.5">
-            <Globe className="w-3.5 h-3.5 text-amber-400" />
+            <Globe className="w-3.5 h-3.5 text-[#FFD400]" />
             <span>NEXOVIAN (PTY) LTD &bull; Mpumalanga, South Africa</span>
           </div>
 

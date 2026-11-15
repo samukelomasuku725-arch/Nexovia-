@@ -24,9 +24,15 @@ import {
   GraduationCap,
   Search,
   CreditCard,
-  AlertCircle
+  AlertCircle,
+  Lock
 } from 'lucide-react';
 import { FULL_PAPERS } from '../papers/PastPapersView';
+import {
+  ALL_STUDY_GUIDE_CHAPTERS,
+  DEGREE_CHAPTERS,
+  TVET_CHAPTERS
+} from '../../data/studyGuideContent';
 import { useLearning } from '../../context/LearningContext';
 import { useAuth } from '../../context/AuthContext';
 import { SALanguageCode } from '../../types';
@@ -153,7 +159,40 @@ export const PublicLandingView: React.FC = () => {
   const [globalSearchQuery, setGlobalSearchQuery] = useState('');
   const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);
 
-  // Global Search filter across FULL_PAPERS, module codes, subjects, and grades
+  // Home Screen Subject Filter: [All] [TVET N1-N6] [Degree]
+  const [homeSubjectFilter, setHomeSubjectFilter] = useState<'all' | 'tvet' | 'degree'>('all');
+  const [showAllHomeSubjects, setShowAllHomeSubjects] = useState(false);
+
+  const filteredHomeChapters = useMemo(() => {
+    if (homeSubjectFilter === 'tvet') return TVET_CHAPTERS;
+    if (homeSubjectFilter === 'degree') return DEGREE_CHAPTERS;
+    return ALL_STUDY_GUIDE_CHAPTERS;
+  }, [homeSubjectFilter]);
+
+  const visibleHomeChapters = useMemo(() => {
+    if (homeSubjectFilter === 'degree' || showAllHomeSubjects) {
+      return filteredHomeChapters;
+    }
+    return filteredHomeChapters.slice(0, 12);
+  }, [filteredHomeChapters, homeSubjectFilter, showAllHomeSubjects]);
+
+  // Global Search filter across Study Guide / TVET chapters AND FULL_PAPERS
+  const globalStudyGuideResults = useMemo(() => {
+    const q = globalSearchQuery.trim().toLowerCase();
+    if (!q) return [];
+    return ALL_STUDY_GUIDE_CHAPTERS.filter((ch) => {
+      return (
+        ch.title.toLowerCase().includes(q) ||
+        ch.subjectLabel.toLowerCase().includes(q) ||
+        ch.shortDescription.toLowerCase().includes(q) ||
+        ch.summary.some((s) => s.toLowerCase().includes(q)) ||
+        ch.formulas.some(
+          (f) => f.expression.toLowerCase().includes(q) || f.meaning.toLowerCase().includes(q)
+        )
+      );
+    }).slice(0, 12);
+  }, [globalSearchQuery]);
+
   const globalSearchResults = useMemo(() => {
     const q = globalSearchQuery.trim().toLowerCase();
     if (!q) return [];
@@ -168,7 +207,7 @@ export const PublicLandingView: React.FC = () => {
           question.officialMemoEn.toLowerCase().includes(q)
       );
       return matchTitle || matchSubject || matchGrade || matchSession || matchQuestions;
-    }).slice(0, 30);
+    }).slice(0, 20);
   }, [globalSearchQuery]);
 
   const handleOpenGlobalSearch = (presetQuery?: string) => {
@@ -233,53 +272,76 @@ export const PublicLandingView: React.FC = () => {
   const selectedGradeObj = ALL_GRADES.find((g) => g.id === selectedGradeId) || ALL_GRADES[6];
 
   return (
-    <div className="min-h-screen bg-[#000000] text-white font-sans antialiased selection:bg-[#FFB612] selection:text-black">
-      
-      {/* 1. HEADER (DEEP NAVY ACCENTS) */}
-      <header className="sticky top-0 z-50 bg-[#000000]/95 backdrop-blur-md border-b border-white/10">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 h-20 flex items-center justify-between">
-          
+    <div className="min-h-screen bg-gradient-to-b from-[#061128] via-[#0A1F44] to-[#050D1E] text-white font-sans antialiased selection:bg-[#FFD400] selection:text-black overflow-x-hidden">
+      {/* TOP ANNOUNCEMENT BANNER */}
+      <div className="bg-gradient-to-r from-[#0A1F44] via-[#102B60] to-[#0A1F44] border-b border-[#FFD400]/50 px-3 sm:px-6 py-2.5">
+        <div className="max-w-7xl mx-auto flex flex-wrap items-center justify-center gap-2 sm:gap-3 text-center">
+          <span className="text-[11px] sm:text-xs font-extrabold tracking-wide text-[#FFD400] uppercase">
+            TVET N1-N6 + DEGREE FULLY LOADED - 48+ Subjects - Start Studying Now
+          </span>
+          <a
+            href="/study-guide"
+            onClick={(e) => {
+              e.preventDefault();
+              setCurrentTab('studyGuide');
+              if (typeof window !== 'undefined') {
+                window.history.pushState({}, '', '/study-guide');
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+              }
+            }}
+            className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-[#FFD400] hover:bg-yellow-400 text-black font-black text-[11px] shadow-md transition-all hover:scale-105 active:scale-95 cursor-pointer whitespace-nowrap"
+          >
+            <span>Start Studying Now</span>
+            <ArrowRight className="w-3 h-3" />
+          </a>
+        </div>
+      </div>
+
+      {/* 1. HEADER (DEEP NAVY + GOLD ACCENTS) */}
+      <header className="sticky top-0 z-50 bg-[#061128]/95 backdrop-blur-md border-b border-[#1E3A6E]">
+        <div className="max-w-7xl mx-auto px-3 sm:px-6 h-16 sm:h-20 flex items-center justify-between gap-2">
           {/* Logo NEXOVIAN Left */}
           <div
-            className="flex items-center gap-3 cursor-pointer"
+            className="flex items-center gap-2 sm:gap-3 cursor-pointer shrink-0"
             onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
           >
-            <div className="w-10 h-10 rounded-full bg-[#FFB612] text-black flex items-center justify-center font-black text-xl shadow-lg">
+            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-[#FFD400] text-black flex items-center justify-center font-black text-lg sm:text-xl shadow-lg">
               N
             </div>
             <div className="flex flex-col">
-              <span className="font-display font-black text-2xl tracking-widest text-[#FFB612]">
+              <span className="font-display font-black text-lg sm:text-2xl tracking-wider sm:tracking-widest text-[#FFD400]">
                 NEXOVIAN
               </span>
-              <span className="text-[10px] text-white/60 tracking-widest uppercase -mt-1 font-mono">
+              <span className="hidden sm:block text-[10px] text-slate-300 tracking-widest uppercase -mt-1 font-mono">
                 The Learning Brain
               </span>
             </div>
           </div>
 
           {/* Nav Links & Action Buttons */}
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-1.5 sm:gap-3 shrink-0">
             {/* Global Search Input in Header */}
             <div className="hidden lg:flex items-center relative">
-              <Search className="w-4 h-4 text-[#FFB612] absolute left-3 pointer-events-none" />
+              <Search className="w-4 h-4 text-[#FFD400] absolute left-3 pointer-events-none" />
               <input
                 type="text"
-                placeholder="🔍 Search: INF1505, N4 Management, Grade 6 Social Sciences..."
+                placeholder="Search: N4 Electrotechnics, INF1505, Grade 12..."
                 value={globalSearchQuery}
                 onChange={(e) => {
                   setGlobalSearchQuery(e.target.value);
                   setIsSearchModalOpen(true);
                 }}
                 onFocus={() => setIsSearchModalOpen(true)}
-                className="w-72 pl-9 pr-3 py-1.5 rounded-full bg-[#1a1a1a] border border-[#d4af37] text-white text-xs placeholder:text-white/40 focus:outline-none focus:ring-1 focus:ring-[#FFB612]"
+                className="w-72 pl-9 pr-3 py-1.5 rounded-full bg-[#0D1E42] border border-[#FFD400]/60 text-white text-xs placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-[#FFD400]"
               />
             </div>
 
             {/* Mobile Search Button */}
             <button
               onClick={() => setIsSearchModalOpen(true)}
-              className="lg:hidden p-2 rounded-full bg-[#1a1a1a] border border-[#d4af37] text-[#FFB612] hover:bg-white/10"
+              className="lg:hidden p-2 rounded-full bg-[#0D1E42] border border-[#FFD400]/60 text-[#FFD400] hover:bg-[#142D61] cursor-pointer"
               title="Search"
+              aria-label="Search curriculum and past papers"
             >
               <Search className="w-4 h-4" />
             </button>
@@ -287,16 +349,16 @@ export const PublicLandingView: React.FC = () => {
             {/* Past Papers & Memos Navbar Link */}
             <button
               onClick={() => navigateToPastPapers()}
-              className="hidden sm:flex items-center gap-1.5 px-3.5 py-2 rounded-full border border-white/20 text-xs font-bold text-white hover:border-[#FFB612] hover:text-[#FFB612] transition-colors cursor-pointer"
+              className="hidden sm:flex items-center gap-1.5 px-3.5 py-2 rounded-full border border-[#1E3A6E] bg-[#0D1E42]/60 text-xs font-bold text-white hover:border-[#FFD400] hover:text-[#FFD400] transition-colors cursor-pointer"
             >
               <span>📚 Past Papers &amp; Memos</span>
             </button>
 
             <button
               onClick={() => setCurrentTab('calculator')}
-              className="hidden md:flex items-center gap-1.5 px-3.5 py-2 rounded-full border border-white/20 text-xs font-semibold text-white/80 hover:text-white transition-colors"
+              className="hidden md:flex items-center gap-1.5 px-3.5 py-2 rounded-full border border-[#1E3A6E] bg-[#0D1E42]/60 text-xs font-semibold text-slate-200 hover:border-[#FFD400] hover:text-white transition-colors cursor-pointer"
             >
-              <Calculator className="w-3.5 h-3.5 text-[#FFB612]" />
+              <Calculator className="w-3.5 h-3.5 text-[#FFD400]" />
               <span>Step-by-Step Calculator</span>
             </button>
 
@@ -310,15 +372,16 @@ export const PublicLandingView: React.FC = () => {
                   window.history.pushState({}, '', '/study-guide');
                 }
               }}
-              className="flex items-center gap-1.5 px-3.5 py-2 rounded-full bg-[#FFD400] hover:bg-yellow-400 text-black font-bold text-xs sm:text-sm shadow-md transition-all cursor-pointer whitespace-nowrap transform hover:scale-105 active:scale-95"
+              className="flex items-center gap-1 px-2.5 sm:px-3.5 py-1.5 sm:py-2 rounded-full bg-[#FFD400] hover:bg-yellow-400 text-black font-black text-[11px] sm:text-sm shadow-md transition-all cursor-pointer whitespace-nowrap transform hover:scale-105 active:scale-95"
             >
               <span>📚</span>
-              <span>Nexovian Study Guide</span>
+              <span className="sm:hidden">Study Guide</span>
+              <span className="hidden sm:inline">Nexovian Study Guide</span>
             </a>
 
             {/* Header Action Buttons */}
             {hasActiveAccess ? (
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1.5 sm:gap-2">
                 <button
                   onClick={() => setCurrentTab('mySubscription')}
                   className="hidden sm:flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-xs font-semibold cursor-pointer"
@@ -328,7 +391,7 @@ export const PublicLandingView: React.FC = () => {
                 </button>
                 <button
                   onClick={handleStartLearning}
-                  className="px-4 py-2 rounded-full bg-[#FFB612] hover:bg-yellow-400 text-black font-black text-xs sm:text-sm shadow-md transition-all cursor-pointer transform hover:scale-105 active:scale-95"
+                  className="px-3 sm:px-4 py-1.5 sm:py-2 rounded-full bg-[#FFD400] hover:bg-yellow-400 text-black font-black text-xs sm:text-sm shadow-md transition-all cursor-pointer transform hover:scale-105 active:scale-95 whitespace-nowrap"
                 >
                   Open App
                 </button>
@@ -338,9 +401,9 @@ export const PublicLandingView: React.FC = () => {
                 {isAuthenticated ? (
                   <button
                     onClick={() => setCurrentTab('mySubscription')}
-                    className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-white/10 hover:bg-white/15 border border-white/20 text-xs font-medium text-white cursor-pointer"
+                    className="hidden sm:flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-[#0D1E42] hover:bg-[#132959] border border-[#1E3A6E] text-xs font-medium text-white cursor-pointer"
                   >
-                    <CreditCard className="w-3.5 h-3.5 text-[#FFB612]" />
+                    <CreditCard className="w-3.5 h-3.5 text-[#FFD400]" />
                     <span>
                       {subRecord?.status === 'cancelled'
                         ? 'Cancelled'
@@ -352,7 +415,7 @@ export const PublicLandingView: React.FC = () => {
                 ) : (
                   <button
                     onClick={() => setCurrentTab('login')}
-                    className="px-4 py-2 rounded-full border border-white/20 hover:border-white/40 text-white font-bold text-xs sm:text-sm transition-colors cursor-pointer"
+                    className="px-2.5 sm:px-4 py-1.5 sm:py-2 rounded-full border border-[#1E3A6E] bg-[#0D1E42]/80 hover:border-[#FFD400] text-white font-bold text-[11px] sm:text-sm transition-colors cursor-pointer whitespace-nowrap"
                   >
                     Login
                   </button>
@@ -360,10 +423,11 @@ export const PublicLandingView: React.FC = () => {
 
                 <button
                   onClick={handleStartTrial}
-                  className="px-4 py-2 sm:px-5 sm:py-2.5 rounded-full bg-[#007A4D] hover:bg-emerald-600 text-white font-black text-xs sm:text-sm shadow-lg shadow-emerald-700/30 transition-all cursor-pointer transform hover:scale-105 active:scale-95 flex items-center gap-1.5"
+                  className="px-2.5 sm:px-5 py-1.5 sm:py-2.5 rounded-full bg-[#FFD400] hover:bg-yellow-400 text-black font-black text-[11px] sm:text-sm shadow-lg shadow-[#FFD400]/25 transition-all cursor-pointer transform hover:scale-105 active:scale-95 flex items-center gap-1 whitespace-nowrap"
                 >
-                  <Sparkles className="w-4 h-4 text-[#FFB612]" />
-                  <span>Start 2-Day Free Trial</span>
+                  <Sparkles className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-black shrink-0" />
+                  <span className="sm:hidden">Free Trial</span>
+                  <span className="hidden sm:inline">Start 2-Day Free Trial</span>
                 </button>
               </>
             )}
@@ -373,18 +437,16 @@ export const PublicLandingView: React.FC = () => {
 
       <main>
         {/* ========================================================
-            HERO SECTION (NETFLIX AESTHETIC WITH DEEP NAVY GLOW)
+            HERO SECTION (DARK BLUE + GOLD PREMIUM THEME)
            ======================================================== */}
-        <section className="relative overflow-hidden pt-12 pb-16 sm:pt-20 sm:pb-24 px-4 sm:px-6 text-center border-b border-white/10">
-          
-          {/* Subtle Deep Navy cinematic glow */}
-          <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[350px] bg-[#0A1F44] rounded-full blur-[140px] pointer-events-none" />
-          
+        <section className="relative overflow-hidden pt-10 pb-16 sm:pt-16 sm:pb-24 px-4 sm:px-6 text-center border-b border-[#1E3A6E]">
+          {/* Subtle Deep Navy + Gold glow */}
+          <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[350px] bg-[#14397B]/50 rounded-full blur-[140px] pointer-events-none" />
+
           <div className="max-w-4xl mx-auto relative z-10">
-            
             {/* Top Badge */}
-            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-[#0A1F44] border border-[#FFB612]/50 text-[#FFB612] text-xs font-mono font-bold uppercase tracking-wider mb-6">
-              <Sparkles className="w-3.5 h-3.5 text-[#FFB612]" />
+            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-[#0D1E42] border border-[#FFD400]/50 text-[#FFD400] text-[11px] sm:text-xs font-mono font-bold uppercase tracking-wider mb-6">
+              <Sparkles className="w-3.5 h-3.5 text-[#FFD400] shrink-0" />
               <span>SOUTH AFRICA&apos;S 12 OFFICIAL LANGUAGES (incl SASL 🤟) EDUCATION PLATFORM</span>
             </div>
 
@@ -405,31 +467,31 @@ export const PublicLandingView: React.FC = () => {
 
             {/* Popular Search Chips */}
             <div className="mt-4 flex flex-wrap items-center justify-center gap-2 text-xs">
-              <span className="text-[#FFB612] font-mono font-bold flex items-center gap-1">
+              <span className="text-[#FFD400] font-mono font-bold flex items-center gap-1">
                 <Search className="w-3.5 h-3.5" />
                 <span>Popular:</span>
               </span>
               {[
-                { label: 'INF1505', q: 'INF1505' },
-                { label: 'N4 Management', q: 'N4 Management Communication' },
-                { label: 'Grade 12 Maths', q: 'Grade 12 Mathematics' },
-                { label: 'FAC1502', q: 'FAC1502' },
-                { label: 'Grade 6 Social Sciences', q: 'Grade 6 Social Sciences' },
-                { label: 'N4 Computer Practice', q: 'Computer Practice' }
+                { label: 'TVET N1–N6', q: 'TVET' },
+                { label: 'BCom Accounting', q: 'Financial Accounting' },
+                { label: 'LLB Law', q: 'Constitutional Law' },
+                { label: 'Nursing', q: 'Anatomy' },
+                { label: 'N4 Electrotechnics', q: 'N4 Electrotechnics' },
+                { label: 'Grade 12 Physics', q: 'Momentum' }
               ].map((chip) => (
                 <button
                   key={chip.label}
                   type="button"
                   onClick={() => handleOpenGlobalSearch(chip.q)}
-                  className="px-3 py-1 rounded-full bg-[#1a1a1a] hover:bg-[#262626] border border-[#d4af37]/60 hover:border-[#FFB612] text-white/90 hover:text-[#FFB612] font-semibold text-[11px] transition-all cursor-pointer shadow-xs active:scale-95"
+                  className="px-3 py-1 rounded-full bg-[#0D1E42] hover:bg-[#142D61] border border-[#FFD400]/50 hover:border-[#FFD400] text-white/95 hover:text-[#FFD400] font-semibold text-[11px] transition-all cursor-pointer shadow-xs active:scale-95"
                 >
                   {chip.label}
                 </button>
               ))}
             </div>
 
-            {/* Nexovian Study Guide Yellow Hero Button */}
-            <div className="mt-7 flex justify-center">
+            {/* Big Study Guide, TVET N1-N6 & Degree Hero Buttons */}
+            <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
               <a
                 href="/study-guide"
                 onClick={(e) => {
@@ -439,18 +501,48 @@ export const PublicLandingView: React.FC = () => {
                     window.history.pushState({}, '', '/study-guide');
                   }
                 }}
-                className="inline-flex items-center gap-2 px-6 py-3.5 rounded-2xl bg-[#FFD400] hover:bg-yellow-400 text-black font-bold text-base sm:text-lg shadow-[0_0_25px_rgba(255,212,0,0.5)] transition-all transform hover:scale-105 active:scale-95 cursor-pointer"
+                className="inline-flex items-center justify-center gap-2.5 px-6 sm:px-7 py-3.5 sm:py-4 rounded-2xl bg-[#FFD400] hover:bg-yellow-400 text-[#061128] font-black text-sm sm:text-lg shadow-[0_0_30px_rgba(255,212,0,0.45)] border-2 border-yellow-200/70 transition-all transform hover:scale-105 active:scale-95 cursor-pointer"
               >
                 <span>📚</span>
-                <span>Nexovian Study Guide</span>
+                <span>Open Study Guide</span>
+              </a>
+
+              <a
+                href="/study-guide/tvet-n1-n6"
+                onClick={(e) => {
+                  e.preventDefault();
+                  setCurrentTab('studyGuideTvet');
+                  if (typeof window !== 'undefined') {
+                    window.history.pushState({}, '', '/study-guide/tvet-n1-n6');
+                  }
+                }}
+                className="inline-flex items-center justify-center gap-2 px-5 sm:px-6 py-3.5 sm:py-4 rounded-2xl bg-[#0D1E42] hover:bg-[#132959] text-[#FFD400] font-black text-sm sm:text-base border-2 border-[#FFD400]/70 shadow-lg transition-all transform hover:scale-105 active:scale-95 cursor-pointer"
+              >
+                <span>🛠️</span>
+                <span>TVET N1–N6 (36)</span>
+              </a>
+
+              <a
+                href="/study-guide/degree-modules"
+                onClick={(e) => {
+                  e.preventDefault();
+                  setCurrentTab('studyGuideDegree');
+                  if (typeof window !== 'undefined') {
+                    window.history.pushState({}, '', '/study-guide/degree-modules');
+                  }
+                }}
+                className="inline-flex items-center justify-center gap-2 px-5 sm:px-6 py-3.5 sm:py-4 rounded-2xl bg-[#0D1E42] hover:bg-[#132959] text-[#FFD400] font-black text-sm sm:text-base border-2 border-[#FFD400]/70 shadow-lg transition-all transform hover:scale-105 active:scale-95 cursor-pointer"
+              >
+                <span>🎓</span>
+                <span>Degree Modules (12)</span>
               </a>
             </div>
 
             {/* ACTIVE SUBSCRIPTION CARD OR SINGLE MAIN 2-DAY FREE TRIAL CTA */}
             {hasActiveAccess ? (
-              <div id="instant-unlock" className="mt-10 max-w-3xl mx-auto bg-gradient-to-r from-emerald-950/90 via-[#0A1F44] to-black border-2 border-emerald-400 rounded-3xl p-6 sm:p-8 text-center shadow-2xl relative overflow-hidden">
+              <div id="instant-unlock" className="mt-10 max-w-3xl mx-auto bg-gradient-to-r from-[#0A1F44] via-[#102B60] to-[#061128] border-2 border-[#FFD400] rounded-3xl p-6 sm:p-8 text-center shadow-2xl relative overflow-hidden">
                 <div className="inline-flex items-center gap-2 px-4 py-1 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 text-xs font-mono font-bold uppercase mb-3">
-                  <Sparkles className="w-3.5 h-3.5 text-[#FFB612]" />
+                  <Sparkles className="w-3.5 h-3.5 text-[#FFD400]" />
                   <span>
                     {subRecord?.status === 'trial' ? '2-Day Free Trial Active' : 'Subscription Active'}
                   </span>
@@ -460,15 +552,20 @@ export const PublicLandingView: React.FC = () => {
                   Welcome Back &mdash; Full Access Unlocked
                 </h3>
 
-                <p className="mt-2 text-xs sm:text-sm text-slate-300 max-w-xl mx-auto leading-relaxed">
-                  All Study Guides, Grade 4 to University subjects, 12 official languages (including SASL), DBE past papers, and AI Tutor are unlocked.
+                <p className="mt-2 text-xs sm:text-sm text-slate-200 max-w-xl mx-auto leading-relaxed">
+                  All {ALL_STUDY_GUIDE_CHAPTERS.length} Study Guide chapters (Grade 12, TVET N1–N6 &amp; Degree), 12 official languages (including SASL), DBE past papers, and AI Tutor are unlocked.
                 </p>
 
                 <div className="mt-6 flex flex-col sm:flex-row items-center justify-center gap-3">
                   <button
                     type="button"
-                    onClick={() => setCurrentTab('studyGuide')}
-                    className="w-full sm:w-auto px-8 py-4 rounded-2xl bg-[#FFB612] hover:bg-yellow-400 text-black font-black text-base shadow-[0_0_25px_rgba(255,182,18,0.4)] flex items-center justify-center gap-2.5 cursor-pointer transition-transform active:scale-95"
+                    onClick={() => {
+                      setCurrentTab('studyGuide');
+                      if (typeof window !== 'undefined') {
+                        window.history.pushState({}, '', '/study-guide');
+                      }
+                    }}
+                    className="w-full sm:w-auto px-8 py-4 rounded-2xl bg-[#FFD400] hover:bg-yellow-400 text-black font-black text-base shadow-[0_0_25px_rgba(255,212,0,0.4)] flex items-center justify-center gap-2.5 cursor-pointer transition-transform active:scale-95"
                   >
                     <BookOpen className="w-5 h-5 text-black" />
                     <span>Open Study Guide</span>
@@ -623,17 +720,271 @@ export const PublicLandingView: React.FC = () => {
         </section>
 
         {/* ========================================================
+            INTERACTIVE HOME SUBJECTS FILTER: [All] [TVET N1-N6] [Degree]
+           ======================================================== */}
+        <section id="study-guide-subjects" className="py-12 sm:py-16 bg-[#071530] border-b border-[#1E3A6E] px-4 sm:px-6">
+          <div className="max-w-7xl mx-auto">
+            <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-8">
+              <div>
+                <span className="text-xs uppercase font-mono font-bold text-[#FFD400] tracking-widest block mb-1">
+                  STUDY GUIDE LIBRARY • 48+ SUBJECTS &amp; {ALL_STUDY_GUIDE_CHAPTERS.length} CHAPTERS
+                </span>
+                <h2 className="font-display font-black text-2xl sm:text-4xl text-white">
+                  Browse Subjects by Level
+                </h2>
+                <p className="text-xs sm:text-sm text-slate-300 mt-1.5 max-w-2xl">
+                  Switch between Grade 12 CAPS, 36 TVET N1–N6 engineering trades, and all 12 Degree Killer Modules.
+                </p>
+              </div>
+
+              {/* Filter Tabs: [All] [TVET N1-N6] [Degree] */}
+              <div className="flex flex-wrap items-center gap-2" role="tablist" aria-label="Filter home study guide subjects">
+                {[
+                  { id: 'all' as const, label: `All (${ALL_STUDY_GUIDE_CHAPTERS.length})` },
+                  { id: 'tvet' as const, label: `TVET N1-N6 (${TVET_CHAPTERS.length})` },
+                  { id: 'degree' as const, label: `Degree (${DEGREE_CHAPTERS.length})` }
+                ].map((tabItem) => {
+                  const active = homeSubjectFilter === tabItem.id;
+                  return (
+                    <button
+                      key={tabItem.id}
+                      type="button"
+                      role="tab"
+                      aria-selected={active}
+                      onClick={() => {
+                        setHomeSubjectFilter(tabItem.id);
+                        setShowAllHomeSubjects(false);
+                      }}
+                      className={`min-h-[44px] px-4 sm:px-5 py-2 rounded-2xl text-xs sm:text-sm font-black transition-all duration-200 cursor-pointer ${
+                        active
+                          ? 'bg-[#FFD400] text-[#061128] shadow-[0_0_20px_rgba(255,212,0,0.35)] scale-[1.03]'
+                          : 'bg-[#0D1E42] text-slate-200 border border-[#1E3A6E] hover:border-[#FFD400] hover:text-[#FFD400]'
+                      }`}
+                    >
+                      {tabItem.label}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Filtered Subject Cards Grid */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5">
+              {visibleHomeChapters.map((ch) => {
+                const chPath = `${ch.backPath}/${ch.slug}`;
+                return (
+                  <a
+                    key={ch.slug}
+                    href={chPath}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      if (typeof window !== 'undefined') {
+                        window.history.pushState({}, '', chPath);
+                        window.scrollTo({ top: 0, behavior: 'smooth' });
+                      }
+                      setCurrentTab('studyGuideChapter');
+                    }}
+                    className="group bg-[#0D1E42] hover:bg-[#122859] border border-[#1E3A6E] hover:border-[#FFD400] rounded-2xl p-5 flex flex-col justify-between gap-4 transition-all duration-300 hover:-translate-y-1 shadow-lg cursor-pointer min-w-0"
+                  >
+                    <div className="space-y-2 min-w-0">
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md bg-[#FFD400]/15 border border-[#FFD400]/40 text-[#FFD400] font-mono text-[11px] font-bold">
+                          <span>{ch.subjectIcon}</span>
+                          <span>{ch.subjectLabel}</span>
+                        </span>
+                        {!hasActiveAccess && (
+                          <span className="inline-flex items-center gap-1 text-[10px] font-bold text-amber-300">
+                            <Lock className="w-3 h-3 shrink-0" />
+                            <span>Trial / Sub</span>
+                          </span>
+                        )}
+                      </div>
+                      <h3 className="font-display font-bold text-base sm:text-lg text-white group-hover:text-[#FFD400] transition-colors break-words">
+                        {ch.title}
+                      </h3>
+                      <p className="text-xs text-slate-300 line-clamp-2 break-words leading-relaxed">
+                        {ch.shortDescription}
+                      </p>
+                    </div>
+
+                    <div className="min-h-[42px] w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-[#FFD400] group-hover:bg-yellow-400 text-[#061128] font-black text-xs sm:text-sm transition-colors shadow-sm">
+                      <span>{hasActiveAccess ? 'Open Chapter' : 'Unlock Chapter'}</span>
+                      <ArrowRight className="w-4 h-4 shrink-0" />
+                    </div>
+                  </a>
+                );
+              })}
+            </div>
+
+            {/* Expand / Section Action Bar */}
+            <div className="mt-7 flex flex-wrap items-center justify-center gap-3">
+              {homeSubjectFilter !== 'degree' && filteredHomeChapters.length > 12 && (
+                <button
+                  type="button"
+                  onClick={() => setShowAllHomeSubjects((prev) => !prev)}
+                  className="min-h-[46px] px-6 py-2.5 rounded-2xl bg-[#0D1E42] hover:bg-[#132959] border border-[#FFD400]/60 text-[#FFD400] font-black text-xs sm:text-sm transition-all cursor-pointer"
+                >
+                  {showAllHomeSubjects
+                    ? 'Show Fewer Chapters'
+                    : `Show All ${filteredHomeChapters.length} ${homeSubjectFilter === 'tvet' ? 'TVET' : ''} Chapters`}
+                </button>
+              )}
+
+              <a
+                href={
+                  homeSubjectFilter === 'tvet'
+                    ? '/study-guide/tvet-n1-n6'
+                    : homeSubjectFilter === 'degree'
+                    ? '/study-guide/degree-modules'
+                    : '/study-guide'
+                }
+                onClick={(e) => {
+                  e.preventDefault();
+                  const targetTab =
+                    homeSubjectFilter === 'tvet'
+                      ? 'studyGuideTvet'
+                      : homeSubjectFilter === 'degree'
+                      ? 'studyGuideDegree'
+                      : 'studyGuide';
+                  const targetUrl =
+                    homeSubjectFilter === 'tvet'
+                      ? '/study-guide/tvet-n1-n6'
+                      : homeSubjectFilter === 'degree'
+                      ? '/study-guide/degree-modules'
+                      : '/study-guide';
+                  if (typeof window !== 'undefined') {
+                    window.history.pushState({}, '', targetUrl);
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                  }
+                  setCurrentTab(targetTab);
+                }}
+                className="min-h-[46px] inline-flex items-center justify-center gap-2 px-6 py-2.5 rounded-2xl bg-[#FFD400] hover:bg-yellow-400 text-[#061128] font-black text-xs sm:text-sm shadow-md transition-all hover:scale-105 active:scale-95 cursor-pointer"
+              >
+                <span>
+                  {homeSubjectFilter === 'tvet'
+                    ? 'Open Full TVET N1–N6 Library (36)'
+                    : homeSubjectFilter === 'degree'
+                    ? 'Open Full Degree Library (12)'
+                    : 'Open Complete Study Guide Hub'}
+                </span>
+                <ArrowRight className="w-4 h-4 shrink-0" />
+              </a>
+            </div>
+          </div>
+        </section>
+
+        {/* ========================================================
+            HOW IT WORKS SECTION (4 PREMIUM STEPS)
+           ======================================================== */}
+        <section className="py-14 sm:py-20 bg-[#081736] border-b border-[#1E3A6E] px-4 sm:px-6">
+          <div className="max-w-6xl mx-auto">
+            <div className="text-center mb-10 sm:mb-12">
+              <span className="text-xs uppercase font-mono font-bold text-[#FFD400] tracking-widest block mb-1">
+                SIMPLE 4-STEP ROADMAP
+              </span>
+              <h2 className="font-display font-black text-2xl sm:text-4xl text-white">
+                How It Works
+              </h2>
+              <p className="text-xs sm:text-sm text-slate-300 mt-2 max-w-xl mx-auto">
+                Go from confused to exam-ready in minutes with structured Study Guides, TVET N1–N6 notes, Degree Killer Modules, and instant answers.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+              {[
+                {
+                  step: '1',
+                  icon: '🚀',
+                  title: '1. Start Free Trial',
+                  desc: 'Unlock full access for 2 days free (R0 today) — cancel anytime before 2 days.'
+                },
+                {
+                  step: '2',
+                  icon: '📚',
+                  title: '2. Pick Your Subject',
+                  desc: 'Choose Grade 12 CAPS, 36 TVET N1–N6 subjects, or 12 Degree Killer Modules.'
+                },
+                {
+                  step: '3',
+                  icon: '🧠',
+                  title: '3. Study + Practice',
+                  desc: 'Read simple English notes, key formulas, worked examples, and test with Show Answer questions.'
+                },
+                {
+                  step: '4',
+                  icon: '🎓',
+                  title: '4. Pass Your Exam',
+                  desc: 'Walk into your matric or NATED exam confident with past papers and mother-tongue memos.'
+                }
+              ].map((item) => (
+                <div
+                  key={item.step}
+                  className="bg-[#0D1E42] hover:bg-[#122859] border border-[#FFD400]/35 hover:border-[#FFD400] rounded-3xl p-6 shadow-xl transition-all duration-300 hover:-translate-y-1 flex flex-col justify-between"
+                >
+                  <div>
+                    <div className="flex items-center justify-between mb-4">
+                      <span className="text-3xl" aria-hidden="true">
+                        {item.icon}
+                      </span>
+                      <span className="w-8 h-8 rounded-full bg-[#FFD400] text-black font-black text-sm flex items-center justify-center shadow-md">
+                        {item.step}
+                      </span>
+                    </div>
+                    <h3 className="font-display font-black text-lg text-white mb-2">
+                      {item.title}
+                    </h3>
+                    <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
+                      {item.desc}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="mt-8 flex justify-center">
+              {hasActiveAccess ? (
+                <a
+                  href="/study-guide"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    setCurrentTab('studyGuide');
+                    if (typeof window !== 'undefined') {
+                      window.history.pushState({}, '', '/study-guide');
+                    }
+                  }}
+                  className="inline-flex items-center gap-2 px-7 py-3.5 rounded-2xl bg-[#FFD400] hover:bg-yellow-400 text-black font-black text-sm sm:text-base shadow-lg transition-all hover:scale-105 active:scale-95 cursor-pointer"
+                >
+                  <span>Start Studying Now</span>
+                  <ArrowRight className="w-4 h-4" />
+                </a>
+              ) : (
+                <button
+                  type="button"
+                  onClick={handleStartTrial}
+                  disabled={checkoutLoading}
+                  className="inline-flex items-center gap-2 px-7 py-3.5 rounded-2xl bg-[#FFD400] hover:bg-yellow-400 text-black font-black text-sm sm:text-base shadow-lg transition-all hover:scale-105 active:scale-95 cursor-pointer disabled:opacity-60"
+                >
+                  <Sparkles className="w-4 h-4" />
+                  <span>{checkoutLoading ? 'Connecting Paystack...' : '1. Start Free Trial Now'}</span>
+                  <ArrowRight className="w-4 h-4" />
+                </button>
+              )}
+            </div>
+          </div>
+        </section>
+
+        {/* ========================================================
             GRADES GRID (UNDER EACH GRADE CARD: VIEW PAST PAPERS)
            ======================================================== */}
         <section className="py-16 sm:py-20 max-w-7xl mx-auto px-4 sm:px-6">
           <div className="text-center mb-12">
-            <span className="text-xs uppercase font-mono font-bold text-[#FFB612] tracking-widest block mb-1">
+            <span className="text-xs uppercase font-mono font-bold text-[#FFD400] tracking-widest block mb-1">
               CURRICULUM COVERAGE (GRADE 4 TO UNIVERSITY)
             </span>
             <h2 className="font-display font-black text-2xl sm:text-4xl text-white">
               Every Grade. Every Subject. All in Your Language.
             </h2>
-            <p className="text-xs sm:text-sm text-white/60 mt-2 max-w-xl mx-auto">
+            <p className="text-xs sm:text-sm text-slate-300 mt-2 max-w-xl mx-auto">
               Explore past papers, CAPS notes, and step-by-step memos tailored specifically for your level.
             </p>
           </div>
@@ -642,31 +993,31 @@ export const PublicLandingView: React.FC = () => {
             {ALL_GRADES.map((grade) => (
               <div
                 key={grade.id}
-                className="bg-[#0A1F44] border border-white/15 hover:border-[#FFB612] rounded-3xl p-5 flex flex-col justify-between transition-all group hover:scale-[1.02] shadow-lg"
+                className="bg-[#0D1E42] border border-[#1E3A6E] hover:border-[#FFD400] rounded-3xl p-4 sm:p-5 flex flex-col justify-between transition-all duration-300 group hover:-translate-y-1 shadow-lg"
               >
                 <div>
                   <div className="flex items-center justify-between mb-2">
-                    <span className="px-2 py-0.5 rounded-md bg-[#FFB612]/20 text-[#FFB612] text-[10px] font-mono font-bold">
+                    <span className="px-2 py-0.5 rounded-md bg-[#FFD400]/20 text-[#FFD400] text-[10px] font-mono font-bold">
                       {grade.badge}
                     </span>
-                    <span className="text-[10px] text-white/40 font-mono">
+                    <span className="text-[10px] text-slate-300 font-mono">
                       {grade.subjectsCount} Subj
                     </span>
                   </div>
 
-                  <h3 className="font-display font-black text-lg text-white group-hover:text-[#FFB612] transition-colors">
+                  <h3 className="font-display font-black text-base sm:text-lg text-white group-hover:text-[#FFD400] transition-colors">
                     {grade.name}
                   </h3>
-                  <p className="text-[11px] text-white/60 mt-0.5">
+                  <p className="text-[11px] text-slate-300 mt-0.5">
                     {grade.level}
                   </p>
                 </div>
 
                 {/* Under each Grade card: small link "View Past Papers" -> /papers?grade=X */}
-                <div className="mt-4 pt-3 border-t border-white/10">
+                <div className="mt-4 pt-3 border-t border-[#1E3A6E]">
                   <button
                     onClick={() => navigateToPastPapers(grade.id)}
-                    className="w-full text-left text-xs font-bold text-[#1E88E5] hover:text-[#FFB612] flex items-center justify-between transition-colors cursor-pointer"
+                    className="w-full text-left text-xs font-bold text-[#FFD400] hover:text-yellow-300 flex items-center justify-between transition-colors cursor-pointer"
                   >
                     <span>View Past Papers</span>
                     <ArrowRight className="w-3.5 h-3.5" />
@@ -754,38 +1105,38 @@ export const PublicLandingView: React.FC = () => {
         {/* ========================================================
             MEMO EXPLANATION FEATURE LIVE DEMO
            ======================================================== */}
-        <section className="py-16 sm:py-24 bg-[#050D1A] border-y border-white/10 px-4 sm:px-6">
+        <section className="py-16 sm:py-24 bg-[#071530] border-y border-[#1E3A6E] px-4 sm:px-6">
           <div className="max-w-4xl mx-auto">
             <div className="text-center mb-10">
-              <span className="text-xs uppercase font-mono font-bold text-[#FFB612] tracking-widest block mb-1">
+              <span className="text-xs uppercase font-mono font-bold text-[#FFD400] tracking-widest block mb-1">
                 PATENT-PENDING LEARNING ENGINE
               </span>
               <h2 className="font-display font-black text-2xl sm:text-4xl text-white">
                 How Memo Translation Works in Real Life
               </h2>
-              <p className="mt-2 text-xs sm:text-sm text-white/60">
+              <p className="mt-2 text-xs sm:text-sm text-slate-300">
                 Original DBE Past Paper (English) + Explanation in YOUR Mother Tongue
               </p>
             </div>
 
             {/* Interactive Demo Card */}
-            <div className="bg-[#0A1F44] border border-white/15 rounded-3xl p-6 sm:p-8 shadow-2xl">
+            <div className="bg-[#0D1E42] border border-[#1E3A6E] rounded-3xl p-6 sm:p-8 shadow-2xl">
               
               {/* Question Header */}
-              <div className="p-4 rounded-2xl bg-black/40 border border-white/10 mb-5">
-                <div className="text-[11px] font-mono font-bold text-[#FFB612] uppercase tracking-wider mb-1">
+              <div className="p-4 rounded-2xl bg-[#061128] border border-[#1E3A6E] mb-5">
+                <div className="text-[11px] font-mono font-bold text-[#FFD400] uppercase tracking-wider mb-1">
                   DBE Mathematics Paper 1 &bull; Question 1.1
                 </div>
                 <p className="text-base sm:text-lg font-bold text-white">
-                  Solve for x: <span className="font-mono text-[#FFB612]">2x + 3 = 7</span>
+                  Solve for x: <span className="font-mono text-[#FFD400]">2x + 3 = 7</span>
                 </p>
-                <p className="text-xs text-white/50 mt-1 font-mono">
+                <p className="text-xs text-slate-300 mt-1 font-mono">
                   Official DBE Memo: 2x = 4 &rarr; x = 2 (2 marks)
                 </p>
               </div>
 
               {/* Action Banner with Language Dropdown */}
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 rounded-2xl bg-black/60 border border-white/10 mb-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 rounded-2xl bg-[#061128] border border-[#1E3A6E] mb-4">
                 <div className="text-xs text-white/80">
                   <span className="font-bold text-white block">Don&apos;t understand the official English memo?</span>
                   <span className="text-white/60">Get it broken down step-by-step in your mother tongue:</span>
@@ -850,20 +1201,20 @@ export const PublicLandingView: React.FC = () => {
           </div>
 
           {hasActiveAccess ? (
-            <div className="max-w-xl mx-auto bg-gradient-to-r from-emerald-950/90 via-[#0A1F44] to-black border-2 border-emerald-400 rounded-3xl p-8 sm:p-10 text-center shadow-2xl relative overflow-hidden">
+            <div className="max-w-xl mx-auto bg-gradient-to-br from-[#0D1E42] via-[#102B60] to-[#061128] border-2 border-[#FFD400] rounded-3xl p-8 sm:p-10 text-center shadow-2xl relative overflow-hidden">
               <div className="inline-block px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 text-xs font-mono font-bold uppercase mb-4">
                 {subRecord?.status === 'trial' ? '2-DAY FREE TRIAL ACTIVE' : 'SUBSCRIPTION ACTIVE'}
               </div>
               <h3 className="font-display font-black text-2xl sm:text-3xl text-white mb-2">
                 Full Access Active
               </h3>
-              <p className="text-sm text-emerald-200 font-bold mb-6">
+              <p className="text-sm text-[#FFD400] font-bold mb-6">
                 All Study Guides, AI Tutor &amp; Past Papers Unlocked
               </p>
               <button
                 type="button"
                 onClick={() => setCurrentTab('mySubscription')}
-                className="w-full py-4 rounded-xl bg-[#FFB612] hover:bg-yellow-400 text-black font-black text-base shadow-xl shadow-yellow-500/20 transition-all transform hover:-translate-y-0.5 active:translate-y-0 cursor-pointer flex items-center justify-center gap-2"
+                className="w-full py-4 rounded-xl bg-[#FFD400] hover:bg-yellow-400 text-black font-black text-base shadow-xl shadow-yellow-500/20 transition-all transform hover:-translate-y-0.5 active:translate-y-0 cursor-pointer flex items-center justify-center gap-2"
               >
                 <CreditCard className="w-5 h-5 text-black" />
                 <span>Manage My Subscription</span>
@@ -928,7 +1279,7 @@ export const PublicLandingView: React.FC = () => {
           NEXOVIAN (Pty) Ltd | Reg: 2026/234078/07 | nexovian.group
           Built in Mpumalanga | Level 1 B-BBEE | 100% CAPS Aligned | Contact WhatsApp: https://wa.me/27636508381
          ======================================================== */}
-      <footer className="border-t border-white/10 py-10 px-4 sm:px-6 bg-[#000000] text-center text-xs text-white/60">
+      <footer className="border-t border-[#1E3A6E] py-10 px-4 sm:px-6 bg-[#061128] text-center text-xs text-slate-300">
         <div className="max-w-6xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6">
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 rounded-full bg-[#FFB612] text-black font-bold flex items-center justify-center text-sm">
@@ -982,9 +1333,9 @@ export const PublicLandingView: React.FC = () => {
             <p className="text-xs text-white/70 mb-5 leading-relaxed">
               Nexovian allows any learner to browse DBE past papers, click &ldquo;Explain in My Language&rdquo;, and understand math and science step-by-step.
             </p>
-            <div className="aspect-video bg-black rounded-2xl border border-white/10 flex flex-col items-center justify-center p-6 text-xs text-white/60">
-              <div className="p-3 bg-white/5 rounded-xl border border-white/10 text-left w-full space-y-1 mb-3">
-                <span className="text-[#FFB612] font-bold block">1. Choose any subject &amp; past paper</span>
+            <div className="aspect-video bg-[#061128] rounded-2xl border border-[#1E3A6E] flex flex-col items-center justify-center p-6 text-xs text-slate-200">
+              <div className="p-3 bg-[#0D1E42] rounded-xl border border-[#1E3A6E] text-left w-full space-y-1 mb-3">
+                <span className="text-[#FFD400] font-bold block">1. Choose any subject &amp; past paper</span>
                 <span>2. Tap [🌐 Explain in My Language]</span>
                 <span className="text-emerald-400 block">3. Immediate mother-tongue explanation in isiZulu, Sepedi, etc.</span>
               </div>
@@ -993,7 +1344,7 @@ export const PublicLandingView: React.FC = () => {
                   setIsDemoModalOpen(false);
                   handleStartTrial();
                 }}
-                className="w-full py-3 bg-[#FFB612] text-black font-black rounded-xl text-xs hover:bg-yellow-400 flex items-center justify-center gap-2 cursor-pointer"
+                className="w-full py-3 bg-[#FFD400] text-black font-black rounded-xl text-xs hover:bg-yellow-400 flex items-center justify-center gap-2 cursor-pointer"
               >
                 <Sparkles className="w-4 h-4" />
                 <span>Start 2-Day Free Trial - Then R60/month</span>
@@ -1004,37 +1355,39 @@ export const PublicLandingView: React.FC = () => {
       )}
       {/* Global Search Modal */}
       {isSearchModalOpen && (
-        <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-start justify-center p-4 sm:p-6 overflow-y-auto">
-          <div className="bg-[#0c0c0c] border border-[#d4af37]/60 rounded-3xl max-w-3xl w-full p-6 text-left shadow-2xl relative my-8">
+        <div className="fixed inset-0 z-50 bg-[#040B1B]/85 backdrop-blur-md flex items-start justify-center p-3 sm:p-6 overflow-y-auto">
+          <div className="bg-[#0A1F44] border border-[#FFD400]/60 rounded-3xl max-w-3xl w-full p-5 sm:p-6 text-left shadow-2xl relative my-6 sm:my-8">
             <button
               onClick={() => setIsSearchModalOpen(false)}
-              className="absolute top-5 right-5 p-2 text-white/60 hover:text-white rounded-full bg-white/5 hover:bg-white/10"
+              aria-label="Close global search"
+              className="absolute top-4 right-4 sm:top-5 sm:right-5 p-2 text-slate-300 hover:text-white rounded-full bg-[#061128] hover:bg-[#132959] cursor-pointer"
             >
               <X className="w-5 h-5" />
             </button>
 
             {/* Modal Search Input */}
-            <div className="flex items-center gap-2 mb-4">
-              <Search className="w-5 h-5 text-[#FFB612] shrink-0" />
-              <h3 className="font-display font-black text-xl text-white">
-                Global Curriculum &amp; Past Paper Search
+            <div className="flex items-center gap-2 mb-4 pr-10">
+              <Search className="w-5 h-5 text-[#FFD400] shrink-0" />
+              <h3 className="font-display font-black text-lg sm:text-xl text-white">
+                Search Study Guides, TVET N1–N6 &amp; Past Papers
               </h3>
             </div>
 
             <div className="relative mb-5">
-              <Search className="w-4 h-4 text-[#FFB612] absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+              <Search className="w-4 h-4 text-[#FFD400] absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
               <input
                 type="text"
                 autoFocus
-                placeholder="Search anything: INF1505, N4 Management, Grade 6 Social Sciences, Photosynthesis..."
+                placeholder="Search anything: N4 Electrotechnics, Power Machines, Momentum, INF1505..."
                 value={globalSearchQuery}
                 onChange={(e) => setGlobalSearchQuery(e.target.value)}
-                className="w-full pl-10 pr-10 py-3 rounded-2xl bg-[#1a1a1a] border border-[#d4af37] text-white text-sm placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-[#FFB612]"
+                className="w-full pl-10 pr-10 py-3 rounded-2xl bg-[#061128] border border-[#FFD400]/70 text-white text-sm placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#FFD400]"
               />
               {globalSearchQuery && (
                 <button
                   onClick={() => setGlobalSearchQuery('')}
-                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-white/40 hover:text-white"
+                  aria-label="Clear search query"
+                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-300 hover:text-white cursor-pointer"
                 >
                   <X className="w-4 h-4" />
                 </button>
@@ -1042,13 +1395,13 @@ export const PublicLandingView: React.FC = () => {
             </div>
 
             {/* Quick search chips */}
-            <div className="flex flex-wrap items-center gap-1.5 mb-5 pb-4 border-b border-white/10">
-              <span className="text-[11px] font-mono text-[#FFB612] font-bold mr-1">Popular:</span>
-              {['INF1505', 'N4 Management', 'Grade 12 Maths', 'FAC1502', 'Grade 6 Social Sciences', 'N4 Computer Practice'].map((tag) => (
+            <div className="flex flex-wrap items-center gap-1.5 mb-5 pb-4 border-b border-[#1E3A6E]">
+              <span className="text-[11px] font-mono text-[#FFD400] font-bold mr-1">Popular:</span>
+              {['TVET', 'N4 Electrotechnics', 'Financial Accounting', 'LLB Law', 'Nursing', 'Psychology', 'Momentum'].map((tag) => (
                 <button
                   key={tag}
                   onClick={() => setGlobalSearchQuery(tag)}
-                  className="px-2.5 py-1 rounded-full bg-white/5 hover:bg-white/15 border border-white/10 text-[11px] text-white/80 hover:text-[#FFB612] transition-colors"
+                  className="px-2.5 py-1 rounded-full bg-[#061128] hover:bg-[#132959] border border-[#1E3A6E] hover:border-[#FFD400] text-[11px] text-slate-200 hover:text-[#FFD400] transition-colors cursor-pointer"
                 >
                   {tag}
                 </button>
@@ -1056,56 +1409,101 @@ export const PublicLandingView: React.FC = () => {
             </div>
 
             {/* Results counter */}
-            <div className="flex items-center justify-between text-xs text-white/60 mb-3 font-mono">
+            <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-slate-300 mb-3 font-mono">
               <span>
-                {globalSearchQuery ? `Found ${globalSearchResults.length} matching paper(s)` : 'Type to search all grades, TVET & university modules'}
+                {globalSearchQuery
+                  ? `Found ${globalStudyGuideResults.length} study guide(s) & ${globalSearchResults.length} past paper(s)`
+                  : `Type to search all ${ALL_STUDY_GUIDE_CHAPTERS.length} Study Guide chapters (Grade 12, TVET N1–N6 & Degree) and past papers`}
               </span>
-              <span className="text-[#FFB612]">Grade 4 to University</span>
+              <span className="text-[#FFD400]">Grade 4 to University, TVET N1–N6 &amp; Degree</span>
             </div>
 
             {/* Results list */}
             <div className="space-y-3 max-h-[60vh] overflow-y-auto pr-1">
-              {globalSearchQuery && globalSearchResults.length === 0 && (
-                <div className="p-8 text-center text-white/60 text-xs">
-                  No direct exam paper matches for &ldquo;{globalSearchQuery}&rdquo;. Try searching by course code (e.g. INF1505, N4) or subject.
+              {globalSearchQuery && globalStudyGuideResults.length === 0 && globalSearchResults.length === 0 && (
+                <div className="p-8 text-center text-slate-300 text-xs">
+                  No direct matches for &ldquo;{globalSearchQuery}&rdquo;. Try searching a TVET N-level (e.g. N4, Electronics), Physics, Maths, or course code.
                 </div>
               )}
+
+              {/* Study Guide & TVET Chapter Matches */}
+              {globalStudyGuideResults.map((ch) => {
+                const chPath = `${ch.backPath}/${ch.slug}`;
+                return (
+                  <div
+                    key={ch.slug}
+                    className="p-4 rounded-2xl bg-[#061128] border border-[#FFD400]/40 hover:border-[#FFD400] transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-3"
+                  >
+                    <div className="min-w-0 space-y-1">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="px-2 py-0.5 rounded-md bg-[#FFD400]/20 border border-[#FFD400]/40 text-[#FFD400] font-mono text-[10px] font-bold">
+                          {ch.subjectIcon} {ch.subjectLabel} • Ch {ch.chapterNumber}
+                        </span>
+                        {!hasActiveAccess && (
+                          <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-amber-300">
+                            <Lock className="w-3 h-3" />
+                            <span>Trial / Subscribed</span>
+                          </span>
+                        )}
+                      </div>
+                      <h4 className="font-display font-black text-sm sm:text-base text-white break-words">
+                        {ch.title}
+                      </h4>
+                      <p className="text-xs text-slate-300 line-clamp-2">{ch.shortDescription}</p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsSearchModalOpen(false);
+                        if (typeof window !== 'undefined') {
+                          window.history.pushState({}, '', chPath);
+                        }
+                        setCurrentTab('studyGuideChapter');
+                      }}
+                      className="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-[#FFD400] hover:bg-yellow-400 text-black font-black text-xs flex items-center justify-center gap-1.5 shrink-0 cursor-pointer"
+                    >
+                      <span>{hasActiveAccess ? 'Open Chapter' : 'Unlock Chapter'}</span>
+                      <ArrowRight className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                );
+              })}
 
               {globalSearchResults.map((paper) => (
                 <div
                   key={paper.id}
-                  className="p-4 rounded-2xl bg-[#141414] border border-white/10 hover:border-[#FFB612]/60 transition-all space-y-3"
+                  className="p-4 rounded-2xl bg-[#061128] border border-[#1E3A6E] hover:border-[#FFD400]/60 transition-all space-y-3"
                 >
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                     <div>
                       <div className="flex items-center gap-2 mb-1">
-                        <span className="px-2 py-0.5 rounded-md bg-[#0A1F44] border border-[#FFB612]/40 text-[#FFB612] font-mono text-[10px] font-bold">
+                        <span className="px-2 py-0.5 rounded-md bg-[#0D1E42] border border-[#FFD400]/40 text-[#FFD400] font-mono text-[10px] font-bold">
                           {paper.gradeName}
                         </span>
-                        <span className="text-white/60 text-xs font-mono">&bull; {paper.subject}</span>
+                        <span className="text-slate-300 text-xs font-mono">&bull; {paper.subject}</span>
                       </div>
                       <h4 className="font-display font-black text-sm sm:text-base text-white">
                         {paper.title}
                       </h4>
                     </div>
-                    <span className="text-xs font-mono text-[#FFB612] shrink-0 font-bold">
+                    <span className="text-xs font-mono text-[#FFD400] shrink-0 font-bold">
                       {paper.totalMarks} Marks &bull; {paper.duration}
                     </span>
                   </div>
 
-                  <p className="text-xs text-white/70 whitespace-pre-wrap font-mono">
+                  <p className="text-xs text-slate-300 whitespace-pre-wrap font-mono">
                     {paper.questions[0]?.questionText || 'Official National Examination paper with step-by-step marking guidelines.'}
                   </p>
 
-                  <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-white/10">
+                  <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-[#1E3A6E]">
                     <button
                       onClick={() => {
                         setIsSearchModalOpen(false);
                         navigateToPastPapers(paper.gradeId);
                       }}
-                      className="px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-white font-bold text-xs flex items-center gap-1.5 transition-colors cursor-pointer"
+                      className="px-3 py-1.5 rounded-xl bg-[#0D1E42] hover:bg-[#142D61] text-white font-bold text-xs flex items-center gap-1.5 transition-colors cursor-pointer"
                     >
-                      <FileText className="w-3.5 h-3.5 text-[#FFB612]" />
+                      <FileText className="w-3.5 h-3.5 text-[#FFD400]" />
                       <span>{paper.year} {paper.paperType || 'Paper 1'}</span>
                     </button>
 
@@ -1125,7 +1523,7 @@ export const PublicLandingView: React.FC = () => {
                         setIsSearchModalOpen(false);
                         navigateToPastPapers(paper.gradeId);
                       }}
-                      className="px-3 py-1.5 rounded-xl bg-[#0A1F44] hover:bg-[#122e66] border border-[#FFB612]/50 text-[#FFB612] font-bold text-xs flex items-center gap-1.5 transition-colors cursor-pointer"
+                      className="px-3 py-1.5 rounded-xl bg-[#0D1E42] hover:bg-[#142D61] border border-[#FFD400]/50 text-[#FFD400] font-bold text-xs flex items-center gap-1.5 transition-colors cursor-pointer"
                     >
                       <Sparkles className="w-3.5 h-3.5" />
                       <span>Explain in YOUR language</span>
@@ -1136,7 +1534,7 @@ export const PublicLandingView: React.FC = () => {
                         setIsSearchModalOpen(false);
                         handleStartLearning();
                       }}
-                      className="ml-auto px-3 py-1.5 rounded-xl bg-[#FFB612] hover:bg-yellow-400 text-black font-black text-xs flex items-center gap-1 transition-colors cursor-pointer"
+                      className="ml-auto px-3 py-1.5 rounded-xl bg-[#FFD400] hover:bg-yellow-400 text-black font-black text-xs flex items-center gap-1 transition-colors cursor-pointer"
                     >
                       <span>Ask Tisha 🤖</span>
                     </button>

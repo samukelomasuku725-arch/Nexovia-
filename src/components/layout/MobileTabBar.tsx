@@ -57,7 +57,7 @@ export const MobileTabBar: React.FC = () => {
   return (
     <>
       <nav
-        className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-[#0F0F0F]/95 backdrop-blur-lg border-t border-[#262626] pb-safe transition-colors shadow-2xl w-full max-w-full overflow-hidden"
+        className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-[#061128]/95 backdrop-blur-lg border-t border-[#1E3A6E] pb-safe transition-colors shadow-2xl w-full max-w-full overflow-hidden"
         aria-label="Mobile Bottom Navigation"
       >
         <div className="grid grid-cols-6 h-16 items-center px-1">

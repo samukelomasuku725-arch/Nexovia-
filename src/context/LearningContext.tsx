@@ -37,7 +37,7 @@ import { isTtsSupportedForLanguage } from '../services/voice/languageCapabilitie
 
 import { learnerStrugglesService } from '../services/struggles/learnerStrugglesService';
 
-export type AppTab = 'landing' | 'login' | 'signup' | 'calculator' | 'home' | 'dashboard' | 'explore' | 'learn' | 'school' | 'tvet' | 'higherEd' | 'tracks' | 'tutor' | 'scan' | 'practice' | 'saved' | 'profile' | 'adaptive' | 'assessments' | 'academicVoice' | 'progress' | 'adminBank' | 'about' | 'smartNotes' | 'myStruggles' | 'success' | 'cancel' | 'trial' | 'paywall' | 'subscribe' | 'mySubscription' | 'papers' | 'adminPayments' | 'unlock' | 'adminCodes' | 'terms' | 'refundPolicy' | 'privacyPolicy' | 'contact' | 'studyGuide' | 'studyGuidePhysics' | 'studyGuideLifeSciences' | 'studyGuideChapter';
+export type AppTab = 'landing' | 'login' | 'signup' | 'calculator' | 'home' | 'dashboard' | 'explore' | 'learn' | 'school' | 'tvet' | 'higherEd' | 'tracks' | 'tutor' | 'scan' | 'practice' | 'saved' | 'profile' | 'adaptive' | 'assessments' | 'academicVoice' | 'progress' | 'adminBank' | 'about' | 'smartNotes' | 'myStruggles' | 'success' | 'cancel' | 'trial' | 'paywall' | 'subscribe' | 'mySubscription' | 'papers' | 'adminPayments' | 'unlock' | 'adminCodes' | 'terms' | 'refundPolicy' | 'privacyPolicy' | 'contact' | 'studyGuide' | 'studyGuidePhysics' | 'studyGuideLifeSciences' | 'studyGuideMathsLiteracy' | 'studyGuideMaths' | 'studyGuideTvet' | 'studyGuideDegree' | 'studyGuideExamTips' | 'studyGuideChapter';
 
 export interface GeminiStatusInfo {
   checked: boolean;
@@ -275,6 +275,11 @@ export const pathToTab = (cleanPath: string, search = ''): AppTab => {
   if (cleanPath === '/study-guide' || cleanPath === '/study-guides') return 'studyGuide';
   if (cleanPath === '/study-guide/physics-grade-12') return 'studyGuidePhysics';
   if (cleanPath === '/study-guide/life-sciences-grade-12') return 'studyGuideLifeSciences';
+  if (cleanPath === '/study-guide/maths-literacy-grade-12') return 'studyGuideMathsLiteracy';
+  if (cleanPath === '/study-guide/maths-grade-12') return 'studyGuideMaths';
+  if (cleanPath === '/study-guide/tvet-n1-n6') return 'studyGuideTvet';
+  if (cleanPath === '/study-guide/degree-modules') return 'studyGuideDegree';
+  if (cleanPath === '/study-guide/matric-exam-tips') return 'studyGuideExamTips';
   if (cleanPath.startsWith('/study-guide/')) return 'studyGuideChapter';
   return 'landing';
 };
@@ -308,6 +313,11 @@ export const tabToPath = (tab: AppTab): string => {
     case 'studyGuide': return '/study-guide';
     case 'studyGuidePhysics': return '/study-guide/physics-grade-12';
     case 'studyGuideLifeSciences': return '/study-guide/life-sciences-grade-12';
+    case 'studyGuideMathsLiteracy': return '/study-guide/maths-literacy-grade-12';
+    case 'studyGuideMaths': return '/study-guide/maths-grade-12';
+    case 'studyGuideTvet': return '/study-guide/tvet-n1-n6';
+    case 'studyGuideDegree': return '/study-guide/degree-modules';
+    case 'studyGuideExamTips': return '/study-guide/matric-exam-tips';
     case 'studyGuideChapter': return typeof window !== 'undefined' ? window.location.pathname : '/study-guide/physics-grade-12/momentum';
     default: return '/';
   }
@@ -333,6 +343,7 @@ export const LearningProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       if (targetPath && currentClean !== targetPath) {
         window.history.pushState({}, '', targetPath);
       }
+      window.dispatchEvent(new Event('nexovian-navigation'));
     }
   };
 
@@ -347,6 +358,7 @@ export const LearningProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
     // Global interceptor for standard internal anchor links
     const handleGlobalLinkClick = (e: MouseEvent) => {
+      if (e.defaultPrevented) return;
       const anchor = (e.target as HTMLElement)?.closest('a');
       if (!anchor) return;
       const href = anchor.getAttribute('href');

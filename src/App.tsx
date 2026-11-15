@@ -49,6 +49,11 @@ import { AboutPage } from './components/legal/AboutPage';
 import { StudyGuideHubPage } from './components/study-guide/StudyGuideHubPage';
 import { PhysicsGrade12Page } from './components/study-guide/PhysicsGrade12Page';
 import { LifeSciencesGrade12Page } from './components/study-guide/LifeSciencesGrade12Page';
+import { MathsLiteracyGrade12Page } from './components/study-guide/MathsLiteracyGrade12Page';
+import { MathsGrade12Page } from './components/study-guide/MathsGrade12Page';
+import { TvetN1N6Page } from './components/study-guide/TvetN1N6Page';
+import { DegreeModulesPage } from './components/study-guide/DegreeModulesPage';
+import { MatricExamTipsPage } from './components/study-guide/MatricExamTipsPage';
 import { StudyGuideChapterPage } from './components/study-guide/StudyGuideChapterPage';
 import { StudyGuideGuard } from './components/study-guide/StudyGuideGuard';
 import { LessonPlayerModal } from './components/player/LessonPlayerModal';
@@ -110,13 +115,13 @@ const MainLayout: React.FC = () => {
     }
   }, [currentTab, user, isAuthenticated, isLoading, setCurrentTab]);
 
-  // If initial auth session is being checked, show dark gold splash
+  // If initial auth session is being checked, show dark blue + gold splash
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center p-4">
+      <div className="min-h-screen bg-gradient-to-b from-[#061128] via-[#0A1F44] to-[#050D1E] flex items-center justify-center p-4">
         <div className="text-center">
           <LogoIcon size={48} className="animate-pulse mx-auto" />
-          <p className="mt-4 font-mono text-xs font-bold text-[#fbbf24]">Connecting to NEXOVIAN...</p>
+          <p className="mt-4 font-mono text-xs font-bold text-[#FFD400]">Connecting to NEXOVIAN...</p>
         </div>
       </div>
     );
@@ -186,7 +191,7 @@ const MainLayout: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#0F0F0F] text-[#F8FAFC] transition-colors pb-16 md:pb-0 w-full max-w-[100vw] overflow-x-hidden">
+    <div className="min-h-screen flex flex-col bg-gradient-to-b from-[#061128] via-[#0A1F44] to-[#050D1E] text-[#F8FAFC] transition-colors pb-16 md:pb-0 w-full max-w-[100vw] overflow-x-hidden">
       {/* 2-Day Free Trial / Subscription Notification */}
       <SubscriptionBanner />
 
@@ -618,21 +623,14 @@ const MainLayout: React.FC = () => {
         {currentTab === 'refundPolicy' && <RefundPolicyPage />}
         {currentTab === 'privacyPolicy' && <PrivacyPolicyPage />}
         {currentTab === 'contact' && <ContactPage />}
-        {currentTab === 'studyGuide' && (
-          <StudyGuideGuard>
-            <StudyGuideHubPage />
-          </StudyGuideGuard>
-        )}
-        {currentTab === 'studyGuidePhysics' && (
-          <StudyGuideGuard>
-            <PhysicsGrade12Page />
-          </StudyGuideGuard>
-        )}
-        {currentTab === 'studyGuideLifeSciences' && (
-          <StudyGuideGuard>
-            <LifeSciencesGrade12Page />
-          </StudyGuideGuard>
-        )}
+        {currentTab === 'studyGuide' && <StudyGuideHubPage />}
+        {currentTab === 'studyGuidePhysics' && <PhysicsGrade12Page />}
+        {currentTab === 'studyGuideLifeSciences' && <LifeSciencesGrade12Page />}
+        {currentTab === 'studyGuideMathsLiteracy' && <MathsLiteracyGrade12Page />}
+        {currentTab === 'studyGuideMaths' && <MathsGrade12Page />}
+        {currentTab === 'studyGuideTvet' && <TvetN1N6Page />}
+        {currentTab === 'studyGuideDegree' && <DegreeModulesPage />}
+        {currentTab === 'studyGuideExamTips' && <MatricExamTipsPage />}
         {currentTab === 'studyGuideChapter' && (
           <StudyGuideGuard>
             <StudyGuideChapterPage />

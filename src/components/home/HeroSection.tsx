@@ -188,7 +188,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onScrollToFinder }) =>
                   <ArrowRight className="w-3.5 h-3.5 text-slate-400" />
                 </a>
 
-                {/* Yellow Nexovian Study Guide Button */}
+                {/* Big Study Guide Button */}
                 <a
                   href="/study-guide"
                   onClick={(e) => {
@@ -198,11 +198,11 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onScrollToFinder }) =>
                       window.history.pushState({}, '', '/study-guide');
                     }
                   }}
-                  className="flex items-center justify-center gap-2 px-5 py-3.5 text-xs sm:text-sm font-bold text-black bg-[#FFD400] hover:bg-yellow-400 rounded-xl shadow-lg shadow-yellow-500/25 transition-all transform hover:-translate-y-0.5 active:translate-y-0 min-h-[48px] whitespace-nowrap cursor-pointer border border-yellow-300/60"
-                  aria-label="Nexovian Study Guide"
+                  className="flex items-center justify-center gap-2 px-6 py-4 text-sm sm:text-base font-black text-[#061128] bg-[#FFD400] hover:bg-yellow-400 rounded-xl shadow-lg shadow-yellow-500/30 transition-all transform hover:-translate-y-0.5 active:translate-y-0 min-h-[48px] whitespace-nowrap cursor-pointer border border-yellow-300/70"
+                  aria-label="Study Guide"
                 >
                   <span>📚</span>
-                  <span>Nexovian Study Guide</span>
+                  <span>Study Guide</span>
                 </a>
               </div>
 

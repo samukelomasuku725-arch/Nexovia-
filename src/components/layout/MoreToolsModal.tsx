@@ -107,6 +107,45 @@ export const MoreToolsModal: React.FC<Props> = ({
       title: 'Curriculum & Resources',
       items: [
         {
+          id: 'studyGuide',
+          title: 'Nexovian Study Guide (68 Chapters)',
+          subtitle: 'Grade 12 CAPS, 36 TVET N1–N6 & 12 Degree Killer Modules',
+          icon: BookOpen,
+          color: 'bg-[#FFD400] text-black',
+          onClick: () => {
+            if (typeof window !== 'undefined') {
+              window.history.pushState({}, '', '/study-guide');
+            }
+            navigateTo('studyGuide');
+          }
+        },
+        {
+          id: 'studyGuideTvet',
+          title: 'TVET N1–N6 Section (36 Subjects)',
+          subtitle: 'N1 to N6 Maths, Science, Electrotechnics & Trades',
+          icon: Layers,
+          color: 'bg-[#0A1F44] text-[#FFD400] border border-[#FFD400]/50',
+          onClick: () => {
+            if (typeof window !== 'undefined') {
+              window.history.pushState({}, '', '/study-guide/tvet-n1-n6');
+            }
+            navigateTo('studyGuideTvet');
+          }
+        },
+        {
+          id: 'studyGuideDegree',
+          title: 'Degree — Modules Students Fail Most (12)',
+          subtitle: 'BCom, BEd, LLB Law, Nursing, Psychology & IT / CS',
+          icon: Award,
+          color: 'bg-[#0A1F44] text-[#FFD400] border border-[#FFD400]/50',
+          onClick: () => {
+            if (typeof window !== 'undefined') {
+              window.history.pushState({}, '', '/study-guide/degree-modules');
+            }
+            navigateTo('studyGuideDegree');
+          }
+        },
+        {
           id: 'smartNotes',
           title: 'Smart Notes v2 (Subject Folders)',
           subtitle: 'Drive-style subject folders & auto-summaries',

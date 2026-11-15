@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Search, X, BookOpen, Layers, Sparkles, ArrowRight } from 'lucide-react';
+import { Search, X, BookOpen, Layers, Sparkles, ArrowRight, GraduationCap } from 'lucide-react';
 import { useLearning } from '../../context/LearningContext';
 import { FLASHCARDS } from '../../data/flashcardsData';
+import { ALL_STUDY_GUIDE_CHAPTERS } from '../../data/studyGuideContent';
 
 export const SearchModal: React.FC = () => {
   const { isSearchOpen, setIsSearchOpen, tracks, openLesson, setActiveTrackId, setCurrentTab } = useLearning();
@@ -19,6 +20,20 @@ export const SearchModal: React.FC = () => {
   if (!isSearchOpen) return null;
 
   const cleanQuery = query.toLowerCase().trim();
+
+  // Search Study Guide & TVET N1-N6 chapters
+  const matchedChapters = cleanQuery
+    ? ALL_STUDY_GUIDE_CHAPTERS.filter(
+        (ch) =>
+          ch.title.toLowerCase().includes(cleanQuery) ||
+          ch.subjectLabel.toLowerCase().includes(cleanQuery) ||
+          ch.shortDescription.toLowerCase().includes(cleanQuery) ||
+          ch.summary.some((s) => s.toLowerCase().includes(cleanQuery)) ||
+          ch.formulas.some(
+            (f) => f.expression.toLowerCase().includes(cleanQuery) || f.meaning.toLowerCase().includes(cleanQuery)
+          )
+      ).slice(0, 12)
+    : [];
 
   // Search tracks
   const matchedTracks = cleanQuery
@@ -55,56 +70,67 @@ export const SearchModal: React.FC = () => {
     : [];
 
   const hasResults =
-    matchedTracks.length > 0 || matchedLessons.length > 0 || matchedCards.length > 0;
+    matchedChapters.length > 0 ||
+    matchedTracks.length > 0 ||
+    matchedLessons.length > 0 ||
+    matchedCards.length > 0;
 
   return (
     <div
-      className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-start justify-center p-4 sm:p-6 pt-16 sm:pt-24"
+      className="fixed inset-0 z-50 bg-[#040B1B]/80 backdrop-blur-sm flex items-start justify-center p-3 sm:p-6 pt-12 sm:pt-24"
       onClick={() => setIsSearchOpen(false)}
       role="dialog"
       aria-modal="true"
     >
       <div
-        className="w-full max-w-2xl bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden flex flex-col max-h-[80vh]"
+        className="w-full max-w-2xl bg-[#0A1F44] rounded-2xl shadow-2xl border border-[#FFD400]/45 overflow-hidden flex flex-col max-h-[82vh] text-white"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Search Input Bar */}
-        <div className="p-4 border-b border-slate-200 dark:border-slate-800 flex items-center gap-3">
-          <Search className="w-5 h-5 text-slate-400 shrink-0" />
+        <div className="p-4 border-b border-[#1E3A6E] flex items-center gap-3 bg-[#061128]">
+          <Search className="w-5 h-5 text-[#FFD400] shrink-0" />
           <input
             ref={inputRef}
             type="text"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search lessons, tracks, concepts (e.g. state machines, vector search, docker)..."
-            className="flex-1 bg-transparent text-sm sm:text-base text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none"
+            placeholder="Search Study Guides, TVET N1–N6, formulas, lessons..."
+            className="flex-1 min-w-0 bg-transparent text-sm sm:text-base text-white placeholder-slate-400 focus:outline-none"
           />
           {query ? (
             <button
+              type="button"
               onClick={() => setQuery('')}
-              className="p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+              aria-label="Clear search"
+              className="p-1.5 text-slate-300 hover:text-[#FFD400] cursor-pointer"
             >
               <X className="w-4 h-4" />
             </button>
           ) : (
-            <kbd className="text-[10px] font-mono px-1.5 py-0.5 bg-slate-100 dark:bg-slate-800 text-slate-500 rounded border border-slate-200 dark:border-slate-700">
+            <button
+              type="button"
+              onClick={() => setIsSearchOpen(false)}
+              aria-label="Close search"
+              className="text-[10px] font-mono px-2 py-1 bg-[#0D1E42] text-slate-300 hover:text-white rounded border border-[#1E3A6E] cursor-pointer"
+            >
               ESC
-            </kbd>
+            </button>
           )}
         </div>
 
         {/* Results Body */}
         <div className="p-4 overflow-y-auto space-y-6">
           {!cleanQuery ? (
-            <div className="py-8 text-center text-xs text-slate-500 dark:text-slate-400">
-              <p className="mb-2 font-semibold">Quick Suggestions:</p>
+            <div className="py-6 text-center text-xs text-slate-300">
+              <p className="mb-3 font-semibold text-[#FFD400]">Popular Searches (Grade 12, TVET N1–N6 &amp; Degree):</p>
               <div className="flex flex-wrap items-center justify-center gap-2">
-                {['Zero-Latency State', 'Thumb Ergonomics', 'JSON Schemas', 'Docker Builds', '60-30-10 Rule'].map(
+                {['Financial Accounting', 'LLB Law', 'Psychology', 'TVET N4', 'Electrotechnics', 'Momentum'].map(
                   (term) => (
                     <button
                       key={term}
+                      type="button"
                       onClick={() => setQuery(term)}
-                      className="px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-amber-100 dark:hover:bg-amber-950/40 text-slate-700 dark:text-slate-300 transition-colors"
+                      className="px-3 py-1.5 rounded-xl bg-[#0D1E42] border border-[#1E3A6E] hover:border-[#FFD400] text-slate-200 hover:text-[#FFD400] transition-colors cursor-pointer"
                     >
                       {term}
                     </button>
@@ -114,33 +140,76 @@ export const SearchModal: React.FC = () => {
             </div>
           ) : hasResults ? (
             <>
+              {/* Study Guide & TVET Chapters Section */}
+              {matchedChapters.length > 0 && (
+                <div>
+                  <h4 className="text-[11px] font-bold uppercase tracking-wider text-[#FFD400] mb-2 flex items-center gap-1.5">
+                    <GraduationCap className="w-3.5 h-3.5" />
+                    <span>Study Guide &amp; TVET Chapters ({matchedChapters.length})</span>
+                  </h4>
+                  <div className="space-y-1.5">
+                    {matchedChapters.map((ch) => {
+                      const path = `${ch.backPath}/${ch.slug}`;
+                      return (
+                        <button
+                          key={ch.slug}
+                          type="button"
+                          onClick={() => {
+                            if (typeof window !== 'undefined') {
+                              window.history.pushState({}, '', path);
+                            }
+                            setCurrentTab('studyGuideChapter');
+                            setIsSearchOpen(false);
+                          }}
+                          className="w-full text-left p-3 rounded-xl bg-[#061128] hover:bg-[#112A5C] border border-[#1E3A6E] hover:border-[#FFD400] flex items-center justify-between gap-2 group transition-all cursor-pointer"
+                        >
+                          <div className="min-w-0">
+                            <span className="text-[10px] text-[#FFD400] font-bold block truncate">
+                              {ch.subjectIcon} {ch.subjectLabel} • Ch {ch.chapterNumber}
+                            </span>
+                            <div className="text-xs sm:text-sm font-bold text-white group-hover:text-[#FFD400] truncate">
+                              {ch.title}
+                            </div>
+                            <span className="text-[11px] text-slate-300 truncate block">
+                              {ch.shortDescription}
+                            </span>
+                          </div>
+                          <ArrowRight className="w-4 h-4 text-[#FFD400] shrink-0" />
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
               {/* Tracks Section */}
               {matchedTracks.length > 0 && (
                 <div>
-                  <h4 className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-2 flex items-center gap-1.5">
-                    <Layers className="w-3.5 h-3.5" />
+                  <h4 className="text-[11px] font-bold uppercase tracking-wider text-slate-300 mb-2 flex items-center gap-1.5">
+                    <Layers className="w-3.5 h-3.5 text-[#FFD400]" />
                     <span>Learning Tracks ({matchedTracks.length})</span>
                   </h4>
                   <div className="space-y-1.5">
                     {matchedTracks.map((t) => (
                       <button
                         key={t.id}
+                        type="button"
                         onClick={() => {
                           setActiveTrackId(t.id);
                           setCurrentTab('tracks');
                           setIsSearchOpen(false);
                         }}
-                        className="w-full text-left p-2.5 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center justify-between group transition-colors"
+                        className="w-full text-left p-2.5 rounded-xl bg-[#061128] hover:bg-[#112A5C] border border-[#1E3A6E] flex items-center justify-between group transition-colors cursor-pointer"
                       >
-                        <div>
-                          <div className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white group-hover:text-amber-600 dark:group-hover:text-amber-400">
+                        <div className="min-w-0">
+                          <div className="text-xs sm:text-sm font-bold text-white group-hover:text-[#FFD400] truncate">
                             {t.title}
                           </div>
-                          <span className="text-[11px] text-slate-500 dark:text-slate-400 line-clamp-1">
+                          <span className="text-[11px] text-slate-300 line-clamp-1">
                             {t.tagline}
                           </span>
                         </div>
-                        <ArrowRight className="w-4 h-4 text-slate-400 group-hover:text-amber-500 shrink-0 ml-2" />
+                        <ArrowRight className="w-4 h-4 text-slate-300 group-hover:text-[#FFD400] shrink-0 ml-2" />
                       </button>
                     ))}
                   </div>
@@ -150,29 +219,30 @@ export const SearchModal: React.FC = () => {
               {/* Lessons Section */}
               {matchedLessons.length > 0 && (
                 <div>
-                  <h4 className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-2 flex items-center gap-1.5">
-                    <BookOpen className="w-3.5 h-3.5" />
+                  <h4 className="text-[11px] font-bold uppercase tracking-wider text-slate-300 mb-2 flex items-center gap-1.5">
+                    <BookOpen className="w-3.5 h-3.5 text-[#FFD400]" />
                     <span>Lessons ({matchedLessons.length})</span>
                   </h4>
                   <div className="space-y-1.5">
                     {matchedLessons.map((l) => (
                       <button
                         key={l.id}
+                        type="button"
                         onClick={() => {
                           setActiveTrackId(l.trackId);
                           openLesson(l.id);
                           setIsSearchOpen(false);
                         }}
-                        className="w-full text-left p-2.5 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center justify-between group transition-colors"
+                        className="w-full text-left p-2.5 rounded-xl bg-[#061128] hover:bg-[#112A5C] border border-[#1E3A6E] flex items-center justify-between group transition-colors cursor-pointer"
                       >
-                        <div className="truncate">
-                          <span className="text-[10px] text-amber-600 dark:text-amber-400 font-semibold block truncate">
+                        <div className="truncate min-w-0">
+                          <span className="text-[10px] text-[#FFD400] font-semibold block truncate">
                             {l.trackTitle}
                           </span>
-                          <div className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white group-hover:text-amber-600 dark:group-hover:text-amber-400 truncate">
+                          <div className="text-xs sm:text-sm font-bold text-white group-hover:text-[#FFD400] truncate">
                             {l.title}
                           </div>
-                          <span className="text-[11px] text-slate-500 dark:text-slate-400 truncate block">
+                          <span className="text-[11px] text-slate-300 truncate block">
                             {l.subtitle}
                           </span>
                         </div>
@@ -188,24 +258,25 @@ export const SearchModal: React.FC = () => {
               {/* Flashcards Section */}
               {matchedCards.length > 0 && (
                 <div>
-                  <h4 className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-2 flex items-center gap-1.5">
-                    <Sparkles className="w-3.5 h-3.5" />
+                  <h4 className="text-[11px] font-bold uppercase tracking-wider text-slate-300 mb-2 flex items-center gap-1.5">
+                    <Sparkles className="w-3.5 h-3.5 text-[#FFD400]" />
                     <span>Flashcard Concepts ({matchedCards.length})</span>
                   </h4>
                   <div className="space-y-1.5">
                     {matchedCards.map((c) => (
                       <button
                         key={c.id}
+                        type="button"
                         onClick={() => {
                           setCurrentTab('practice');
                           setIsSearchOpen(false);
                         }}
-                        className="w-full text-left p-2.5 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 block transition-colors group"
+                        className="w-full text-left p-2.5 rounded-xl bg-[#061128] hover:bg-[#112A5C] border border-[#1E3A6E] block transition-colors group cursor-pointer"
                       >
-                        <div className="text-xs font-bold text-slate-900 dark:text-white group-hover:text-amber-600 dark:group-hover:text-amber-400">
+                        <div className="text-xs font-bold text-white group-hover:text-[#FFD400]">
                           {c.question}
                         </div>
-                        <p className="text-[11px] text-slate-500 dark:text-slate-400 line-clamp-1 mt-0.5">
+                        <p className="text-[11px] text-slate-300 line-clamp-1 mt-0.5">
                           {c.answer}
                         </p>
                       </button>
@@ -215,8 +286,8 @@ export const SearchModal: React.FC = () => {
               )}
             </>
           ) : (
-            <div className="py-8 text-center text-xs text-slate-500">
-              No results found for "{query}". Try a different keyword.
+            <div className="py-8 text-center text-xs text-slate-300">
+              No results found for &ldquo;{query}&rdquo;. Try searching a TVET subject (e.g. N4, Electrotechnics) or Grade 12 topic.
             </div>
           )}
         </div>
