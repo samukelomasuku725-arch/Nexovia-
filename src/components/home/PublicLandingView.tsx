@@ -1037,6 +1037,11 @@ export const PublicLandingView: React.FC = () => {
                   <p className="text-[11px] text-slate-300 mt-0.5">
                     {grade.level}
                   </p>
+                  {grade.id === 'tvet' && (
+                    <p className="text-[11px] text-slate-300 mt-2 leading-relaxed">
+                      Now includes full NC(V) Coverage: NC(V) Level 2, Level 3, Level 4 - 12 subjects with original DHET past papers + memos explained step-by-step in Xitsonga, Sepedi and 12 official languages. Includes Tisha AI tutor and Step-by-Step Calculator.
+                    </p>
+                  )}
                 </div>
 
                 {/* Under each Grade card: small link "View Past Papers" -> /papers?grade=X */}
