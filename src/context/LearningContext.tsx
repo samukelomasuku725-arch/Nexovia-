@@ -37,7 +37,7 @@ import { isTtsSupportedForLanguage } from '../services/voice/languageCapabilitie
 
 import { learnerStrugglesService } from '../services/struggles/learnerStrugglesService';
 
-export type AppTab = 'landing' | 'login' | 'signup' | 'calculator' | 'home' | 'dashboard' | 'explore' | 'learn' | 'school' | 'tvet' | 'higherEd' | 'tracks' | 'tutor' | 'scan' | 'practice' | 'saved' | 'profile' | 'adaptive' | 'assessments' | 'academicVoice' | 'progress' | 'adminBank' | 'about' | 'smartNotes' | 'myStruggles' | 'success' | 'cancel' | 'trial' | 'paywall' | 'subscribe' | 'mySubscription' | 'papers' | 'adminPayments' | 'unlock' | 'adminCodes' | 'terms' | 'refundPolicy' | 'privacyPolicy' | 'contact' | 'studyGuide' | 'studyGuidePhysics' | 'studyGuideLifeSciences' | 'studyGuideMathsLiteracy' | 'studyGuideMaths' | 'studyGuideTvet' | 'studyGuideDegree' | 'studyGuideExamTips' | 'studyGuideChapter';
+export type AppTab = 'landing' | 'login' | 'signup' | 'calculator' | 'home' | 'dashboard' | 'explore' | 'learn' | 'school' | 'tvet' | 'higherEd' | 'tracks' | 'tutor' | 'scan' | 'practice' | 'saved' | 'profile' | 'adaptive' | 'assessments' | 'academicVoice' | 'progress' | 'adminBank' | 'about' | 'smartNotes' | 'myStruggles' | 'success' | 'cancel' | 'trial' | 'paywall' | 'subscribe' | 'mySubscription' | 'papers' | 'adminPayments' | 'unlock' | 'adminCodes' | 'terms' | 'refundPolicy' | 'privacyPolicy' | 'contact' | 'studyGuide' | 'studyGuidePhysics' | 'studyGuideLifeSciences' | 'studyGuideMathsLiteracy' | 'studyGuideMaths' | 'studyGuideTvet' | 'studyGuideDegree' | 'studyGuideNcv' | 'studyGuideExamTips' | 'studyGuideChapter';
 
 export interface GeminiStatusInfo {
   checked: boolean;
@@ -279,6 +279,7 @@ export const pathToTab = (cleanPath: string, search = ''): AppTab => {
   if (cleanPath === '/study-guide/maths-grade-12') return 'studyGuideMaths';
   if (cleanPath === '/study-guide/tvet-n1-n6') return 'studyGuideTvet';
   if (cleanPath === '/study-guide/degree-modules') return 'studyGuideDegree';
+  if (cleanPath === '/study-guide/ncv-level-2-3-4') return 'studyGuideNcv';
   if (cleanPath === '/study-guide/matric-exam-tips') return 'studyGuideExamTips';
   if (cleanPath.startsWith('/study-guide/')) return 'studyGuideChapter';
   return 'landing';
@@ -317,6 +318,7 @@ export const tabToPath = (tab: AppTab): string => {
     case 'studyGuideMaths': return '/study-guide/maths-grade-12';
     case 'studyGuideTvet': return '/study-guide/tvet-n1-n6';
     case 'studyGuideDegree': return '/study-guide/degree-modules';
+    case 'studyGuideNcv': return '/study-guide/ncv-level-2-3-4';
     case 'studyGuideExamTips': return '/study-guide/matric-exam-tips';
     case 'studyGuideChapter': return typeof window !== 'undefined' ? window.location.pathname : '/study-guide/physics-grade-12/momentum';
     default: return '/';

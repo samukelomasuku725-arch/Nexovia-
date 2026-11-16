@@ -117,7 +117,7 @@ export const StudyGuideGuard: React.FC<StudyGuideGuardProps> = ({ children }) =>
             Start 2-Day Free Trial to unlock
           </h1>
           <p className="text-sm text-slate-200 leading-relaxed">
-            Unlock all Grade 12 CAPS, 36 TVET N1–N6, and 12 Degree Study Guide chapters, formulas, worked examples, and practice questions inside Nexovian.
+            Unlock all Grade 12 CAPS, 36 TVET N1–N6, NCV Level 2–4, and 12 Degree Study Guide chapters, formulas, worked examples, and practice questions inside Nexovian.
           </p>
           <p className="text-xs text-[#FFD400] font-semibold">
             2 days free • Then R60/month • Cancel before 2 days for R0

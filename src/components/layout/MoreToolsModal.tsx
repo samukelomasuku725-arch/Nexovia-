@@ -108,8 +108,8 @@ export const MoreToolsModal: React.FC<Props> = ({
       items: [
         {
           id: 'studyGuide',
-          title: 'Nexovian Study Guide (68 Chapters)',
-          subtitle: 'Grade 12 CAPS, 36 TVET N1–N6 & 12 Degree Killer Modules',
+          title: 'Nexovian Study Guide (81 Chapters)',
+          subtitle: 'Grade 12 CAPS, TVET N1–N6, NCV L2–L4 & Degree Modules',
           icon: BookOpen,
           color: 'bg-[#FFD400] text-black',
           onClick: () => {
@@ -130,6 +130,19 @@ export const MoreToolsModal: React.FC<Props> = ({
               window.history.pushState({}, '', '/study-guide/tvet-n1-n6');
             }
             navigateTo('studyGuideTvet');
+          }
+        },
+        {
+          id: 'studyGuideNcv',
+          title: 'NCV — Level 2, 3, 4 (13 Modules)',
+          subtitle: 'Office, Finance, Electrical, Civil, Eng. Design, IT & Tourism',
+          icon: BookOpen,
+          color: 'bg-[#0A1F44] text-[#FFD400] border border-[#FFD400]/50',
+          onClick: () => {
+            if (typeof window !== 'undefined') {
+              window.history.pushState({}, '', '/study-guide/ncv-level-2-3-4');
+            }
+            navigateTo('studyGuideNcv');
           }
         },
         {

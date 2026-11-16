@@ -31,6 +31,7 @@ import { FULL_PAPERS } from '../papers/PastPapersView';
 import {
   ALL_STUDY_GUIDE_CHAPTERS,
   DEGREE_CHAPTERS,
+  NCV_CHAPTERS,
   TVET_CHAPTERS
 } from '../../data/studyGuideContent';
 import { useLearning } from '../../context/LearningContext';
@@ -159,18 +160,19 @@ export const PublicLandingView: React.FC = () => {
   const [globalSearchQuery, setGlobalSearchQuery] = useState('');
   const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);
 
-  // Home Screen Subject Filter: [All] [TVET N1-N6] [Degree]
-  const [homeSubjectFilter, setHomeSubjectFilter] = useState<'all' | 'tvet' | 'degree'>('all');
+  // Home Screen Subject Filter: [All] [TVET N1-N6] [NCV L2-L4] [Degree]
+  const [homeSubjectFilter, setHomeSubjectFilter] = useState<'all' | 'tvet' | 'ncv' | 'degree'>('all');
   const [showAllHomeSubjects, setShowAllHomeSubjects] = useState(false);
 
   const filteredHomeChapters = useMemo(() => {
     if (homeSubjectFilter === 'tvet') return TVET_CHAPTERS;
+    if (homeSubjectFilter === 'ncv') return NCV_CHAPTERS;
     if (homeSubjectFilter === 'degree') return DEGREE_CHAPTERS;
     return ALL_STUDY_GUIDE_CHAPTERS;
   }, [homeSubjectFilter]);
 
   const visibleHomeChapters = useMemo(() => {
-    if (homeSubjectFilter === 'degree' || showAllHomeSubjects) {
+    if (homeSubjectFilter === 'degree' || homeSubjectFilter === 'ncv' || showAllHomeSubjects) {
       return filteredHomeChapters;
     }
     return filteredHomeChapters.slice(0, 12);
@@ -536,6 +538,21 @@ export const PublicLandingView: React.FC = () => {
                 <span>🎓</span>
                 <span>Degree Modules (12)</span>
               </a>
+
+              <a
+                href="/study-guide/ncv-level-2-3-4"
+                onClick={(e) => {
+                  e.preventDefault();
+                  setCurrentTab('studyGuideNcv');
+                  if (typeof window !== 'undefined') {
+                    window.history.pushState({}, '', '/study-guide/ncv-level-2-3-4');
+                  }
+                }}
+                className="inline-flex items-center justify-center gap-2 px-5 sm:px-6 py-3.5 sm:py-4 rounded-2xl bg-[#0D1E42] hover:bg-[#132959] text-[#FFD400] font-black text-sm sm:text-base border-2 border-[#FFD400]/70 shadow-lg transition-all transform hover:scale-105 active:scale-95 cursor-pointer"
+              >
+                <span>📋</span>
+                <span>NCV L2–L4 ({NCV_CHAPTERS.length})</span>
+              </a>
             </div>
 
             {/* ACTIVE SUBSCRIPTION CARD OR SINGLE MAIN 2-DAY FREE TRIAL CTA */}
@@ -733,15 +750,16 @@ export const PublicLandingView: React.FC = () => {
                   Browse Subjects by Level
                 </h2>
                 <p className="text-xs sm:text-sm text-slate-300 mt-1.5 max-w-2xl">
-                  Switch between Grade 12 CAPS, 36 TVET N1–N6 engineering trades, and all 12 Degree Killer Modules.
+                  Switch between Grade 12 CAPS, 36 TVET N1–N6 engineering trades, {NCV_CHAPTERS.length} NCV Level 2–4 modules, and all 12 Degree Killer Modules.
                 </p>
               </div>
 
-              {/* Filter Tabs: [All] [TVET N1-N6] [Degree] */}
+              {/* Filter Tabs: [All] [TVET N1-N6] [NCV L2-L4] [Degree] */}
               <div className="flex flex-wrap items-center gap-2" role="tablist" aria-label="Filter home study guide subjects">
                 {[
                   { id: 'all' as const, label: `All (${ALL_STUDY_GUIDE_CHAPTERS.length})` },
                   { id: 'tvet' as const, label: `TVET N1-N6 (${TVET_CHAPTERS.length})` },
+                  { id: 'ncv' as const, label: `NCV L2-L4 (${NCV_CHAPTERS.length})` },
                   { id: 'degree' as const, label: `Degree (${DEGREE_CHAPTERS.length})` }
                 ].map((tabItem) => {
                   const active = homeSubjectFilter === tabItem.id;
@@ -818,7 +836,7 @@ export const PublicLandingView: React.FC = () => {
 
             {/* Expand / Section Action Bar */}
             <div className="mt-7 flex flex-wrap items-center justify-center gap-3">
-              {homeSubjectFilter !== 'degree' && filteredHomeChapters.length > 12 && (
+              {homeSubjectFilter !== 'degree' && homeSubjectFilter !== 'ncv' && filteredHomeChapters.length > 12 && (
                 <button
                   type="button"
                   onClick={() => setShowAllHomeSubjects((prev) => !prev)}
@@ -834,6 +852,8 @@ export const PublicLandingView: React.FC = () => {
                 href={
                   homeSubjectFilter === 'tvet'
                     ? '/study-guide/tvet-n1-n6'
+                    : homeSubjectFilter === 'ncv'
+                    ? '/study-guide/ncv-level-2-3-4'
                     : homeSubjectFilter === 'degree'
                     ? '/study-guide/degree-modules'
                     : '/study-guide'
@@ -843,12 +863,16 @@ export const PublicLandingView: React.FC = () => {
                   const targetTab =
                     homeSubjectFilter === 'tvet'
                       ? 'studyGuideTvet'
+                      : homeSubjectFilter === 'ncv'
+                      ? 'studyGuideNcv'
                       : homeSubjectFilter === 'degree'
                       ? 'studyGuideDegree'
                       : 'studyGuide';
                   const targetUrl =
                     homeSubjectFilter === 'tvet'
                       ? '/study-guide/tvet-n1-n6'
+                      : homeSubjectFilter === 'ncv'
+                      ? '/study-guide/ncv-level-2-3-4'
                       : homeSubjectFilter === 'degree'
                       ? '/study-guide/degree-modules'
                       : '/study-guide';
@@ -863,6 +887,8 @@ export const PublicLandingView: React.FC = () => {
                 <span>
                   {homeSubjectFilter === 'tvet'
                     ? 'Open Full TVET N1–N6 Library (36)'
+                    : homeSubjectFilter === 'ncv'
+                    ? `Open Full NCV Level 2–4 Library (${NCV_CHAPTERS.length})`
                     : homeSubjectFilter === 'degree'
                     ? 'Open Full Degree Library (12)'
                     : 'Open Complete Study Guide Hub'}

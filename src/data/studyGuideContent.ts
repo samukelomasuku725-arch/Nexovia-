@@ -6,7 +6,7 @@
  * Physics + Life Sciences + Maths Literacy + Mathematics
  */
 
-export type SubjectKey = 'physics' | 'life-sciences' | 'maths-literacy' | 'maths' | 'tvet' | 'degree';
+export type SubjectKey = 'physics' | 'life-sciences' | 'maths-literacy' | 'maths' | 'tvet' | 'degree' | 'ncv';
 
 export interface PracticeQuestion {
   number: number;
@@ -6194,13 +6194,1186 @@ export const DEGREE_CHAPTERS: StudyGuideChapterData[] = [
   }
 ];
 
+export const NCV_CHAPTERS: StudyGuideChapterData[] = [
+  {
+    subject: 'ncv',
+    subjectLabel: 'NCV - Level 2, 3, 4',
+    subjectIcon: '💻',
+    backPath: '/study-guide/ncv-level-2-3-4',
+    chapterNumber: 1,
+    slug: 'ncv-office-admin-office-data-processing',
+    aliases: ['office-data-processing', 'ncv-odp', 'ncv-office-administration-odp'],
+    title: 'NCV Office Administration L2–L4: Office Data Processing',
+    shortDescription:
+      'MS Word documents, Excel spreadsheets & formulas (=SUM, =AVERAGE), PowerPoint presentations, Access databases, Mail Merge & typing speed.',
+    summary: [
+      'Office Data Processing = using a computer to do everyday office work accurately and fast.',
+      'MS Word = documents (letters, memos, reports), Excel = spreadsheets (budgets, calculations), PowerPoint = presentations, Access = databases.',
+      'Must know for NCV exams: Document Formatting, Excel Formulas, Mail Merge, and fast, accurate Typing Speed.'
+    ],
+    formulasTitle: 'Key Formulas & MS Office Diagrams Box',
+    formulas: [
+      {
+        expression: '=SUM(A1:A5)',
+        meaning: 'Excel SUM formula: adds all numbers from cell A1 through A5'
+      },
+      {
+        expression: '=AVERAGE(A1:A5)',
+        meaning: 'Excel AVERAGE formula: finds the mean (average) of cells A1 to A5'
+      },
+      {
+        expression: 'Mail Merge = Letters + Data Source',
+        meaning: 'Combines a main letter template with a spreadsheet/database address list to create personalised letters automatically'
+      },
+      {
+        expression: 'MS Office Core Suite',
+        meaning: 'Word (Documents) • Excel (Spreadsheets) • PowerPoint (Slides) • Access (Databases)'
+      }
+    ],
+    diagramLines: [
+      '   EXCEL SPREADSHEET FORMULA:           MAIL MERGE WORKFLOW:',
+      '   ┌────┬──────────┐                    ┌──────────────────┐   ┌─────────────────┐',
+      '   │ A1 │    10    │                    │   Main Letter    │ + │   Data Source   │',
+      '   │ A2 │    20    │                    │ (Dear <<Name>>)  │   │ (Names & Addrs) │',
+      '   ├────┼──────────┤                    └────────┬─────────┘   └────────┬────────┘',
+      '   │ A3 │ =SUM(A1:A2) -> 30                      └──────────┬───────────┘',
+      '   └────┴──────────┘                                        ▼',
+      '                                                 Personalised Letters Ready!'
+    ],
+    workedExample: {
+      question: 'In Excel, cells A1 = 10 and A2 = 20. What is =SUM(A1:A2)?',
+      steps: [
+        'Look at the range inside the brackets: A1:A2 means cell A1 and cell A2.',
+        'The =SUM function adds all values in that range together.',
+        'Add the cell values: 10 + 20 = 30.'
+      ],
+      finalAnswer: '30'
+    },
+    practiceQuestions: [
+      {
+        number: 1,
+        question: 'What is MS Word used for?',
+        answer: [
+          'MS Word is a word-processing program used to type, format, edit, and print office documents such as business letters, memos, CVs, notices, and reports.'
+        ]
+      },
+      {
+        number: 2,
+        question: 'What is =AVERAGE used for?',
+        answer: [
+          'The =AVERAGE(...) function in MS Excel calculates the arithmetic mean of a selected range of numbers (it adds the values in the cells and divides by how many numbers there are).'
+        ]
+      },
+      {
+        number: 3,
+        question: 'What is Mail Merge?',
+        answer: [
+          'Mail Merge is a feature that combines a standard main document (such as a letter or certificate) with a Data Source (a list of names, addresses, or emails) to produce personalised copies for many recipients at once.'
+        ]
+      },
+      {
+        number: 4,
+        question: 'Name 3 parts of MS Office.',
+        answer: [
+          '1. MS Word (documents & word processing)',
+          '2. MS Excel (spreadsheets & calculations)',
+          '3. MS PowerPoint (presentations) — and also MS Access (databases).'
+        ]
+      },
+      {
+        number: 5,
+        question: 'What is a spreadsheet?',
+        answer: [
+          'A spreadsheet (such as MS Excel) is a computer grid made of rows and columns of cells used to organise numbers, run automatic formulas and calculations, create budgets, and generate charts.'
+        ]
+      }
+    ]
+  },
+  {
+    subject: 'ncv',
+    subjectLabel: 'NCV - Level 2, 3, 4',
+    subjectIcon: '🗂️',
+    backPath: '/study-guide/ncv-level-2-3-4',
+    chapterNumber: 2,
+    slug: 'ncv-office-admin-business-practice-office-practice',
+    aliases: ['business-practice-office-practice', 'ncv-office-practice', 'ncv-business-practice'],
+    title: 'NCV Office Administration L2–L4: Business Practice & Office Practice',
+    shortDescription:
+      'Filing systems (Alphabetical & Numerical), reception, meeting agendas & minutes, business communication, customer service & ethics.',
+    summary: [
+      'Business Practice = how a business operates as a whole (departments, customers, ethics, and business functions).',
+      'Office Practice = how the office runs day-to-day to support the business.',
+      'Must know for exams: Filing, Reception duties, Meetings (Agenda & Minutes), Business Communication, Customer Service, and Business Ethics.'
+    ],
+    formulasTitle: 'Key Concepts & Office Systems Box',
+    formulas: [
+      {
+        expression: 'Filing Systems: Alphabetical & Numerical',
+        meaning: 'Alphabetical (sorted A–Z by client/company name) • Numerical (sorted by file or invoice number)'
+      },
+      {
+        expression: 'Business Communication',
+        meaning: 'Clear verbal, telephone, email, memo, and written communication between staff and clients'
+      },
+      {
+        expression: 'Meeting Agenda & Minutes',
+        meaning: 'Agenda = list of topics BEFORE the meeting • Minutes = official written record AFTER the meeting'
+      },
+      {
+        expression: 'Customer Service & Business Ethics',
+        meaning: 'Treating clients politely and solving problems honestly, fairly, and confidentially'
+      }
+    ],
+    diagramLines: [
+      '   HANDLING AN ANGRY CLIENT CALL:',
+      '   [1. Listen Quietly] ─▶ [2. Stay Calm] ─▶ [3. Apologise] ─▶ [4. Solve Problem] ─▶ [5. Record Complaint]',
+      '',
+      '   MEETING FLOW:   [ Notice + Agenda ] ──▶ [ Meeting Held ] ──▶ [ Written Minutes Filed ]'
+    ],
+    workedExample: {
+      question: 'A client calls angry about an incorrect invoice. What do you do?',
+      steps: [
+        'Step 1: Listen carefully without interrupting so the client feels heard.',
+        'Step 2: Stay calm, polite, and professional — never argue back.',
+        'Step 3: Apologise sincerely for the inconvenience caused.',
+        'Step 4: Solve the problem (check details, fix the mistake, or escalate to a manager).',
+        'Step 5: Record the complaint and action taken in the customer log.'
+      ],
+      finalAnswer: 'Listen, stay calm, apologise, solve the problem, and record the complaint.'
+    },
+    practiceQuestions: [
+      {
+        number: 1,
+        question: 'What is filing?',
+        answer: [
+          'Filing is the systematic sorting, classifying, and storing of paper or electronic office documents (using alphabetical, numerical, chronological, or subject order) so they stay safe and can be found quickly when needed.'
+        ]
+      },
+      {
+        number: 2,
+        question: 'What is in a meeting agenda?',
+        answer: [
+          'A meeting agenda lists the meeting title, date, time, and venue, followed by items in order: Welcome, Attendance/Apologies, Minutes of Previous Meeting, Matters Arising, New Business/Topics to Discuss, General, and Date of Next Meeting / Closure.'
+        ]
+      },
+      {
+        number: 3,
+        question: 'What is customer service?',
+        answer: [
+          'Customer service is the polite, helpful assistance and support a business gives its customers before, during, and after a purchase or enquiry to keep clients satisfied and loyal.'
+        ]
+      },
+      {
+        number: 4,
+        question: 'Difference Business Practice vs Office Practice?',
+        answer: [
+          'Business Practice focuses on how the entire business works (business operations, departments, workplace ethics, customer relations, and economic role).',
+          'Office Practice focuses on daily administrative tasks inside the office (reception, telephone etiquette, filing, mail handling, and arranging meetings).'
+        ]
+      },
+      {
+        number: 5,
+        question: 'Why is communication important in office?',
+        answer: [
+          'Good office communication prevents costly mistakes, ensures instructions are clearly understood, builds teamwork among staff, and creates a professional, trustworthy image for clients.'
+        ]
+      }
+    ]
+  },
+  {
+    subject: 'ncv',
+    subjectLabel: 'NCV - Level 2, 3, 4',
+    subjectIcon: '💼',
+    backPath: '/study-guide/ncv-level-2-3-4',
+    chapterNumber: 3,
+    slug: 'ncv-office-admin-new-venture-lo-english-maths-lit',
+    aliases: ['new-venture-creation', 'ncv-new-venture-lo-english-maths-lit', 'ncv-fundamentals'],
+    title: 'NCV Office Administration L2–L4: New Venture Creation + Life Orientation + English + Maths Lit',
+    shortDescription:
+      'Starting a business (Business Plan, Marketing, Finance), Life Orientation (health, career, values), English FAL communication & Maths Lit formulas.',
+    summary: [
+      'New Venture Creation = starting and running your own small business: Business Plan, Marketing, and Finance.',
+      'Life Orientation = health, workplace readiness, career planning, and positive values.',
+      'English FAL = clear speaking, reading, and written business communication. Maths Lit = real-life maths: budgets, profit, simple interest, and measurements.'
+    ],
+    formulasTitle: 'Key Formulas & Business Planning Box',
+    formulas: [
+      {
+        expression: 'Profit = Income − Expenses',
+        meaning: 'Money left over after paying all business costs'
+      },
+      {
+        expression: 'Simple Interest = P × R × T',
+        meaning: 'Interest = Principal (P) × Rate (R as decimal) × Time (T in years)'
+      },
+      {
+        expression: 'Budget = Income − Expenses',
+        meaning: 'Plan showing expected money coming in versus money going out over a month or year'
+      },
+      {
+        expression: 'New Venture Creation Pillars',
+        meaning: 'Business Plan (Roadmap) • Marketing (4Ps & Customers) • Finance (Cash Flow & Profit)'
+      }
+    ],
+    diagramLines: [
+      '   SMALL BUSINESS MONEY CHECK:',
+      '   [ Total Income (R5 000) ]  −  [ Total Expenses (R3 000) ]  =  [ Profit (R2 000) ]',
+      '',
+      '   NCV SUCCESS CORE:  New Venture (Business) + LO (Life Skills) + English FAL + Maths Lit'
+    ],
+    workedExample: {
+      question: 'A small business earns Income of R5 000 and pays Expenses of R3 000. Find the Profit.',
+      steps: [
+        'Write the profit formula: Profit = Income − Expenses',
+        'Substitute the values: Profit = R5 000 − R3 000',
+        'Calculate: 5 000 − 3 000 = 2 000'
+      ],
+      finalAnswer: 'Profit = R2 000'
+    },
+    practiceQuestions: [
+      {
+        number: 1,
+        question: 'What is a business plan?',
+        answer: [
+          'A business plan is a formal written document describing a business idea, its products or services, target customers, marketing strategy, operations, and financial forecasts (used to guide the owner and apply for funding).'
+        ]
+      },
+      {
+        number: 2,
+        question: 'What is profit?',
+        answer: [
+          'Profit is the financial gain earned when a business’s total Income is greater than its total Expenses (Profit = Income − Expenses).'
+        ]
+      },
+      {
+        number: 3,
+        question: 'Income R8000, Expenses R5000, find profit.',
+        answer: [
+          'Formula: Profit = Income − Expenses',
+          'Substitute: Profit = R8 000 − R5 000 = R3 000',
+          'Answer: R3 000 profit.'
+        ]
+      },
+      {
+        number: 4,
+        question: 'What is a budget?',
+        answer: [
+          'A budget is a financial plan that estimates expected Income and planned Expenses for a set period (such as a month or year) so a person or business avoids overspending.'
+        ]
+      },
+      {
+        number: 5,
+        question: 'Why is Life Orientation important?',
+        answer: [
+          'Life Orientation builds essential life and workplace skills — including physical/mental health, career planning, financial responsibility, human rights, and ethical values — helping learners succeed in both jobs and daily life.'
+        ]
+      }
+    ]
+  },
+  {
+    subject: 'ncv',
+    subjectLabel: 'NCV - Level 2, 3, 4',
+    subjectIcon: '🧾',
+    backPath: '/study-guide/ncv-level-2-3-4',
+    chapterNumber: 4,
+    slug: 'ncv-finance-financial-accounting',
+    aliases: ['ncv-financial-accounting', 'ncv-finance-economics-accounting-financial-accounting'],
+    title: 'NCV Finance, Economics & Accounting L2–L4: Financial Accounting',
+    shortDescription:
+      'Debit (Dr) vs Credit (Cr), Journals, Ledgers, Trial Balance, Income Statement, Balance Sheet & Accounting Equation made practical.',
+    summary: [
+      'Financial Accounting = recording, sorting, and reporting money for a business.',
+      'Debit = Dr (left side, what comes in / increases Assets & Expenses). Credit = Cr (right side, what goes out / increases Liabilities, Equity & Income).',
+      'Must know for NCV exams: Journals, Ledgers, Trial Balance, Income Statement, and Balance Sheet — the same core principles as BCom, taught in a simpler, practical way.'
+    ],
+    formulasTitle: 'Key Formulas & Accounting Cycle Box',
+    formulas: [
+      {
+        expression: 'Assets = Liabilities + Equity',
+        meaning: 'The fundamental Accounting Equation — must always stay balanced'
+      },
+      {
+        expression: 'Profit = Income − Expenses',
+        meaning: 'Calculated in the Income Statement for a financial period'
+      },
+      {
+        expression: 'Trial Balance: Debits = Credits',
+        meaning: 'Sum of all Debit balances equals the sum of all Credit balances'
+      }
+    ],
+    diagramLines: [
+      '   PRACTICAL ACCOUNTING CYCLE:',
+      '   [ Source Documents ] ─▶ [ Journals ] ─▶ [ Ledgers (Dr | Cr) ] ─▶ [ Trial Balance (Dr = Cr) ]',
+      '                                                                            │',
+      '                                              ┌─────────────────────────────┴──────────────────────┐',
+      '                                              ▼                                                    ▼',
+      '                                    [ Income Statement ]                                   [ Balance Sheet ]',
+      '                                  (Profit = Income − Exp.)                             (Assets = Liab. + Equity)'
+    ],
+    workedExample: {
+      question: 'A business has Assets of R60 000 and Equity of R40 000. Find Liabilities.',
+      steps: [
+        'Write the Accounting Equation: Assets = Liabilities + Equity',
+        'Rearrange to solve for Liabilities: Liabilities = Assets − Equity',
+        'Substitute values: Liabilities = R60 000 − R40 000 = R20 000'
+      ],
+      finalAnswer: 'Liabilities = R20 000'
+    },
+    practiceQuestions: [
+      {
+        number: 1,
+        question: 'What is Financial Accounting?',
+        answer: [
+          'Financial Accounting is the systematic process of recording, classifying, summarising, and reporting a business’s money transactions (into financial statements like the Income Statement and Balance Sheet) so owners, banks, and SARS can see financial results.'
+        ]
+      },
+      {
+        number: 2,
+        question: 'What is a debit?',
+        answer: [
+          'A Debit (Dr) is an entry recorded on the left-hand side of a ledger account.',
+          'Debits increase Assets (like Cash/Bank) and Expenses, and decrease Liabilities, Equity, and Income.'
+        ]
+      },
+      {
+        number: 3,
+        question: 'Assets R90 000, Liabilities R30 000, find Equity.',
+        answer: [
+          'Formula: Assets = Liabilities + Equity  →  Equity = Assets − Liabilities',
+          'Substitute: Equity = R90 000 − R30 000 = R60 000',
+          'Answer: Equity = R60 000.'
+        ]
+      },
+      {
+        number: 4,
+        question: 'What is Trial Balance?',
+        answer: [
+          'A Trial Balance is a list of all General Ledger account balances separated into Debit and Credit columns to check the arithmetic accuracy of double-entry bookkeeping (Total Debits must equal Total Credits).'
+        ]
+      },
+      {
+        number: 5,
+        question: 'Difference Income Statement vs Balance Sheet?',
+        answer: [
+          'Income Statement: Shows income earned minus expenses incurred OVER a specific period to calculate Profit or Loss.',
+          'Balance Sheet: Shows the business’s Assets, Liabilities, and Equity AT one specific date.'
+        ]
+      }
+    ]
+  },
+  {
+    subject: 'ncv',
+    subjectLabel: 'NCV - Level 2, 3, 4',
+    subjectIcon: '🏦',
+    backPath: '/study-guide/ncv-level-2-3-4',
+    chapterNumber: 5,
+    slug: 'ncv-finance-economic-environment-applied-accounting',
+    aliases: ['ncv-economic-environment-applied-accounting', 'ncv-applied-accounting-vat'],
+    title: 'NCV Finance L2–L4: Economic Environment & Applied Accounting',
+    shortDescription:
+      'Economic Environment (Supply, Demand, Inflation, Unemployment) & practical Applied Accounting (15% SA VAT, Net Salaries & Bank Reconciliation).',
+    summary: [
+      'Economic Environment = how the wider economy affects every business — including Supply, Demand, Inflation, and Unemployment.',
+      'Applied Accounting = using accounting rules in real everyday business tasks: calculating VAT, preparing Salaries & Wages, and completing Bank Reconciliation.',
+      'Know South Africa’s standard 15% VAT rate and how to compare a business’s Cash Book against its Bank Statement.'
+    ],
+    formulasTitle: 'Key Formulas & Applied Accounting Box',
+    formulas: [
+      {
+        expression: 'VAT = 15% in South Africa',
+        meaning: 'VAT Amount = Price (Excl.) × 0.15  •  Total Incl. VAT = Price × 1.15'
+      },
+      {
+        expression: 'Net Salary = Gross Salary − Deductions',
+        meaning: 'Take-home pay after PAYE tax, UIF, medical aid, and pension deductions'
+      },
+      {
+        expression: 'Inflation = Prices Going Up Over Time',
+        meaning: 'General rise in prices causing each Rand to buy less than before'
+      }
+    ],
+    diagramLines: [
+      '   SA VAT CALCULATION (15%):          APPLIED ACCOUNTING CONTROLS:',
+      '   [ Price Excl. VAT (R100) ]           1. Payroll: Gross Salary − (PAYE + UIF) = Net Salary',
+      '        + 15% VAT (R15)                 2. Bank Recon: Cash Book  ◀──Match──▶  Bank Statement',
+      '   = [ Total Incl. VAT (R115) ]            (Spot outstanding cheques, deposits & bank charges)'
+    ],
+    workedExample: {
+      question: 'An item costs R100 excluding VAT. Add VAT at 15% and find the total price.',
+      steps: [
+        'Calculate 15% VAT: VAT = R100 × (15 ÷ 100) = R15',
+        'Add VAT to the original price: Total = R100 + R15 = R115'
+      ],
+      finalAnswer: 'VAT = R15, Total = R115'
+    },
+    practiceQuestions: [
+      {
+        number: 1,
+        question: 'What is inflation?',
+        answer: [
+          'Inflation is the sustained general increase in the prices of goods and services over time, which reduces the purchasing power of money.'
+        ]
+      },
+      {
+        number: 2,
+        question: 'What is VAT % in SA?',
+        answer: [
+          '15% (South Africa’s standard Value Added Tax rate).'
+        ]
+      },
+      {
+        number: 3,
+        question: 'Price R200 + VAT, find total.',
+        answer: [
+          'VAT = R200 × 15% = R200 × 0.15 = R30',
+          'Total = R200 + R30 = R230',
+          'Answer: R230.'
+        ]
+      },
+      {
+        number: 4,
+        question: 'What is bank reconciliation?',
+        answer: [
+          'Bank reconciliation is the process of comparing the business’s internal Cash Book / Cash Journals with the monthly Bank Statement from the bank and explaining any differences (such as bank charges, interest, or unpresented deposits/payments).'
+        ]
+      },
+      {
+        number: 5,
+        question: 'What is unemployment?',
+        answer: [
+          'Unemployment occurs when people who are willing, able, and actively looking for work cannot find a job.'
+        ]
+      }
+    ]
+  },
+  {
+    subject: 'ncv',
+    subjectLabel: 'NCV - Level 2, 3, 4',
+    subjectIcon: '📈',
+    backPath: '/study-guide/ncv-level-2-3-4',
+    chapterNumber: 6,
+    slug: 'ncv-finance-new-venture-lo-english-maths-lit',
+    aliases: ['ncv-finance-new-venture-creation', 'ncv-finance-marketing-4ps'],
+    title: 'NCV Finance L2–L4: New Venture Creation + Life Orientation + English + Maths Lit',
+    shortDescription:
+      'Business Plans, Marketing Mix 4Ps (Product, Price, Place, Promotion), Profit & Markup, Budgets, Simple Interest & Financial Percentages.',
+    summary: [
+      'New Venture Creation = starting and growing a sustainable business.',
+      'Must know: Business Plan and the Marketing Mix 4Ps — Product, Price, Place, Promotion — alongside Life Orientation and English workplace communication.',
+      'Maths Lit for Finance covers Budgets, Profit & Markup calculations, Simple Interest, and Percentages.'
+    ],
+    formulasTitle: 'Key Formulas & Marketing Mix 4Ps Box',
+    formulas: [
+      {
+        expression: 'Profit = Income − Expenses',
+        meaning: 'Or Selling Price − Cost Price on goods sold'
+      },
+      {
+        expression: 'Markup = Cost + Profit',
+        meaning: 'Selling Price = Cost Price + Profit added'
+      },
+      {
+        expression: 'Simple Interest = P × R × T',
+        meaning: 'Principal (P) × Interest Rate (R as decimal) × Time (T in years)'
+      },
+      {
+        expression: 'Marketing Mix (4Ps)',
+        meaning: 'Product • Price • Place • Promotion'
+      }
+    ],
+    diagramLines: [
+      '   MARKETING MIX (4Ps):   [ Product ]  +  [ Price ]  +  [ Place ]  +  [ Promotion ]',
+      '',
+      '   PROFIT CHECK:          Selling Price (R150) − Cost Price (R100) = Profit (R50)'
+    ],
+    workedExample: {
+      question: 'A product has a Cost Price of R100 and you sell it for R150. Find the Profit.',
+      steps: [
+        'Write the profit formula: Profit = Selling Price (Income) − Cost Price (Expenses)',
+        'Substitute values: Profit = R150 − R100',
+        'Calculate: 150 − 100 = 50'
+      ],
+      finalAnswer: 'Profit = R50'
+    },
+    practiceQuestions: [
+      {
+        number: 1,
+        question: 'What are 4Ps?',
+        answer: [
+          'The Marketing Mix 4Ps:',
+          '1. Product (what you sell — goods or service)',
+          '2. Price (how much customers pay)',
+          '3. Place (where and how it is distributed)',
+          '4. Promotion (how you advertise and attract buyers).'
+        ]
+      },
+      {
+        number: 2,
+        question: 'What is a business plan?',
+        answer: [
+          'A business plan is a written document outlining a venture’s goals, products, target market, marketing strategy (4Ps), operations, and financial forecasts (budget, costs, expected profit).'
+        ]
+      },
+      {
+        number: 3,
+        question: 'Cost R80, Sell R120, find profit.',
+        answer: [
+          'Formula: Profit = Selling Price − Cost Price',
+          'Substitute: Profit = R120 − R80 = R40',
+          'Answer: R40 profit.'
+        ]
+      },
+      {
+        number: 4,
+        question: 'What is marketing?',
+        answer: [
+          'Marketing is the process of researching what customers want, developing the right product, pricing and promoting it effectively, and delivering it to satisfy customers at a profit.'
+        ]
+      },
+      {
+        number: 5,
+        question: 'Why do businesses fail?',
+        answer: [
+          'Common reasons include poor cash-flow/financial management, no clear business plan, weak marketing or wrong location, spending more than income, and poor customer service.'
+        ]
+      }
+    ]
+  },
+  {
+    subject: 'ncv',
+    subjectLabel: 'NCV - Level 2, 3, 4',
+    subjectIcon: '⚡',
+    backPath: '/study-guide/ncv-level-2-3-4',
+    chapterNumber: 7,
+    slug: 'ncv-electrical-principles-and-practice',
+    aliases: ['ncv-electrical-infrastructure-principles', 'ncv-electrical-ohms-law'],
+    title: 'NCV Electrical Infrastructure Construction L2–L4: Electrical Principles & Practice',
+    shortDescription:
+      'Current, Voltage, Resistance, Ohm’s Law (V = I × R), Electrical Power (P = V × I), Series & Parallel circuit calculations.',
+    summary: [
+      'Electrical Principles = how electricity works in circuits and installations.',
+      'Current (I, Amps) = flow of electrons, Voltage (V, Volts) = electrical pressure, Resistance (R, Ohms Ω) = opposition to current flow.',
+      'Ohm’s Law is KING in NCV Electrical! Must also master Series vs Parallel resistor circuits and Electrical Power.'
+    ],
+    formulasTitle: 'Key Formulas & Series / Parallel Diagram Box',
+    formulas: [
+      {
+        expression: 'V = I × R   |   I = V / R   |   R = V / I',
+        meaning: 'Ohm’s Law triangle: relates Voltage (V), Current (A), and Resistance (Ω)'
+      },
+      {
+        expression: 'P = V × I',
+        meaning: 'Electrical Power in Watts (W) = Voltage (V) × Current (A)'
+      },
+      {
+        expression: 'Series: R_total = R₁ + R₂',
+        meaning: 'Same current flows through every resistor; voltages add up'
+      },
+      {
+        expression: 'Parallel: 1/R_total = 1/R₁ + 1/R₂',
+        meaning: 'Same voltage across every branch; total current splits between branches'
+      }
+    ],
+    diagramLines: [
+      '   SERIES CIRCUIT:                    PARALLEL CIRCUIT:',
+      '   ┌───[ R₁ ]───[ R₂ ]───┐            ┌────[ R₁ ]────┐',
+      '   │                     │            ├────[ R₂ ]────┤',
+      '   └────────( V )────────┘            └────( V )─────┘',
+      '   R_total = R₁ + R₂                  1/R_total = 1/R₁ + 1/R₂'
+    ],
+    workedExample: {
+      question: 'A circuit has Voltage V = 12 V and Resistance R = 4 Ω. Find the Current I.',
+      steps: [
+        'Write Ohm’s Law for Current: I = V ÷ R',
+        'Substitute values: I = 12 V ÷ 4 Ω',
+        'Calculate: 12 ÷ 4 = 3 A'
+      ],
+      finalAnswer: 'I = 3 A'
+    },
+    practiceQuestions: [
+      {
+        number: 1,
+        question: 'What is Ohm’s Law?',
+        answer: [
+          'Ohm’s Law states that the current (I) flowing through a conductor is directly proportional to the voltage (V) across it and inversely proportional to its resistance (R), at constant temperature: V = I × R.'
+        ]
+      },
+      {
+        number: 2,
+        question: 'V=24V, I=2A, find R.',
+        answer: [
+          'Formula: R = V ÷ I',
+          'Substitute: R = 24 V ÷ 2 A = 12 Ω',
+          'Answer: R = 12 Ω (ohms).'
+        ]
+      },
+      {
+        number: 3,
+        question: 'Difference series vs parallel?',
+        answer: [
+          'Series circuit: Components are connected end-to-end along ONE path — current is the same everywhere, and if one component breaks, the whole circuit stops.',
+          'Parallel circuit: Components are connected across separate branches — voltage is the same across each branch, and other branches keep working if one branch opens.'
+        ]
+      },
+      {
+        number: 4,
+        question: 'What is voltage?',
+        answer: [
+          'Voltage (potential difference, measured in Volts V) is the electrical pressure or energy per unit charge that pushes electrons to flow around a circuit.'
+        ]
+      },
+      {
+        number: 5,
+        question: 'P=100W, V=20V, find I.',
+        answer: [
+          'Formula: P = V × I  →  I = P ÷ V',
+          'Substitute: I = 100 W ÷ 20 V = 5 A',
+          'Answer: I = 5 A.'
+        ]
+      }
+    ]
+  },
+  {
+    subject: 'ncv',
+    subjectLabel: 'NCV - Level 2, 3, 4',
+    subjectIcon: '🔌',
+    backPath: '/study-guide/ncv-level-2-3-4',
+    chapterNumber: 8,
+    slug: 'ncv-electrical-electronic-control-digital-workshop-practice',
+    aliases: ['ncv-electronic-control-digital-electronics', 'ncv-workshop-practice-logic-gates'],
+    title: 'NCV Electrical L2–L4: Electronic Control & Digital Electronics + Workshop Practice',
+    shortDescription:
+      'Relays & timers, Digital Electronics (0 & 1, AND / OR / NOT logic gates), Workshop Practice tools, wiring, testing & Lock-Out PPE safety.',
+    summary: [
+      'Electronic Control = control circuits built with relays, contactors, and timers to automate machines.',
+      'Digital Electronics = binary logic using 0 (LOW/OFF) and 1 (HIGH/ON) through logic gates: AND, OR, NOT.',
+      'Workshop Practice = electrical safety, hand tools, wiring, and circuit testing. Safety FIRST: always Isolate, Test Dead, Lock Out, and wear PPE.'
+    ],
+    formulasTitle: 'Key Concepts & Logic Gates / Safety Box',
+    formulas: [
+      {
+        expression: 'AND Gate (Y = A · B)',
+        meaning: 'Output is 1 ONLY if BOTH inputs A and B are 1'
+      },
+      {
+        expression: 'OR Gate (Y = A + B)',
+        meaning: 'Output is 1 if ANY input (A or B or both) is 1'
+      },
+      {
+        expression: 'NOT Gate (Y = Ā)',
+        meaning: 'Inverter — output is the OPPOSITE of input (0 becomes 1, 1 becomes 0)'
+      },
+      {
+        expression: 'Workshop Safety & PPE',
+        meaning: 'Isolate → Lock-Out/Tag-Out → Test Zero Volts → Wear Insulated PPE'
+      }
+    ],
+    diagramLines: [
+      '   DIGITAL LOGIC GATES:                 SAFE ISOLATION PROCEDURE:',
+      '   AND:  A=1, B=0  ──▶ [ AND ] ──▶ 0     1. Switch OFF & Isolate supply',
+      '   OR:   A=0, B=1  ──▶ [  OR ] ──▶ 1     2. Lock Out & Tag (LOTO)',
+      '   NOT:  A=1       ──▶ [ NOT ] ──▶ 0     3. Test with calibrated multimeter (Verify Dead)'
+    ],
+    workedExample: {
+      question: 'An AND logic gate has inputs A = 1 and B = 0. What is the output?',
+      steps: [
+        'Recall the AND gate rule: output is 1 ONLY when ALL inputs are 1.',
+        'Here A = 1 and B = 0 (not both 1).',
+        'Therefore the output is 0.'
+      ],
+      finalAnswer: 'Output = 0 (because an AND gate needs both inputs to be 1)'
+    },
+    practiceQuestions: [
+      {
+        number: 1,
+        question: 'Name 3 logic gates.',
+        answer: [
+          '1. AND gate',
+          '2. OR gate',
+          '3. NOT gate (inverter).'
+        ]
+      },
+      {
+        number: 2,
+        question: 'AND gate 1,1 = ?',
+        answer: [
+          'Output = 1 (because both inputs are 1).'
+        ]
+      },
+      {
+        number: 3,
+        question: 'OR gate 0,1 = ?',
+        answer: [
+          'Output = 1 (an OR gate outputs 1 whenever at least one input is 1).'
+        ]
+      },
+      {
+        number: 4,
+        question: 'What is PPE?',
+        answer: [
+          'PPE stands for Personal Protective Equipment — safety gear worn to protect workers from electrical, mechanical, and arc-flash hazards (such as insulated gloves, safety boots, safety goggles, hard hats, and overalls).'
+        ]
+      },
+      {
+        number: 5,
+        question: 'Why isolate before working?',
+        answer: [
+          'Isolating disconnects the electrical circuit from the live power supply so no current can flow through you — preventing fatal electric shock, electrocution, burns, and short-circuit arc flashes.'
+        ]
+      }
+    ]
+  },
+  {
+    subject: 'ncv',
+    subjectLabel: 'NCV - Level 2, 3, 4',
+    subjectIcon: '☀️',
+    backPath: '/study-guide/ncv-level-2-3-4',
+    chapterNumber: 9,
+    slug: 'ncv-electrical-renewable-energy-maths-english-lo',
+    aliases: ['ncv-renewable-energy', 'ncv-electrical-solar-renewable-energy'],
+    title: 'NCV Electrical L2–L4: Renewable Energy + Maths + English + Life Orientation',
+    shortDescription:
+      'Solar PV panels, Wind & Hydro renewable energy, Solar Power (P = V × I) & Energy (E = P × t), technical Maths, English reports & LO.',
+    summary: [
+      'Renewable Energy = clean energy from natural sources that never run out: Solar (sun), Wind, and Hydro (water).',
+      'A Solar PV panel converts sunlight directly into DC electricity, feeding charge controllers, batteries, and inverters.',
+      'Engineering Fundamentals: Maths = algebra, trigonometry, and Ohm’s Law calculations; English = clear technical & safety reports; Life Orientation = workplace safety and career planning.'
+    ],
+    formulasTitle: 'Key Formulas & Solar PV System Box',
+    formulas: [
+      {
+        expression: 'Power Solar = Voltage × Current (P = V × I)',
+        meaning: 'Solar panel electrical power output in Watts (W)'
+      },
+      {
+        expression: 'Energy = Power × Time (E = P × t)',
+        meaning: 'Electrical energy in Watt-hours (Wh) or Joules (W × seconds)'
+      },
+      {
+        expression: '3 Main Renewable Sources',
+        meaning: 'Solar (Sunlight PV) • Wind (Turbines) • Hydro (Moving Water)'
+      }
+    ],
+    diagramLines: [
+      '   OFF-GRID / HYBRID SOLAR PV SYSTEM:',
+      '   ☀️ Sunlight ─▶ [ Solar Panel (DC) ] ─▶ [ Charge Controller ] ─▶ [ Battery Bank ]',
+      '                                                                          │',
+      '                                          [ AC Appliances ] ◀─ [ Inverter (DC→AC) ]'
+    ],
+    workedExample: {
+      question: 'A solar panel delivers Voltage = 12 V at Current = 5 A. Find its Power output.',
+      steps: [
+        'Write the solar power formula: Power = Voltage × Current (P = V × I)',
+        'Substitute values: P = 12 V × 5 A',
+        'Calculate: 12 × 5 = 60 W'
+      ],
+      finalAnswer: 'P = 60 W'
+    },
+    practiceQuestions: [
+      {
+        number: 1,
+        question: 'Name 3 renewable energies.',
+        answer: [
+          '1. Solar energy (sunlight)',
+          '2. Wind energy (wind turbines)',
+          '3. Hydroelectric energy (flowing water).'
+        ]
+      },
+      {
+        number: 2,
+        question: 'What does solar panel do?',
+        answer: [
+          'A solar photovoltaic (PV) panel captures sunlight and converts solar light energy directly into direct-current (DC) electricity.'
+        ]
+      },
+      {
+        number: 3,
+        question: 'Panel 24V, 2A, find Power.',
+        answer: [
+          'Formula: P = V × I',
+          'Substitute: P = 24 V × 2 A = 48 W',
+          'Answer: 48 W.'
+        ]
+      },
+      {
+        number: 4,
+        question: 'Why is renewable energy important?',
+        answer: [
+          'Renewable energy never runs out, produces clean electricity with low carbon emissions/pollution, reduces load-shedding dependence on fossil fuels (coal), and lowers long-term electricity costs.'
+        ]
+      },
+      {
+        number: 5,
+        question: 'What is Energy?',
+        answer: [
+          'Energy is the capacity to do work (for example, lighting a bulb or running a motor). Electrical energy equals Power multiplied by Time (E = P × t), measured in Joules (J) or kilowatt-hours (kWh).'
+        ]
+      }
+    ]
+  },
+  {
+    subject: 'ncv',
+    subjectLabel: 'NCV - Level 2, 3, 4',
+    subjectIcon: '🧱',
+    backPath: '/study-guide/ncv-level-2-3-4',
+    chapterNumber: 10,
+    slug: 'ncv-civil-engineering-and-building-construction',
+    aliases: ['ncv-civil-engineering', 'ncv-building-construction'],
+    title: 'NCV Civil Engineering & Building Construction L2–L4',
+    shortDescription:
+      'Construction Planning, Materials (Cement, Sand, Bricks, Concrete 1:2:3 ratio), Drawings, Measurements, Area (L × W) & Volume (L × W × H).',
+    summary: [
+      'Civil Engineering & Building Construction covers building houses, roads, bridges, and safe structural foundations.',
+      'Must know for NCV L2–L4 exams: Construction Planning, Building Materials, Technical Drawings, and accurate Site Measurements.',
+      'Key building materials include Cement, Sand, Bricks, and Concrete. Standard Concrete Mix Ratio 1:2:3 = 1 part Cement : 2 parts Sand : 3 parts Stone.'
+    ],
+    formulasTitle: 'Key Formulas & Concrete Mix Ratio Box',
+    formulas: [
+      {
+        expression: 'Area = L × W (or L × H)',
+        meaning: 'Surface area of a floor, slab, or wall in square metres (m²)'
+      },
+      {
+        expression: 'Volume = L × W × H',
+        meaning: 'Three-dimensional volume of foundations, walls, or concrete pours in m³'
+      },
+      {
+        expression: 'Concrete Ratio = 1 : 2 : 3',
+        meaning: '1 part Cement : 2 parts Sand : 3 parts Stone (crushed aggregate) + clean water'
+      }
+    ],
+    diagramLines: [
+      '   CONCRETE MIX RATIO (1 : 2 : 3):',
+      '   [ 1 Cement ]  +  [ 2 Sand ]  +  [ 3 Stone ]  + Clean Water  ──▶  Structural Concrete',
+      '   MEASUREMENTS:    Wall Area = L × H  (m²)     |     Foundation Volume = L × W × H  (m³)'
+    ],
+    workedExample: {
+      question: 'A brick wall has Length L = 5 m and Height H = 3 m. Find the Area.',
+      steps: [
+        'Write the Area formula for a rectangular wall: Area = Length × Height',
+        'Substitute the given dimensions: Area = 5 m × 3 m',
+        'Multiply: 5 × 3 = 15 m²'
+      ],
+      finalAnswer: 'Area = 15 m²'
+    },
+    practiceQuestions: [
+      {
+        number: 1,
+        question: 'What is concrete ratio?',
+        answer: [
+          'Concrete ratio is the measured proportion of dry ingredients mixed with water to make concrete. A standard 1:2:3 ratio means 1 part Cement : 2 parts Sand : 3 parts Stone.'
+        ]
+      },
+      {
+        number: 2,
+        question: 'Wall 4m x 2m, find Area.',
+        answer: [
+          'Formula: Area = L × H',
+          'Substitute: Area = 4 m × 2 m = 8 m²',
+          'Answer: 8 m².'
+        ]
+      },
+      {
+        number: 3,
+        question: 'Name 3 building materials.',
+        answer: [
+          '1. Cement',
+          '2. Sand',
+          '3. Bricks (or Stone / Concrete / Timber / Reinforcing Steel).'
+        ]
+      },
+      {
+        number: 4,
+        question: 'What is construction planning?',
+        answer: [
+          'Construction planning is the process of organising tasks, timelines, materials, labour, tools, budget, and site safety rules before and during building so the project finishes on time and to specification.'
+        ]
+      },
+      {
+        number: 5,
+        question: 'What is a foundation?',
+        answer: [
+          'A foundation is the lowest structural base of a building (usually concrete) built in the ground to carry and distribute the entire weight of the structure safely onto firm soil or rock.'
+        ]
+      }
+    ]
+  },
+  {
+    subject: 'ncv',
+    subjectLabel: 'NCV - Level 2, 3, 4',
+    subjectIcon: '⚙️',
+    backPath: '/study-guide/ncv-level-2-3-4',
+    chapterNumber: 11,
+    slug: 'ncv-engineering-and-related-design',
+    aliases: ['ncv-engineering-design', 'ncv-fitting-turning-welding'],
+    title: 'NCV Engineering & Related Design L2–L4',
+    shortDescription:
+      'Fitting (filing, drilling, tapping), Turning, Welding, Engineering Fundamentals (F = m × a, Stress = F/A, Speed = d/t), Tools & PPE Safety.',
+    summary: [
+      'Engineering & Related Design covers Fitting, Turning, Welding, and Engineering Fundamentals.',
+      'Must know for NCV L2–L4 exams: Workshop Tools, Safety & PPE, Precision Measurements, and Engineering Drawings.',
+      'Fitting involves filing, drilling, and tapping threads; Engineering Fundamentals studies forces, stress, and material strength.'
+    ],
+    formulasTitle: 'Key Formulas & Engineering Fundamentals Box',
+    formulas: [
+      {
+        expression: 'Force = Mass × Acceleration (F = m × a)',
+        meaning: 'Force in Newtons (N), Mass in kg, Acceleration in m/s²'
+      },
+      {
+        expression: 'Stress = Force / Area (σ = F / A)',
+        meaning: 'Internal resisting force per unit cross-sectional area in Pascals (Pa or N/m²)'
+      },
+      {
+        expression: 'Speed = Distance / Time (v = d / t)',
+        meaning: 'Distance travelled per unit time in m/s or km/h'
+      },
+      {
+        expression: 'Fitting Operations',
+        meaning: 'Filing, Drilling, Tapping internal threads, Marking off & Assembly'
+      }
+    ],
+    diagramLines: [
+      '   WORKSHOP TRADES:    [ Drawings & Measurement ] ─▶ [ Fitting • Turning • Welding ] ─▶ [ Quality Check ]',
+      '   MECHANICS CORE:     F = m × a  (Newtons)     |     Stress = F ÷ A     |     Speed = Distance ÷ Time'
+    ],
+    workedExample: {
+      question: 'A component has Mass = 10 kg and Acceleration = 2 m/s². Find the Force.',
+      steps: [
+        'Write the Force formula: Force = Mass × Acceleration (F = m × a)',
+        'Substitute values: F = 10 kg × 2 m/s²',
+        'Calculate: 10 × 2 = 20 N'
+      ],
+      finalAnswer: 'F = 20 N'
+    },
+    practiceQuestions: [
+      {
+        number: 1,
+        question: 'What is fitting?',
+        answer: [
+          'Fitting is the engineering workshop process of accurately shaping, filing, drilling, tapping (cutting internal screw threads), and assembling metal parts to fit together cleanly.'
+        ]
+      },
+      {
+        number: 2,
+        question: 'Mass 5kg, Acc 3m/s2, find Force.',
+        answer: [
+          'Formula: F = m × a',
+          'Substitute: F = 5 kg × 3 m/s² = 15 N',
+          'Answer: 15 N.'
+        ]
+      },
+      {
+        number: 3,
+        question: 'Name 3 workshop tools.',
+        answer: [
+          '1. Engineer’s File (flat/round file)',
+          '2. Hacksaw',
+          '3. Vernier Calliper (or Drill Press / Tap & Die / Ball-peen Hammer).'
+        ]
+      },
+      {
+        number: 4,
+        question: 'What is PPE in workshop?',
+        answer: [
+          'PPE (Personal Protective Equipment) is safety gear worn to prevent workshop injuries — including safety goggles or welding helmet, steel-toe safety boots, leather gloves, hearing protection, and flame-resistant overalls.'
+        ]
+      },
+      {
+        number: 5,
+        question: 'What is welding?',
+        answer: [
+          'Welding is a metal-joining process that uses intense heat (from an electric arc or gas flame) to melt and permanently fuse two or more metal pieces together, often with a filler rod.'
+        ]
+      }
+    ]
+  },
+  {
+    subject: 'ncv',
+    subjectLabel: 'NCV - Level 2, 3, 4',
+    subjectIcon: '💾',
+    backPath: '/study-guide/ncv-level-2-3-4',
+    chapterNumber: 12,
+    slug: 'ncv-information-technology',
+    aliases: ['ncv-it-computer-science', 'ncv-systems-development-programming'],
+    title: 'NCV Information Technology L2–L4',
+    shortDescription:
+      'Systems Development, Programming Logic (Algorithms, Flowcharts, If-Else, Loops), Hardware vs Software, HTML & Relational Database Tables.',
+    summary: [
+      'Information Technology covers Systems Development, Computer Programming, and Networks.',
+      'Must know for NCV L2–L4 exams: Hardware, Software, Databases, HTML web structure, and Programming Logic.',
+      'Covers the same core logic as Degree IT & Computer Science, taught at NCV level with practical hands-on application.'
+    ],
+    formulasTitle: 'Key Concepts & Programming Logic Box',
+    formulas: [
+      {
+        expression: 'Hardware vs Software',
+        meaning: 'Hardware = physical parts (CPU, RAM, screen); Software = programs & OS instructions'
+      },
+      {
+        expression: 'Algorithm & Flowchart',
+        meaning: 'Algorithm = step-by-step instructions; Flowchart = visual symbol diagram of program flow'
+      },
+      {
+        expression: 'If-Else & Loop',
+        meaning: 'If-Else = decision test (True/False branch); Loop = repeats statements automatically'
+      },
+      {
+        expression: 'Database Table',
+        meaning: 'Structured grid of Records (rows) and Fields (columns) identified by a Primary Key'
+      }
+    ],
+    diagramLines: [
+      '   DECISION LOGIC FLOW:   [ Input Mark ] ──▶ < Is Mark >= 50 ? > ──┬── TRUE  ──▶ Print "Pass"',
+      '                                                                   └── FALSE ──▶ Print "Fail"'
+    ],
+    workedExample: {
+      question: 'Program rule: If mark >= 50 print Pass else Fail. If Mark = 70, what is the output?',
+      steps: [
+        'Test the IF condition with Mark = 70: Is 70 >= 50?',
+        '70 is greater than or equal to 50, so the condition evaluates to TRUE.',
+        'The IF branch executes and prints "Pass".'
+      ],
+      finalAnswer: 'Pass'
+    },
+    practiceQuestions: [
+      {
+        number: 1,
+        question: 'What is hardware?',
+        answer: [
+          'Hardware refers to all the physical, touchable components of a computer system — such as the CPU, RAM, hard drive/SSD, motherboard, monitor, keyboard, and printer.'
+        ]
+      },
+      {
+        number: 2,
+        question: 'What is software?',
+        answer: [
+          'Software is the collection of computer programs, code, and instructions that tell hardware how to run and complete tasks — including Operating Systems (Windows/Linux) and applications (browsers, Word, databases).'
+        ]
+      },
+      {
+        number: 3,
+        question: 'What is an algorithm?',
+        answer: [
+          'An algorithm is a clear, finite, step-by-step set of instructions used to solve a problem or perform a calculation in programming.'
+        ]
+      },
+      {
+        number: 4,
+        question: 'Mark 30, If >=50 Pass else Fail, output?',
+        answer: [
+          'Test condition: Is 30 >= 50? FALSE.',
+          'Since it is false, the ELSE branch executes.',
+          'Output: Fail.'
+        ]
+      },
+      {
+        number: 5,
+        question: 'What is a database?',
+        answer: [
+          'A database is an organised electronic collection of structured data stored in tables (made of rows/records and columns/fields) so information can be stored, searched, and updated efficiently.'
+        ]
+      }
+    ]
+  },
+  {
+    subject: 'ncv',
+    subjectLabel: 'NCV - Level 2, 3, 4',
+    subjectIcon: '🏨',
+    backPath: '/study-guide/ncv-level-2-3-4',
+    chapterNumber: 13,
+    slug: 'ncv-tourism-and-hospitality',
+    aliases: ['ncv-tourism', 'ncv-hospitality'],
+    title: 'NCV Tourism / Hospitality L2–L4',
+    shortDescription:
+      'Client Services (5-Star Service: Greet, Listen, Help, Thank), Science of Tourism, SA Attractions, Front Office, Booking & Housekeeping.',
+    summary: [
+      'Tourism & Hospitality covers travel, hotels, guest experiences, and service excellence.',
+      'Must know for NCV L2–L4 exams: Client Services, Science of Tourism, Hospitality Operations, Front Office, and Housekeeping.',
+      '5-Star Service formula: Greet, Listen, Help, Thank. Major South African attractions include Table Mountain, Kruger National Park, and Robben Island.'
+    ],
+    formulasTitle: 'Key Concepts & 5-Star Guest Service Box',
+    formulas: [
+      {
+        expression: '5-Star Customer Service',
+        meaning: '1. Greet warmly  →  2. Listen actively  →  3. Help promptly  →  4. Thank sincerely'
+      },
+      {
+        expression: 'SA Tourism Attractions',
+        meaning: 'Table Mountain (Western Cape), Kruger National Park (Mpumalanga/Limpopo), Robben Island'
+      },
+      {
+        expression: 'Booking & Front Office',
+        meaning: 'Reception desk managing reservations, guest check-in/out, room keys, and billing'
+      },
+      {
+        expression: 'Housekeeping',
+        meaning: 'Cleaning, sanitising, linen care, and preparing rooms to 5-star guest standards'
+      }
+    ],
+    diagramLines: [
+      '   5-STAR SERVICE RULE:  [ 1. Greet ] ──▶ [ 2. Listen ] ──▶ [ 3. Help / Solve ] ──▶ [ 4. Thank ]',
+      '   GUEST STAY CYCLE:     Booking ─▶ Front Office (Check-In) ─▶ Housekeeping (Clean Room) ─▶ Happy Guest'
+    ],
+    workedExample: {
+      question: 'A tourist arrives and is angry about a dirty hotel room. What do you do?',
+      steps: [
+        'Stay calm, greet respectfully, and listen carefully without arguing.',
+        'Apologise sincerely for the bad experience on behalf of the hotel.',
+        'Solve immediately: offer a clean room or complimentary room upgrade, alert Housekeeping, and record the complaint for follow-up.'
+      ],
+      finalAnswer: 'Apologise sincerely, listen calmly, offer a clean room / upgrade, and record the complaint.'
+    },
+    practiceQuestions: [
+      {
+        number: 1,
+        question: 'Name 3 SA tourist attractions.',
+        answer: [
+          '1. Table Mountain (Cape Town)',
+          '2. Kruger National Park (Mpumalanga / Limpopo)',
+          '3. Robben Island (Western Cape) — other valid answers include Drakensberg, Cradle of Humankind, and Blyde River Canyon.'
+        ]
+      },
+      {
+        number: 2,
+        question: 'What is client services?',
+        answer: [
+          'Client services is the professional care, communication, and assistance given to tourists and guests before, during, and after their stay or trip to ensure satisfaction.'
+        ]
+      },
+      {
+        number: 3,
+        question: 'What is front office?',
+        answer: [
+          'The Front Office is the main reception hub of a hotel or lodge responsible for reservations/bookings, check-in, check-out, guest enquiries, and account billing.'
+        ]
+      },
+      {
+        number: 4,
+        question: 'Why is customer service important in tourism?',
+        answer: [
+          'Excellent customer service makes tourists feel welcome and safe, creates repeat visits and positive reviews, grows South Africa’s tourism economy, and protects jobs and hotel revenue.'
+        ]
+      },
+      {
+        number: 5,
+        question: 'What is hospitality?',
+        answer: [
+          'Hospitality is the industry and practice of warmly welcoming, accommodating, feeding, and caring for travellers and guests in hotels, guesthouses, restaurants, and events.'
+        ]
+      }
+    ]
+  }
+];
+
 export const ALL_STUDY_GUIDE_CHAPTERS: StudyGuideChapterData[] = [
   ...PHYSICS_CHAPTERS,
   ...LIFE_SCIENCES_CHAPTERS,
   ...MATHS_LITERACY_CHAPTERS,
   ...MATHS_CHAPTERS,
   ...TVET_CHAPTERS,
-  ...DEGREE_CHAPTERS
+  ...DEGREE_CHAPTERS,
+  ...NCV_CHAPTERS
 ];
 
 export function findStudyGuideChapter(rawSlug: string): StudyGuideChapterData | null {

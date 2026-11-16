@@ -35,6 +35,7 @@ import {
   LIFE_SCIENCES_CHAPTERS,
   MATHS_CHAPTERS,
   MATHS_LITERACY_CHAPTERS,
+  NCV_CHAPTERS,
   PHYSICS_CHAPTERS,
   TVET_CHAPTERS,
   StudyGuideChapterData
@@ -59,6 +60,7 @@ export const StudyGuideHubPage: React.FC = () => {
       | 'studyGuideMaths'
       | 'studyGuideTvet'
       | 'studyGuideDegree'
+      | 'studyGuideNcv'
       | 'studyGuideChapter'
       | 'studyGuideExamTips',
     path: string
@@ -164,6 +166,17 @@ export const StudyGuideHubPage: React.FC = () => {
       cta: 'Open Degree Killer Modules',
       description:
         'BCom Accounting & Economics, BEd, LLB Law, Nursing, Social Work / Psychology (Research & Development) & IT (Programming, SQL, SDLC).'
+    },
+    {
+      id: 'ncv-level-2-3-4',
+      icon: '📋',
+      title: '📋 NCV — Level 2, 3, 4 (All 7 Programmes)',
+      chapters: NCV_CHAPTERS,
+      tab: 'studyGuideNcv' as const,
+      path: '/study-guide/ncv-level-2-3-4',
+      cta: 'Open NCV Level 2–4 Chapters',
+      description:
+        'Office Admin, Finance & Accounting, Electrical, Civil & Building Construction, Engineering & Related Design, Information Technology, and Tourism & Hospitality.'
     }
   ];
 
@@ -202,7 +215,7 @@ export const StudyGuideHubPage: React.FC = () => {
         {/* Search Bar */}
         <div className="bg-[#0D1E42] border-2 border-[#FFD400]/45 rounded-3xl p-4 sm:p-5 shadow-xl space-y-3">
           <label htmlFor="study-guide-search" className="sr-only">
-            Search all {totalChapters} chapters across Grade 12 CAPS, TVET N1-N6, and Degree Killer Modules
+            Search all {totalChapters} chapters across Grade 12 CAPS, TVET N1-N6, NCV Level 2-4, and Degree Killer Modules
           </label>
           <div className="relative flex items-center">
             <Search className="w-5 h-5 text-[#FFD400] absolute left-4 pointer-events-none" />
@@ -211,7 +224,7 @@ export const StudyGuideHubPage: React.FC = () => {
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search topics, formulas, or modules (e.g. Momentum, N4 Electrotechnics, Financial Accounting, LLB)..."
+              placeholder="Search topics, formulas, or modules (e.g. Momentum, N4 Electrotechnics, Office Data Processing, Financial Accounting)..."
               className="w-full min-h-[52px] pl-12 pr-12 py-3 rounded-2xl bg-[#061128] border border-[#1E3A6E] focus:border-[#FFD400] focus:outline-none focus:ring-2 focus:ring-[#FFD400]/30 text-base text-white placeholder:text-slate-400"
             />
             {searchQuery && (

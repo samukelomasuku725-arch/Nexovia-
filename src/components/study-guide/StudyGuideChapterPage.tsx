@@ -30,6 +30,7 @@ import {
   LIFE_SCIENCES_CHAPTERS,
   MATHS_CHAPTERS,
   MATHS_LITERACY_CHAPTERS,
+  NCV_CHAPTERS,
   PHYSICS_CHAPTERS,
   TVET_CHAPTERS
 } from '../../data/studyGuideContent';
@@ -83,6 +84,8 @@ export const StudyGuideChapterPage: React.FC = () => {
       ? MATHS_CHAPTERS
       : chapter.subject === 'degree'
       ? DEGREE_CHAPTERS
+      : chapter.subject === 'ncv'
+      ? NCV_CHAPTERS
       : TVET_CHAPTERS;
   const currentIndex = siblingChapters.findIndex((c) => c.slug === chapter.slug);
   const prevChapter = currentIndex > 0 ? siblingChapters[currentIndex - 1] : null;
@@ -100,6 +103,7 @@ export const StudyGuideChapterPage: React.FC = () => {
       | 'studyGuideMaths'
       | 'studyGuideTvet'
       | 'studyGuideDegree'
+      | 'studyGuideNcv'
       | 'studyGuideChapter'
       | 'studyGuideExamTips',
     path: string
@@ -131,6 +135,8 @@ export const StudyGuideChapterPage: React.FC = () => {
       ? 'studyGuideMaths'
       : chapter.subject === 'degree'
       ? 'studyGuideDegree'
+      : chapter.subject === 'ncv'
+      ? 'studyGuideNcv'
       : 'studyGuideTvet';
 
   return (

@@ -53,6 +53,7 @@ import { MathsLiteracyGrade12Page } from './components/study-guide/MathsLiteracy
 import { MathsGrade12Page } from './components/study-guide/MathsGrade12Page';
 import { TvetN1N6Page } from './components/study-guide/TvetN1N6Page';
 import { DegreeModulesPage } from './components/study-guide/DegreeModulesPage';
+import { NcvLevel234Page } from './components/study-guide/NcvLevel234Page';
 import { MatricExamTipsPage } from './components/study-guide/MatricExamTipsPage';
 import { StudyGuideChapterPage } from './components/study-guide/StudyGuideChapterPage';
 import { StudyGuideGuard } from './components/study-guide/StudyGuideGuard';
@@ -630,6 +631,7 @@ const MainLayout: React.FC = () => {
         {currentTab === 'studyGuideMaths' && <MathsGrade12Page />}
         {currentTab === 'studyGuideTvet' && <TvetN1N6Page />}
         {currentTab === 'studyGuideDegree' && <DegreeModulesPage />}
+        {currentTab === 'studyGuideNcv' && <NcvLevel234Page />}
         {currentTab === 'studyGuideExamTips' && <MatricExamTipsPage />}
         {currentTab === 'studyGuideChapter' && (
           <StudyGuideGuard>
