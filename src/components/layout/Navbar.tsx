@@ -89,7 +89,7 @@ export const Navbar: React.FC = () => {
                 : ''
             }`}
           >
-            {t('navHome')}
+            {currentTab === 'textbooksLibrary' || currentTab === 'electricalTextbook' || currentTab === 'ncvTourismTextbook' || currentTab === 'ncvItTextbook' ? 'Home' : t('navHome')}
           </button>
 
           <button
@@ -246,8 +246,8 @@ export const Navbar: React.FC = () => {
 
         {/* Zone 3: 1-2 primary actions + Language selector */}
         <div className="flex items-center gap-1.5 sm:gap-3 shrink-0">
-          {/* Quick Xitsonga Hub Shortcut when Xitsonga is active */}
-          {language === 'ts' && (
+          {/* Quick Xitsonga Hub Shortcut when Xitsonga is active (hidden on English-only /textbooks library) */}
+          {language === 'ts' && currentTab !== 'textbooksLibrary' && (
             <button
               onClick={() => setIsPhrasebookOpen(true)}
               className="hidden md:flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-300 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300 hover:bg-emerald-100 transition-colors shadow-2xs"
@@ -269,7 +269,12 @@ export const Navbar: React.FC = () => {
               aria-expanded={isLangOpen}
             >
               <Globe className="w-3.5 h-3.5 text-[#FFD400] shrink-0" />
-              <span className="font-semibold max-w-[54px] sm:max-w-none truncate">{currentLanguageInfo?.nativeName || currentLanguageInfo?.name || 'English'}</span>
+              <span className="font-semibold max-w-[110px] sm:max-w-none truncate">
+                {languages.find((l) => l.code === (activeLearningLanguage || language))?.nativeName ||
+                  currentLanguageInfo?.nativeName ||
+                  currentLanguageInfo?.name ||
+                  'English'}
+              </span>
               <ChevronDown className={`w-3 h-3 text-slate-400 shrink-0 transition-transform ${isLangOpen ? 'rotate-180' : ''}`} />
             </button>
 

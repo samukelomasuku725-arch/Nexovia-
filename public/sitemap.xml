@@ -1,6 +1,17 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-  <url><loc>https://nexovian.group/</loc><lastmod>2026-11-16</lastmod><priority>1.0</priority></url>
+  <url><loc>https://nexovian.group/</loc><lastmod>2026-11-17</lastmod><priority>1.0</priority></url>
+  <url><loc>https://nexovian.group/textbooks</loc><lastmod>2026-11-17</lastmod><priority>0.9</priority></url>
+  <url><loc>https://nexovian.group/textbooks/ncv-office-administration-textbook</loc><lastmod>2026-11-17</lastmod><priority>0.9</priority></url>
+  <url><loc>https://nexovian.group/textbooks/electrical-trade-theory-textbook</loc><lastmod>2026-11-18</lastmod><priority>0.9</priority></url>
+  <url><loc>https://nexovian.group/textbooks/ncv-tourism-textbook</loc><lastmod>2026-11-18</lastmod><priority>0.9</priority></url>
+  <url><loc>https://nexovian.group/electrical-trade-theory-xitsonga</loc><lastmod>2026-11-16</lastmod><priority>0.9</priority></url>
+  <url><loc>https://nexovian.group/study-guide/ncv-office-administration-11-languages</loc><lastmod>2026-11-16</lastmod><priority>0.9</priority></url>
+  <url><loc>https://nexovian.group/study-guide/ncv-office-administration-xitsonga</loc><lastmod>2026-11-17</lastmod><priority>0.9</priority></url>
+  <url><loc>https://nexovian.group/study-guide/electrical-trade-theory-11-languages</loc><lastmod>2026-11-16</lastmod><priority>0.9</priority></url>
+  <url><loc>https://nexovian.group/study-guide/information-technology-ncv-11-languages</loc><lastmod>2026-11-16</lastmod><priority>0.9</priority></url>
+  <url><loc>https://nexovian.group/study-guide/financial-management-ncv-11-languages</loc><lastmod>2026-11-16</lastmod><priority>0.9</priority></url>
+  <url><loc>https://nexovian.group/study-guide/mathematics-ncv-11-languages</loc><lastmod>2026-11-16</lastmod><priority>0.9</priority></url>
   <url><loc>https://nexovian.group/login</loc><priority>0.8</priority></url>
   <url><loc>https://nexovian.group/signup</loc><priority>0.8</priority></url>
 </urlset>

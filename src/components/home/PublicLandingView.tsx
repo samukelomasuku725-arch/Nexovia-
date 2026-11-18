@@ -34,6 +34,7 @@ import {
   NCV_CHAPTERS,
   TVET_CHAPTERS
 } from '../../data/studyGuideContent';
+import { NCV_MULTILINGUAL_SEO_PAGES } from '../../data/ncvMultilingualSeoPages';
 import { useLearning } from '../../context/LearningContext';
 import { useAuth } from '../../context/AuthContext';
 import { SALanguageCode } from '../../types';
@@ -381,6 +382,23 @@ export const PublicLandingView: React.FC = () => {
               <span className="hidden sm:inline">Nexovian Study Guide</span>
             </a>
 
+            {/* Nexovian Textbooks Link in Homepage Header */}
+            <a
+              href="/textbooks"
+              onClick={(e) => {
+                e.preventDefault();
+                setCurrentTab('textbooksLibrary');
+                if (typeof window !== 'undefined') {
+                  window.history.pushState({}, '', '/textbooks');
+                  window.scrollTo({ top: 0, behavior: 'smooth' });
+                }
+              }}
+              className="hidden md:flex items-center gap-1.5 px-3.5 py-2 rounded-full border border-[#FFD400]/70 bg-[#0D1E42] hover:bg-[#132959] text-xs font-black text-[#FFD400] hover:border-[#FFD400] transition-colors cursor-pointer whitespace-nowrap"
+            >
+              <BookOpen className="w-3.5 h-3.5 text-[#FFD400]" />
+              <span>Nexovian Textbooks</span>
+            </a>
+
             {/* Header Action Buttons */}
             {hasActiveAccess ? (
               <div className="flex items-center gap-1.5 sm:gap-2">
@@ -552,6 +570,22 @@ export const PublicLandingView: React.FC = () => {
               >
                 <span>📋</span>
                 <span>NCV L2–L4 ({NCV_CHAPTERS.length})</span>
+              </a>
+
+              <a
+                href="/textbooks"
+                onClick={(e) => {
+                  e.preventDefault();
+                  setCurrentTab('textbooksLibrary');
+                  if (typeof window !== 'undefined') {
+                    window.history.pushState({}, '', '/textbooks');
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                  }
+                }}
+                className="inline-flex items-center justify-center gap-2 px-5 sm:px-6 py-3.5 sm:py-4 rounded-2xl bg-[#FFD400] hover:bg-yellow-400 text-[#061128] font-black text-sm sm:text-base border-2 border-yellow-200/70 shadow-lg transition-all transform hover:scale-105 active:scale-95 cursor-pointer"
+              >
+                <span>📖</span>
+                <span>Nexovian Textbooks</span>
               </a>
             </div>
 
@@ -896,6 +930,78 @@ export const PublicLandingView: React.FC = () => {
                 <ArrowRight className="w-4 h-4 shrink-0" />
               </a>
             </div>
+
+            {/* Electrical Trade Theory in Xitsonga — N1, N2, N3 & NCV Level 2-4 Spotlight */}
+            <div className="mt-8 bg-[#0D1E42] border border-[#FFD400]/45 rounded-3xl p-5 sm:p-7 shadow-xl flex flex-col lg:flex-row lg:items-center justify-between gap-5">
+              <div className="space-y-2 max-w-3xl">
+                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#FFD400]/15 border border-[#FFD400]/50 text-[#FFD400] text-[11px] font-bold uppercase tracking-wider">
+                  <span>⚡ Gezi hi Xitsonga • Future Managers &amp; DHET</span>
+                </div>
+                <h3 className="font-display font-black text-lg sm:text-2xl text-white">
+                  Electrical Trade Theory in Xitsonga - N1 N2 N3 &amp; NCV Level 2-4
+                </h3>
+                <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
+                  Nexovian translates complex Future Managers &amp; DHET Electrical concepts into simple Xitsonga — AC/DC Circuits (ku hlamusela ka AC/DC circuits hi Xitsonga), Transformers &amp; Machines (ti-transformer na michini ya gezi), Switchgear, Protection &amp; Earthing (ku sirhelela na earthing), Ohm&apos;s Law, Power &amp; Energy calculations, plus Past Papers &amp; 11-Language AI Tutor (Xitsonga, Sepedi, isiZulu, Tshivenda &amp; all 11 official languages).
+                </p>
+              </div>
+              <a
+                href="/electrical-trade-theory-xitsonga"
+                onClick={(e) => {
+                  e.preventDefault();
+                  if (typeof window !== 'undefined') {
+                    window.history.pushState({}, '', '/electrical-trade-theory-xitsonga');
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                  }
+                  setCurrentTab('electricalXitsonga');
+                }}
+                className="min-h-[48px] inline-flex items-center justify-center gap-2 px-5 py-3 rounded-2xl bg-[#FFD400] hover:bg-yellow-400 text-[#061128] font-black text-xs sm:text-sm whitespace-nowrap shadow-md transition-all hover:scale-105 active:scale-95 shrink-0 cursor-pointer"
+              >
+                <span>Explore Electrical in Xitsonga</span>
+                <ArrowRight className="w-4 h-4 shrink-0" />
+              </a>
+            </div>
+
+            {/* 11-Language TVET & NCV Subject Guides Internal Links */}
+            <div className="mt-5 bg-[#0D1E42] border border-[#1E3A6E] rounded-3xl p-4 sm:p-5 shadow-lg space-y-3">
+              <div className="text-xs font-mono font-bold uppercase tracking-wider text-[#FFD400]">
+                11-Language TVET &amp; NC(V) Level 2–4 Guides (Xitsonga, Sepedi, isiZulu, Tshivenda &amp; All 11 Official Languages)
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {NCV_MULTILINGUAL_SEO_PAGES.map((seoPage) => (
+                  <a
+                    key={seoPage.path}
+                    href={seoPage.path}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      if (typeof window !== 'undefined') {
+                        window.history.pushState({}, '', seoPage.path);
+                        window.scrollTo({ top: 0, behavior: 'smooth' });
+                      }
+                      setCurrentTab('studyGuideMultilingualSeo');
+                    }}
+                    className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-[#061128] hover:bg-[#132959] border border-[#1E3A6E] hover:border-[#FFD400] text-xs font-bold text-slate-200 hover:text-[#FFD400] transition-colors cursor-pointer"
+                  >
+                    <span>{seoPage.title.replace(' | Nexovian', '')}</span>
+                    <ArrowRight className="w-3.5 h-3.5 shrink-0" />
+                  </a>
+                ))}
+                <a
+                  href="/textbooks/ncv-office-administration-textbook"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    if (typeof window !== 'undefined') {
+                      window.history.pushState({}, '', '/textbooks/ncv-office-administration-textbook');
+                      window.scrollTo({ top: 0, behavior: 'smooth' });
+                    }
+                    setCurrentTab('ncvOfficeAdminTextbook');
+                  }}
+                  className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-[#FFD400] hover:bg-yellow-400 text-[#061128] text-xs font-black transition-colors cursor-pointer"
+                >
+                  <span>Nexovian Office Admin Textbook (L2–L4 Online)</span>
+                  <ArrowRight className="w-3.5 h-3.5 shrink-0" />
+                </a>
+              </div>
+            </div>
           </div>
         </section>
 
@@ -1038,9 +1144,14 @@ export const PublicLandingView: React.FC = () => {
                     {grade.level}
                   </p>
                   {grade.id === 'tvet' && (
-                    <p className="text-[11px] text-slate-300 mt-2 leading-relaxed">
-                      Now includes full NC(V) Coverage: NC(V) Level 2, Level 3, Level 4 - 12 subjects with original DHET past papers + memos explained step-by-step in Xitsonga, Sepedi and 12 official languages. Includes Tisha AI tutor and Step-by-Step Calculator.
-                    </p>
+                    <>
+                      <p className="text-[11px] text-slate-300 mt-2 leading-relaxed">
+                        Now includes full NC(V) Coverage: NC(V) Level 2, Level 3, Level 4 - 12 subjects with original DHET past papers + memos explained step-by-step in Xitsonga, Sepedi and 12 official languages. Includes Tisha AI tutor and Step-by-Step Calculator.
+                      </p>
+                      <p className="text-[11px] text-slate-200 mt-2 leading-relaxed">
+                        <strong className="text-[#FFD400]">NC(V) Level 2-4 Streams We Cover:</strong> Office Administration, Finance Economics &amp; Accounting, Electrical Infrastructure Construction, Engineering &amp; Related Design, Information Technology &amp; Computer Science, Hospitality, Tourism, Management. Study in English + Xitsonga, Sepedi, isiZulu, and 8 more official languages. Includes past exam papers, study guides &amp; AI explanations.
+                      </p>
+                    </>
                   )}
                 </div>
 

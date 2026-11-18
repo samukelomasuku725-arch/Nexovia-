@@ -74,6 +74,20 @@ export const Footer: React.FC = () => {
             >
               Past Papers
             </button>
+            <a
+              href="/textbooks"
+              onClick={(e) => {
+                e.preventDefault();
+                setCurrentTab('textbooksLibrary');
+                if (typeof window !== 'undefined') {
+                  window.history.pushState({}, '', '/textbooks');
+                  window.scrollTo({ top: 0, behavior: 'smooth' });
+                }
+              }}
+              className="hover:text-[#fbbf24] transition-colors cursor-pointer text-[#fbbf24] font-bold"
+            >
+              Nexovian Textbooks
+            </a>
             <button
               onClick={() => setIsPwaPromptOpen(true)}
               className="text-[#fbbf24] font-bold hover:underline cursor-pointer"

@@ -54,6 +54,13 @@ import { MathsGrade12Page } from './components/study-guide/MathsGrade12Page';
 import { TvetN1N6Page } from './components/study-guide/TvetN1N6Page';
 import { DegreeModulesPage } from './components/study-guide/DegreeModulesPage';
 import { NcvLevel234Page } from './components/study-guide/NcvLevel234Page';
+import { ElectricalXitsongaPage } from './components/study-guide/ElectricalXitsongaPage';
+import { NcvMultilingualSeoPage } from './components/study-guide/NcvMultilingualSeoPage';
+import { NcvOfficeAdminTextbookPage } from './components/study-guide/NcvOfficeAdminTextbookPage';
+import { ElectricalTradeTheoryTextbookPage } from './components/study-guide/ElectricalTradeTheoryTextbookPage';
+import { NcvTourismTextbookPage } from './components/study-guide/NcvTourismTextbookPage';
+import { NcvItTextbookPage } from './components/study-guide/NcvItTextbookPage';
+import { TextbooksLibraryPage } from './components/study-guide/TextbooksLibraryPage';
 import { MatricExamTipsPage } from './components/study-guide/MatricExamTipsPage';
 import { StudyGuideChapterPage } from './components/study-guide/StudyGuideChapterPage';
 import { StudyGuideGuard } from './components/study-guide/StudyGuideGuard';
@@ -632,6 +639,13 @@ const MainLayout: React.FC = () => {
         {currentTab === 'studyGuideTvet' && <TvetN1N6Page />}
         {currentTab === 'studyGuideDegree' && <DegreeModulesPage />}
         {currentTab === 'studyGuideNcv' && <NcvLevel234Page />}
+        {currentTab === 'electricalXitsonga' && <ElectricalXitsongaPage />}
+        {currentTab === 'studyGuideMultilingualSeo' && <NcvMultilingualSeoPage />}
+        {currentTab === 'textbooksLibrary' && <TextbooksLibraryPage />}
+        {currentTab === 'ncvOfficeAdminTextbook' && <NcvOfficeAdminTextbookPage />}
+        {currentTab === 'electricalTextbook' && <ElectricalTradeTheoryTextbookPage />}
+        {currentTab === 'ncvTourismTextbook' && <NcvTourismTextbookPage />}
+        {currentTab === 'ncvItTextbook' && <NcvItTextbookPage />}
         {currentTab === 'studyGuideExamTips' && <MatricExamTipsPage />}
         {currentTab === 'studyGuideChapter' && (
           <StudyGuideGuard>

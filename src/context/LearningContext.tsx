@@ -36,8 +36,9 @@ import { ttsManager } from '../services/voice/tts/TextToSpeechManager';
 import { isTtsSupportedForLanguage } from '../services/voice/languageCapabilities';
 
 import { learnerStrugglesService } from '../services/struggles/learnerStrugglesService';
+import { findNcvMultilingualSeoPage } from '../data/ncvMultilingualSeoPages';
 
-export type AppTab = 'landing' | 'login' | 'signup' | 'calculator' | 'home' | 'dashboard' | 'explore' | 'learn' | 'school' | 'tvet' | 'higherEd' | 'tracks' | 'tutor' | 'scan' | 'practice' | 'saved' | 'profile' | 'adaptive' | 'assessments' | 'academicVoice' | 'progress' | 'adminBank' | 'about' | 'smartNotes' | 'myStruggles' | 'success' | 'cancel' | 'trial' | 'paywall' | 'subscribe' | 'mySubscription' | 'papers' | 'adminPayments' | 'unlock' | 'adminCodes' | 'terms' | 'refundPolicy' | 'privacyPolicy' | 'contact' | 'studyGuide' | 'studyGuidePhysics' | 'studyGuideLifeSciences' | 'studyGuideMathsLiteracy' | 'studyGuideMaths' | 'studyGuideTvet' | 'studyGuideDegree' | 'studyGuideNcv' | 'studyGuideExamTips' | 'studyGuideChapter';
+export type AppTab = 'landing' | 'login' | 'signup' | 'calculator' | 'home' | 'dashboard' | 'explore' | 'learn' | 'school' | 'tvet' | 'higherEd' | 'tracks' | 'tutor' | 'scan' | 'practice' | 'saved' | 'profile' | 'adaptive' | 'assessments' | 'academicVoice' | 'progress' | 'adminBank' | 'about' | 'smartNotes' | 'myStruggles' | 'success' | 'cancel' | 'trial' | 'paywall' | 'subscribe' | 'mySubscription' | 'papers' | 'adminPayments' | 'unlock' | 'adminCodes' | 'terms' | 'refundPolicy' | 'privacyPolicy' | 'contact' | 'studyGuide' | 'studyGuidePhysics' | 'studyGuideLifeSciences' | 'studyGuideMathsLiteracy' | 'studyGuideMaths' | 'studyGuideTvet' | 'studyGuideDegree' | 'studyGuideNcv' | 'studyGuideExamTips' | 'studyGuideChapter' | 'studyGuideMultilingualSeo' | 'electricalXitsonga' | 'textbooksLibrary' | 'ncvOfficeAdminTextbook' | 'electricalTextbook' | 'ncvTourismTextbook' | 'ncvItTextbook';
 
 export interface GeminiStatusInfo {
   checked: boolean;
@@ -252,7 +253,7 @@ export const pathToTab = (cleanPath: string, search = ''): AppTab => {
   if (cleanPath === '/signup' || cleanPath === '/register') return 'signup';
   if (cleanPath === '/login') return 'login';
   if (cleanPath === '/trial' || cleanPath === '/pricing') return 'trial';
-  if (cleanPath === '/learn' || search.includes('lang=')) return 'learn';
+  if (cleanPath === '/learn') return 'learn';
   if (cleanPath === '/calculator' || cleanPath === '/calc') return 'calculator';
   if (cleanPath === '/papers') return 'papers';
   if (cleanPath === '/paywall') return 'paywall';
@@ -281,7 +282,15 @@ export const pathToTab = (cleanPath: string, search = ''): AppTab => {
   if (cleanPath === '/study-guide/degree-modules') return 'studyGuideDegree';
   if (cleanPath === '/study-guide/ncv-level-2-3-4') return 'studyGuideNcv';
   if (cleanPath === '/study-guide/matric-exam-tips') return 'studyGuideExamTips';
+  if (cleanPath === '/electrical-trade-theory-xitsonga' || cleanPath === '/electrical-xitsonga') return 'electricalXitsonga';
+  if (cleanPath === '/textbooks') return 'textbooksLibrary';
+  if (cleanPath === '/textbooks/ncv-office-administration-textbook') return 'ncvOfficeAdminTextbook';
+  if (cleanPath === '/textbooks/electrical-trade-theory-textbook') return 'electricalTextbook';
+  if (cleanPath === '/textbooks/ncv-tourism-textbook') return 'ncvTourismTextbook';
+  if (cleanPath === '/textbooks/ncv-it-computer-science-textbook') return 'ncvItTextbook';
+  if (findNcvMultilingualSeoPage(cleanPath)) return 'studyGuideMultilingualSeo';
   if (cleanPath.startsWith('/study-guide/')) return 'studyGuideChapter';
+  if (search.includes('lang=')) return 'learn';
   return 'landing';
 };
 
@@ -320,6 +329,13 @@ export const tabToPath = (tab: AppTab): string => {
     case 'studyGuideDegree': return '/study-guide/degree-modules';
     case 'studyGuideNcv': return '/study-guide/ncv-level-2-3-4';
     case 'studyGuideExamTips': return '/study-guide/matric-exam-tips';
+    case 'electricalXitsonga': return '/electrical-trade-theory-xitsonga';
+    case 'textbooksLibrary': return '/textbooks';
+    case 'ncvOfficeAdminTextbook': return '/textbooks/ncv-office-administration-textbook';
+    case 'electricalTextbook': return '/textbooks/electrical-trade-theory-textbook';
+    case 'ncvTourismTextbook': return '/textbooks/ncv-tourism-textbook';
+    case 'ncvItTextbook': return '/textbooks/ncv-it-computer-science-textbook';
+    case 'studyGuideMultilingualSeo': return typeof window !== 'undefined' ? window.location.pathname : '/study-guide/ncv-office-administration-11-languages';
     case 'studyGuideChapter': return typeof window !== 'undefined' ? window.location.pathname : '/study-guide/physics-grade-12/momentum';
     default: return '/';
   }
@@ -376,7 +392,7 @@ export const LearningProvider: React.FC<{ children: React.ReactNode }> = ({ chil
           const clean = normalizePath(url.pathname);
           const tab = pathToTab(clean, url.search);
           e.preventDefault();
-          window.history.pushState({}, '', clean);
+          window.history.pushState({}, '', `${clean}${url.search || ''}`);
           setCurrentTab(tab);
           window.dispatchEvent(new PopStateEvent('popstate'));
         } catch {

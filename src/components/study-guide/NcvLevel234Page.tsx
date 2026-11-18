@@ -19,6 +19,7 @@ import {
 import { useAuth } from '../../context/AuthContext';
 import { useLearning } from '../../context/LearningContext';
 import { NCV_CHAPTERS } from '../../data/studyGuideContent';
+import { NCV_MULTILINGUAL_SEO_PAGES } from '../../data/ncvMultilingualSeoPages';
 import { isUserActive, startTwoDayFreeTrialCheckout } from '../../services/paystackService';
 import { useStudyGuideProgress } from '../../utils/studyGuideProgress';
 
@@ -115,7 +116,13 @@ export const NcvLevel234Page: React.FC = () => {
   }, [selectedProgramme, searchQuery]);
 
   const navigate = (
-    tab: 'studyGuide' | 'studyGuideChapter' | 'studyGuideExamTips' | 'login',
+    tab:
+      | 'studyGuide'
+      | 'studyGuideChapter'
+      | 'studyGuideExamTips'
+      | 'studyGuideMultilingualSeo'
+      | 'ncvOfficeAdminTextbook'
+      | 'login',
     path: string
   ) => {
     if (typeof window !== 'undefined') {
@@ -176,6 +183,9 @@ export const NcvLevel234Page: React.FC = () => {
           </h1>
           <p className="text-sm text-slate-300">
             Office Administration, Finance &amp; Accounting, Electrical Infrastructure, Civil &amp; Building Construction, Engineering &amp; Related Design, Information Technology, and Tourism &amp; Hospitality (Level 2–4).
+          </p>
+          <p className="mt-3 text-xs sm:text-sm text-slate-200 bg-[#071530] border border-[#1E3A6E] rounded-2xl p-3.5 leading-relaxed">
+            <strong className="text-[#FFD400]">NC(V) Level 2-4 Streams We Cover:</strong> Office Administration, Finance Economics &amp; Accounting, Electrical Infrastructure Construction, Engineering &amp; Related Design, Information Technology &amp; Computer Science, Hospitality, Tourism, Management. Study in English + Xitsonga, Sepedi, isiZulu, and 8 more official languages. Includes past exam papers, study guides &amp; AI explanations.
           </p>
 
           {!hasAccess && (
@@ -322,6 +332,40 @@ export const NcvLevel234Page: React.FC = () => {
             })}
           </div>
         )}
+
+        {/* 11-Language NC(V) & TVET Guides */}
+        <div className="mt-8 bg-[#0D1E42] border border-[#1E3A6E] rounded-3xl p-5 sm:p-6 shadow-xl space-y-3">
+          <h2 className="font-display font-bold text-base sm:text-lg text-[#FFD400]">
+            Study NC(V) &amp; TVET in All 11 Official Languages
+          </h2>
+          <div className="flex flex-wrap gap-2">
+            {NCV_MULTILINGUAL_SEO_PAGES.map((seoPage) => (
+              <a
+                key={seoPage.path}
+                href={seoPage.path}
+                onClick={(e) => {
+                  e.preventDefault();
+                  navigate('studyGuideMultilingualSeo', seoPage.path);
+                }}
+                className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-[#061128] hover:bg-[#132959] border border-[#1E3A6E] hover:border-[#FFD400] text-xs font-bold text-slate-200 hover:text-[#FFD400] transition-colors cursor-pointer"
+              >
+                <span>{seoPage.title.replace(' | Nexovian', '')}</span>
+                <ArrowRight className="w-3.5 h-3.5 shrink-0" />
+              </a>
+            ))}
+            <a
+              href="/textbooks/ncv-office-administration-textbook"
+              onClick={(e) => {
+                e.preventDefault();
+                navigate('ncvOfficeAdminTextbook', '/textbooks/ncv-office-administration-textbook');
+              }}
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-[#FFD400] hover:bg-yellow-400 text-black text-xs font-black transition-colors cursor-pointer"
+            >
+              <span>FREE NCV Office Admin Textbook (L2–L4)</span>
+              <ArrowRight className="w-3.5 h-3.5 shrink-0" />
+            </a>
+          </div>
+        </div>
       </div>
     </div>
   );
