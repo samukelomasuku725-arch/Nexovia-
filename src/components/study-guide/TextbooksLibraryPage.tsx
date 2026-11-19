@@ -25,7 +25,7 @@ import { TEXTBOOKS_CATALOG, TextbookCatalogItem } from '../../data/textbooksLibr
 
 const PAGE_TITLE = 'FREE Nexovian Textbooks Library in 11 Languages | Learn in Your Language';
 const PAGE_META_DESC =
-  'Browse the FREE Nexovian Textbooks Library. Read original Nexovian NCV Office Administration, Electrical Trade Theory, and NCV Tourism Level 2-4 textbooks online.';
+  'Browse the FREE Nexovian Textbooks Library. Read original Nexovian NCV Office Administration, Electrical Trade Theory, NCV Tourism, and NCV IT & Computer Science textbooks online.';
 
 const VOTES_STORAGE_KEY = 'nexovian_textbook_votes_v1';
 
@@ -278,7 +278,7 @@ export const TextbooksLibraryPage: React.FC = () => {
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search your textbook... e.g. Office Admin, Electrical, Tourism"
+              placeholder="Search your textbook... e.g. Office Admin, Electrical, Tourism, IT"
               aria-label="Search your textbook"
               className="w-full min-h-[52px] pl-12 pr-4 py-3 rounded-2xl bg-[#061128] border-2 border-[#1E3A6E] focus:border-[#FFD400] text-white text-sm sm:text-base placeholder:text-slate-400 focus:outline-none transition-colors select-text"
             />
@@ -447,6 +447,18 @@ export const TextbooksLibraryPage: React.FC = () => {
               className="inline-flex items-center gap-2 min-h-[44px] px-4 py-2.5 rounded-xl bg-[#FFD400] hover:bg-yellow-400 text-black font-black text-xs sm:text-sm cursor-pointer"
             >
               <span>NCV Tourism Textbook — Read FREE</span>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </a>
+
+            <a
+              href="/textbooks/ncv-it-computer-science-textbook"
+              onClick={(e) => {
+                e.preventDefault();
+                navigate('ncvItTextbook', '/textbooks/ncv-it-computer-science-textbook');
+              }}
+              className="inline-flex items-center gap-2 min-h-[44px] px-4 py-2.5 rounded-xl bg-[#FFD400] hover:bg-yellow-400 text-black font-black text-xs sm:text-sm cursor-pointer"
+            >
+              <span>NCV IT &amp; Computer Science Textbook — Read FREE</span>
               <ArrowRight className="w-3.5 h-3.5" />
             </a>
           </div>

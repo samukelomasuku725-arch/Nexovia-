@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  *
  * NEXOVIAN ORIGINAL NCV INFORMATION TECHNOLOGY & COMPUTER SCIENCE TEXTBOOK
- * Status: IN PROGRESS — Chapters 1–3 LIVE (out of 10 Chapters)
+ * Status: LIVE — All 10 Chapters Complete (Level 2, Level 3 & Level 4)
  * Route: /textbooks/ncv-it-computer-science-textbook
  * Read Online Only on nexovian.group.
  */
@@ -25,14 +25,15 @@ import {
 import { useLearning } from '../../context/LearningContext';
 import {
   ItChapter,
+  NCV_IT_LEVEL4_EXTENDED_CHAPTERS,
   NCV_IT_LIVE_CHAPTERS,
   NCV_IT_ROADMAP
 } from '../../data/ncvItTextbookData';
 
 const PAGE_TITLE =
-  'NCV Information Technology & Computer Science Textbook (Chapters 1-7 LIVE) | Nexovian';
+  'NCV Information Technology & Computer Science Textbook (All 10 Chapters LIVE) | Nexovian';
 const PAGE_META_DESC =
-  'Read Chapters 1–7 of Nexovian’s original NCV Information Technology & Computer Science Level 2–4 textbook free online, now including Level 4 Web Development.';
+  'Read all 10 chapters of Nexovian’s original NCV Information Technology & Computer Science Level 2–4 textbook free online—computing, hardware, networking, Python, databases, web dev, cybersecurity & exam prep.';
 
 export const NcvItTextbookPage: React.FC = () => {
   const { setCurrentTab } = useLearning();
@@ -100,7 +101,7 @@ export const NcvItTextbookPage: React.FC = () => {
           </span>
         </div>
         <h3 className="font-display font-black text-xl sm:text-2xl text-white pt-1">
-          Chapter {chapter.chapterNumber}: {chapter.title}
+          {chapter.displayHeading || `Chapter ${chapter.chapterNumber}: ${chapter.title}`}
         </h3>
         <p className="text-xs sm:text-sm text-[#FFD400] font-semibold">{chapter.subtitle}</p>
       </div>
@@ -297,8 +298,8 @@ export const NcvItTextbookPage: React.FC = () => {
               <Cpu className="w-4 h-4 shrink-0" />
               <span>Level 2, 3, 4 • 10 Chapters Planned</span>
             </div>
-            <span className="px-3 py-1 rounded-full bg-amber-500/20 border border-amber-400/60 text-amber-200 text-xs font-mono font-bold uppercase tracking-wider">
-              IN PROGRESS - 7/10 LIVE
+            <span className="px-3 py-1 rounded-full bg-emerald-500/20 border border-emerald-400/60 text-emerald-300 text-xs font-mono font-bold uppercase tracking-wider">
+              ✅ LIVE • 10/10 CHAPTERS
             </span>
           </div>
 
@@ -307,10 +308,10 @@ export const NcvItTextbookPage: React.FC = () => {
               NCV Information Technology &amp; Computer Science
             </h1>
             <p className="text-lg sm:text-2xl font-black text-[#FFD400]">
-              Chapters 1–7 LIVE Now (Level 2, Level 3 &amp; Level 4 Web Dev). Read Online Only.
+              All 10 Chapters LIVE Now (Level 2, Level 3 &amp; Level 4). Read Online Only.
             </p>
             <p className="text-sm sm:text-base text-slate-200 leading-relaxed max-w-3xl">
-              Study all of Level 2 (Chapters 1–3), all of Level 3 (Chapters 4–6), and Level 4 Chapter 7 (Web Development: HTML, CSS &amp; JavaScript) free right now, while Chapters 8–10 are added next.
+              Study the complete NCV Information Technology &amp; Computer Science Level 2–4 curriculum free online—from Computing, Hardware, and Operating Systems to Networking, Python, Databases, Web Development, Cybersecurity &amp; POPIA, Capstone Projects, and Digital Entrepreneurship &amp; Exam Prep.
             </p>
           </div>
 
@@ -321,7 +322,7 @@ export const NcvItTextbookPage: React.FC = () => {
               className="min-h-[50px] inline-flex items-center justify-center gap-2 px-6 py-3 rounded-2xl bg-[#FFD400] hover:bg-yellow-400 text-black font-black text-sm sm:text-base shadow-lg transition-all hover:scale-[1.02] active:scale-95 cursor-pointer"
             >
               <BookOpen className="w-5 h-5 shrink-0" />
-              <span>Read Chapters 1-7 FREE</span>
+              <span>Read FREE</span>
               <ArrowRight className="w-4 h-4 shrink-0" />
             </button>
           </div>
@@ -357,14 +358,14 @@ export const NcvItTextbookPage: React.FC = () => {
           </div>
         </section>
 
-        {/* LEVEL 4 LIVE CHAPTER (7) */}
+        {/* LEVEL 4 LIVE CHAPTERS (7–10) */}
         <section className="space-y-5">
           <div className="border-b border-[#FFD400]/40 pb-2">
             <h2 className="font-display font-black text-2xl sm:text-3xl text-[#FFD400]">
-              LEVEL 4 — Chapter 7 (LIVE Now)
+              LEVEL 4 — Chapters 7–10 (LIVE Now)
             </h2>
             <p className="text-xs sm:text-sm text-slate-300 mt-1">
-              Web Development — HTML, CSS &amp; JavaScript
+              Web Development (HTML, CSS &amp; JavaScript), Cybersecurity, Ethics &amp; POPIA, Advanced Python + Capstone Project, and Careers, Digital Entrepreneurship &amp; Exam Prep
             </p>
           </div>
           <div className="space-y-5">
@@ -372,13 +373,28 @@ export const NcvItTextbookPage: React.FC = () => {
           </div>
         </section>
 
+        {/* LEVEL 4 SPECIALIST MODULES */}
+        <section className="space-y-5">
+          <div className="border-b border-[#FFD400]/40 pb-2">
+            <h2 className="font-display font-black text-2xl sm:text-3xl text-[#FFD400]">
+              LEVEL 4 PRACTICALS — Specialist Applied Tech &amp; Capstone Modules
+            </h2>
+            <p className="text-xs sm:text-sm text-slate-300 mt-1">
+              Troubleshooting, network security, relational SQL, e-commerce, data analysis, project management, Cloud/AI, entrepreneurship &amp; final exam prep
+            </p>
+          </div>
+          <div className="space-y-5">
+            {NCV_IT_LEVEL4_EXTENDED_CHAPTERS.map(renderChapterCard)}
+          </div>
+        </section>
+
         {/* CHAPTERS 1–10 ROADMAP */}
         <section className="bg-[#0D1E42] border border-[#1E3A6E] rounded-3xl p-6 space-y-4">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <h2 className="font-display font-black text-xl text-[#FFD400]">
-              Full 10-Chapter Course Roadmap (7/10 LIVE)
+              Full 10-Chapter Course Roadmap (10/10 LIVE)
             </h2>
-            <span className="text-xs font-mono text-slate-300">Chapter 10 = Bonus Exam Prep</span>
+            <span className="text-xs font-mono text-emerald-300">10/10 Chapters Complete • Read Online Only</span>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
             {NCV_IT_ROADMAP.map((item) => (

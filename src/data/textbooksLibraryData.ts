@@ -69,9 +69,7 @@ export const TEXTBOOKS_CATALOG: TextbookCatalogItem[] = [
   {
     id: 'ncv-it-computer-science',
     order: 4,
-    status: 'IN_PROGRESS',
-    statusBadge: 'IN PROGRESS - 7/10 LIVE',
-    ctaLabel: 'Read Chapters 1-7 FREE',
+    status: 'LIVE',
     subjectEn: 'NCV Information Technology & Computer Science',
     levelBadge: 'Level 2, 3, 4',
     chaptersCount: 10,
