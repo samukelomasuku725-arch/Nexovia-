@@ -22,7 +22,9 @@ export interface TextbookCatalogItem {
     | 'ncvOfficeAdminTextbook'
     | 'electricalTextbook'
     | 'ncvTourismTextbook'
-    | 'ncvItTextbook';
+    | 'ncvItTextbook'
+    | 'ncvFinanceTextbook'
+    | 'ncvEconomicEnvironmentTextbook';
   initialVotes: number;
 }
 
@@ -82,17 +84,32 @@ export const TEXTBOOKS_CATALOG: TextbookCatalogItem[] = [
   {
     id: 'ncv-finance-economics-accounting',
     order: 5,
-    status: 'COMING_SOON',
+    status: 'LIVE',
     subjectEn: 'NCV Finance, Economics & Accounting',
     levelBadge: 'Level 2, 3, 4',
     chaptersCount: 10,
+    href: '/textbooks/ncv-finance-economics-accounting-textbook',
+    targetTab: 'ncvFinanceTextbook',
     initialVotes: 312,
     description:
       'Journals, General Ledger, Financial Statements, 15% VAT and practical economics.'
   },
   {
-    id: 'ncv-marketing',
+    id: 'ncv-economic-environment',
     order: 6,
+    status: 'LIVE',
+    subjectEn: 'NCV Economic Environment',
+    levelBadge: 'Level 2, 3, 4',
+    chaptersCount: 27,
+    href: '/textbooks/ncv-economic-environment-textbook',
+    targetTab: 'ncvEconomicEnvironmentTextbook',
+    initialVotes: 248,
+    description:
+      'Level 2 (10/10), Level 3 (10/10) + Level 4 Ch 1–7 (Macroeconomy, AD/AS, Phillips Curve, Policy, Globalisation, Labour, HDI & Sustainability) — read free online.'
+  },
+  {
+    id: 'ncv-marketing',
+    order: 7,
     status: 'COMING_SOON',
     subjectEn: 'NCV Marketing',
     levelBadge: 'Level 2, 3, 4',
@@ -103,7 +120,7 @@ export const TEXTBOOKS_CATALOG: TextbookCatalogItem[] = [
   },
   {
     id: 'ncv-hospitality',
-    order: 7,
+    order: 8,
     status: 'COMING_SOON',
     subjectEn: 'NCV Hospitality',
     levelBadge: 'Level 2, 3, 4',
@@ -114,7 +131,7 @@ export const TEXTBOOKS_CATALOG: TextbookCatalogItem[] = [
   },
   {
     id: 'ncv-civil-engineering',
-    order: 8,
+    order: 9,
     status: 'COMING_SOON',
     subjectEn: 'NCV Civil Engineering & Building Construction',
     levelBadge: 'Level 2, 3, 4',
@@ -125,7 +142,7 @@ export const TEXTBOOKS_CATALOG: TextbookCatalogItem[] = [
   },
   {
     id: 'ncv-engineering-related-design',
-    order: 9,
+    order: 10,
     status: 'COMING_SOON',
     subjectEn: 'NCV Engineering & Related Design',
     levelBadge: 'Level 2, 3, 4',
@@ -136,7 +153,7 @@ export const TEXTBOOKS_CATALOG: TextbookCatalogItem[] = [
   },
   {
     id: 'ncv-safety-in-society',
-    order: 10,
+    order: 11,
     status: 'COMING_SOON',
     subjectEn: 'NCV Safety in Society',
     levelBadge: 'Level 2, 3, 4',

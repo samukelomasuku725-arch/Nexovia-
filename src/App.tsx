@@ -60,6 +60,8 @@ import { NcvOfficeAdminTextbookPage } from './components/study-guide/NcvOfficeAd
 import { ElectricalTradeTheoryTextbookPage } from './components/study-guide/ElectricalTradeTheoryTextbookPage';
 import { NcvTourismTextbookPage } from './components/study-guide/NcvTourismTextbookPage';
 import { NcvItTextbookPage } from './components/study-guide/NcvItTextbookPage';
+import { NcvFinanceTextbookPage } from './components/study-guide/NcvFinanceTextbookPage';
+import { NcvEconomicEnvironmentTextbookPage } from './components/study-guide/NcvEconomicEnvironmentTextbookPage';
 import { TextbooksLibraryPage } from './components/study-guide/TextbooksLibraryPage';
 import { MatricExamTipsPage } from './components/study-guide/MatricExamTipsPage';
 import { StudyGuideChapterPage } from './components/study-guide/StudyGuideChapterPage';
@@ -646,6 +648,8 @@ const MainLayout: React.FC = () => {
         {currentTab === 'electricalTextbook' && <ElectricalTradeTheoryTextbookPage />}
         {currentTab === 'ncvTourismTextbook' && <NcvTourismTextbookPage />}
         {currentTab === 'ncvItTextbook' && <NcvItTextbookPage />}
+        {currentTab === 'ncvFinanceTextbook' && <NcvFinanceTextbookPage />}
+        {currentTab === 'ncvEconomicEnvironmentTextbook' && <NcvEconomicEnvironmentTextbookPage />}
         {currentTab === 'studyGuideExamTips' && <MatricExamTipsPage />}
         {currentTab === 'studyGuideChapter' && (
           <StudyGuideGuard>

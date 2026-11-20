@@ -89,7 +89,7 @@ export const Navbar: React.FC = () => {
                 : ''
             }`}
           >
-            {currentTab === 'textbooksLibrary' || currentTab === 'electricalTextbook' || currentTab === 'ncvTourismTextbook' || currentTab === 'ncvItTextbook' ? 'Home' : t('navHome')}
+            {currentTab === 'textbooksLibrary' || currentTab === 'electricalTextbook' || currentTab === 'ncvTourismTextbook' || currentTab === 'ncvItTextbook' || currentTab === 'ncvFinanceTextbook' || currentTab === 'ncvEconomicEnvironmentTextbook' ? 'Home' : t('navHome')}
           </button>
 
           <button

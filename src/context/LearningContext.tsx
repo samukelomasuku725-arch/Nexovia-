@@ -38,7 +38,7 @@ import { isTtsSupportedForLanguage } from '../services/voice/languageCapabilitie
 import { learnerStrugglesService } from '../services/struggles/learnerStrugglesService';
 import { findNcvMultilingualSeoPage } from '../data/ncvMultilingualSeoPages';
 
-export type AppTab = 'landing' | 'login' | 'signup' | 'calculator' | 'home' | 'dashboard' | 'explore' | 'learn' | 'school' | 'tvet' | 'higherEd' | 'tracks' | 'tutor' | 'scan' | 'practice' | 'saved' | 'profile' | 'adaptive' | 'assessments' | 'academicVoice' | 'progress' | 'adminBank' | 'about' | 'smartNotes' | 'myStruggles' | 'success' | 'cancel' | 'trial' | 'paywall' | 'subscribe' | 'mySubscription' | 'papers' | 'adminPayments' | 'unlock' | 'adminCodes' | 'terms' | 'refundPolicy' | 'privacyPolicy' | 'contact' | 'studyGuide' | 'studyGuidePhysics' | 'studyGuideLifeSciences' | 'studyGuideMathsLiteracy' | 'studyGuideMaths' | 'studyGuideTvet' | 'studyGuideDegree' | 'studyGuideNcv' | 'studyGuideExamTips' | 'studyGuideChapter' | 'studyGuideMultilingualSeo' | 'electricalXitsonga' | 'textbooksLibrary' | 'ncvOfficeAdminTextbook' | 'electricalTextbook' | 'ncvTourismTextbook' | 'ncvItTextbook';
+export type AppTab = 'landing' | 'login' | 'signup' | 'calculator' | 'home' | 'dashboard' | 'explore' | 'learn' | 'school' | 'tvet' | 'higherEd' | 'tracks' | 'tutor' | 'scan' | 'practice' | 'saved' | 'profile' | 'adaptive' | 'assessments' | 'academicVoice' | 'progress' | 'adminBank' | 'about' | 'smartNotes' | 'myStruggles' | 'success' | 'cancel' | 'trial' | 'paywall' | 'subscribe' | 'mySubscription' | 'papers' | 'adminPayments' | 'unlock' | 'adminCodes' | 'terms' | 'refundPolicy' | 'privacyPolicy' | 'contact' | 'studyGuide' | 'studyGuidePhysics' | 'studyGuideLifeSciences' | 'studyGuideMathsLiteracy' | 'studyGuideMaths' | 'studyGuideTvet' | 'studyGuideDegree' | 'studyGuideNcv' | 'studyGuideExamTips' | 'studyGuideChapter' | 'studyGuideMultilingualSeo' | 'electricalXitsonga' | 'textbooksLibrary' | 'ncvOfficeAdminTextbook' | 'electricalTextbook' | 'ncvTourismTextbook' | 'ncvItTextbook' | 'ncvFinanceTextbook' | 'ncvEconomicEnvironmentTextbook';
 
 export interface GeminiStatusInfo {
   checked: boolean;
@@ -288,6 +288,8 @@ export const pathToTab = (cleanPath: string, search = ''): AppTab => {
   if (cleanPath === '/textbooks/electrical-trade-theory-textbook') return 'electricalTextbook';
   if (cleanPath === '/textbooks/ncv-tourism-textbook') return 'ncvTourismTextbook';
   if (cleanPath === '/textbooks/ncv-it-computer-science-textbook') return 'ncvItTextbook';
+  if (cleanPath === '/textbooks/ncv-finance-economics-accounting-textbook') return 'ncvFinanceTextbook';
+  if (cleanPath === '/textbooks/ncv-economic-environment-textbook') return 'ncvEconomicEnvironmentTextbook';
   if (findNcvMultilingualSeoPage(cleanPath)) return 'studyGuideMultilingualSeo';
   if (cleanPath.startsWith('/study-guide/')) return 'studyGuideChapter';
   if (search.includes('lang=')) return 'learn';
@@ -335,6 +337,8 @@ export const tabToPath = (tab: AppTab): string => {
     case 'electricalTextbook': return '/textbooks/electrical-trade-theory-textbook';
     case 'ncvTourismTextbook': return '/textbooks/ncv-tourism-textbook';
     case 'ncvItTextbook': return '/textbooks/ncv-it-computer-science-textbook';
+    case 'ncvFinanceTextbook': return '/textbooks/ncv-finance-economics-accounting-textbook';
+    case 'ncvEconomicEnvironmentTextbook': return '/textbooks/ncv-economic-environment-textbook';
     case 'studyGuideMultilingualSeo': return typeof window !== 'undefined' ? window.location.pathname : '/study-guide/ncv-office-administration-11-languages';
     case 'studyGuideChapter': return typeof window !== 'undefined' ? window.location.pathname : '/study-guide/physics-grade-12/momentum';
     default: return '/';

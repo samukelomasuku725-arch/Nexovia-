@@ -25,7 +25,7 @@ import { TEXTBOOKS_CATALOG, TextbookCatalogItem } from '../../data/textbooksLibr
 
 const PAGE_TITLE = 'FREE Nexovian Textbooks Library in 11 Languages | Learn in Your Language';
 const PAGE_META_DESC =
-  'Browse the FREE Nexovian Textbooks Library. Read original Nexovian NCV Office Administration, Electrical Trade Theory, NCV Tourism, and NCV IT & Computer Science textbooks online.';
+  'Browse the FREE Nexovian Textbooks Library. Read original Nexovian NCV Office Administration, Electrical Trade Theory, NCV Tourism, NCV IT & Computer Science, and NCV Finance, Economics & Accounting textbooks online.';
 
 const VOTES_STORAGE_KEY = 'nexovian_textbook_votes_v1';
 
@@ -70,7 +70,9 @@ export const TextbooksLibraryPage: React.FC = () => {
       | 'ncvOfficeAdminTextbook'
       | 'electricalTextbook'
       | 'ncvTourismTextbook'
-      | 'ncvItTextbook',
+      | 'ncvItTextbook'
+      | 'ncvFinanceTextbook'
+      | 'ncvEconomicEnvironmentTextbook',
     path: string
   ) => {
     if (typeof window !== 'undefined') {
@@ -126,7 +128,11 @@ export const TextbooksLibraryPage: React.FC = () => {
           ? 'ncvTourismTextbook'
           : book.id === 'ncv-it-computer-science'
             ? 'ncvItTextbook'
-            : 'ncvOfficeAdminTextbook');
+            : book.id === 'ncv-finance-economics-accounting'
+              ? 'ncvFinanceTextbook'
+              : book.id === 'ncv-economic-environment'
+                ? 'ncvEconomicEnvironmentTextbook'
+                : 'ncvOfficeAdminTextbook');
 
     return (
       <article
@@ -301,7 +307,7 @@ export const TextbooksLibraryPage: React.FC = () => {
                 onClick={() => setSearchQuery('')}
                 className="min-h-[44px] px-5 py-2.5 rounded-xl bg-[#FFD400] hover:bg-yellow-400 text-black font-black text-xs sm:text-sm cursor-pointer"
               >
-                Show All 10 Textbooks
+                Show All Textbooks
               </button>
             </div>
           )}
@@ -459,6 +465,30 @@ export const TextbooksLibraryPage: React.FC = () => {
               className="inline-flex items-center gap-2 min-h-[44px] px-4 py-2.5 rounded-xl bg-[#FFD400] hover:bg-yellow-400 text-black font-black text-xs sm:text-sm cursor-pointer"
             >
               <span>NCV IT &amp; Computer Science Textbook — Read FREE</span>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </a>
+
+            <a
+              href="/textbooks/ncv-finance-economics-accounting-textbook"
+              onClick={(e) => {
+                e.preventDefault();
+                navigate('ncvFinanceTextbook', '/textbooks/ncv-finance-economics-accounting-textbook');
+              }}
+              className="inline-flex items-center gap-2 min-h-[44px] px-4 py-2.5 rounded-xl bg-[#FFD400] hover:bg-yellow-400 text-black font-black text-xs sm:text-sm cursor-pointer"
+            >
+              <span>NCV Finance, Economics &amp; Accounting Textbook — Read FREE</span>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </a>
+
+            <a
+              href="/textbooks/ncv-economic-environment-textbook"
+              onClick={(e) => {
+                e.preventDefault();
+                navigate('ncvEconomicEnvironmentTextbook', '/textbooks/ncv-economic-environment-textbook');
+              }}
+              className="inline-flex items-center gap-2 min-h-[44px] px-4 py-2.5 rounded-xl bg-[#FFD400] hover:bg-yellow-400 text-black font-black text-xs sm:text-sm cursor-pointer"
+            >
+              <span>NCV Economic Environment Textbook — Read FREE</span>
               <ArrowRight className="w-3.5 h-3.5" />
             </a>
           </div>
