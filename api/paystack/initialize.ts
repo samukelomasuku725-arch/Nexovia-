@@ -1,14 +1,52 @@
 /**
  * Vercel Serverless Function: /api/paystack/initialize
  *
- * Self-contained alias for /api/paystack/subscribe: enforces
- * PAYSTACK_SECRET_KEY + PAYSTACK_PLAN_CODE env vars and 2-Day Free Trial scheduling.
+ * Self-contained alias for /api/paystack/subscribe: enforces authenticated Supabase user,
+ * PAYSTACK_SECRET_KEY + PAYSTACK_PLAN_CODE env vars, and 2-Day Free Trial scheduling.
  */
 
+import { createClient } from '@supabase/supabase-js';
+
 const DEFAULT_CALLBACK_URL = 'https://nexovian.group/success';
+const ALLOWED_ORIGIN_PATTERNS = [
+  /^https:\/\/([a-z0-9-]+\.)?nexovian\.group$/i,
+  /^http:\/\/localhost:\d+$/i,
+  /^https:\/\/[a-z0-9-]+\.vercel\.app$/i,
+  /^https:\/\/[a-z0-9-]+\.run\.app$/i
+];
+
+function resolveAllowedOrigin(originHeader?: string): string {
+  if (originHeader && ALLOWED_ORIGIN_PATTERNS.some((re) => re.test(originHeader.trim()))) {
+    return originHeader.trim();
+  }
+  return 'https://nexovian.group';
+}
+
+function resolveSafeCallbackUrl(rawCallback: any, originHeader?: string, hostHeader?: string): string {
+  const candidate = typeof rawCallback === 'string' ? rawCallback.trim() : '';
+  if (candidate) {
+    try {
+      const parsed = new URL(candidate);
+      if (ALLOWED_ORIGIN_PATTERNS.some((re) => re.test(parsed.origin))) {
+        return parsed.toString();
+      }
+    } catch {
+      // ignore invalid URL
+    }
+  }
+  const fallbackOrigin =
+    originHeader && ALLOWED_ORIGIN_PATTERNS.some((re) => re.test(originHeader.trim()))
+      ? originHeader.trim()
+      : hostHeader
+      ? `https://${hostHeader}`
+      : '';
+  return fallbackOrigin ? `${fallbackOrigin}/success` : DEFAULT_CALLBACK_URL;
+}
 
 export default async function handler(req: any, res: any) {
-  res.setHeader('Access-Control-Allow-Origin', '*');
+  const allowedOrigin = resolveAllowedOrigin(req.headers?.origin);
+  res.setHeader('Access-Control-Allow-Origin', allowedOrigin);
+  res.setHeader('Vary', 'Origin');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
 
@@ -21,6 +59,54 @@ export default async function handler(req: any, res: any) {
   }
 
   try {
+    const authHeader = String(req.headers?.authorization || '');
+    const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7).trim() : '';
+    if (!token) {
+      return res.status(401).json({
+        success: false,
+        error: 'Authentication required. Please log in before starting your 2-day free trial.'
+      });
+    }
+
+    const supabaseUrl = (
+      process.env.NEXT_PUBLIC_SUPABASE_URL ||
+      process.env.SUPABASE_URL ||
+      process.env.VITE_SUPABASE_URL ||
+      'https://elvzpyksawrpdzfdnwsj.supabase.co'
+    ).trim();
+    const supabaseKey = (
+      process.env.SUPABASE_SERVICE_ROLE_KEY ||
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
+      process.env.SUPABASE_ANON_KEY ||
+      process.env.VITE_SUPABASE_ANON_KEY ||
+      'sb_publishable_Qvje6uGCD42PcmnFypO89g__TuoqTxR'
+    ).trim();
+
+    const supabase = createClient(supabaseUrl, supabaseKey, {
+      auth: { autoRefreshToken: false, persistSession: false }
+    });
+    const {
+      data: { user: authUser },
+      error: authError
+    } = await supabase.auth.getUser(token);
+
+    if (authError || !authUser) {
+      return res.status(401).json({
+        success: false,
+        error: 'Invalid or expired session. Please log in again.'
+      });
+    }
+
+    const finalEmail = String(authUser.email || '').trim().toLowerCase();
+    const finalUserId = String(authUser.id || '').trim();
+
+    if (!finalEmail || !finalEmail.includes('@') || !finalUserId) {
+      return res.status(401).json({
+        success: false,
+        error: 'Verified account email and user ID are required before starting your 2-day free trial.'
+      });
+    }
+
     const secretKey = (process.env.PAYSTACK_SECRET_KEY || '').trim();
     const planCode = (process.env.PAYSTACK_PLAN_CODE || '').trim();
 
@@ -31,22 +117,11 @@ export default async function handler(req: any, res: any) {
       });
     }
 
-    const { email, userId, callbackUrl } = req.body || {};
-    const finalEmail = (email || '').trim().toLowerCase();
-
-    if (!finalEmail || !finalEmail.includes('@')) {
-      return res.status(400).json({
-        success: false,
-        error: 'Please log in or create an account with a valid email address before starting your 2-day free trial.'
-      });
-    }
-
+    const { callbackUrl } = req.body || {};
     const trialEnd = new Date(Date.now() + 2 * 24 * 60 * 60 * 1000);
     const startDate = trialEnd.toISOString();
-    const reference = `NEX_TRIAL_${userId || 'usr'}_${Date.now()}`;
-
-    const originHeader = req.headers.origin || (req.headers.host ? `https://${req.headers.host}` : '');
-    const finalCallback = callbackUrl || (originHeader ? `${originHeader}/success` : DEFAULT_CALLBACK_URL);
+    const reference = `NEX_TRIAL_${finalUserId}_${Date.now()}`;
+    const finalCallback = resolveSafeCallbackUrl(callbackUrl, req.headers?.origin, req.headers?.host);
 
     const paystackRes = await fetch('https://api.paystack.co/transaction/initialize', {
       method: 'POST',
@@ -63,7 +138,7 @@ export default async function handler(req: any, res: any) {
         callback_url: finalCallback,
         metadata: {
           type: 'two_day_trial',
-          user_id: userId || '',
+          user_id: finalUserId,
           email: finalEmail,
           plan_code: planCode,
           start_date: startDate,

@@ -10,9 +10,19 @@ import fs from 'fs';
 import path from 'path';
 import { createClient } from '@supabase/supabase-js';
 
-const SUPABASE_URL = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || 'https://elvzpyksawrpdzfdnwsj.supabase.co';
-const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY || 'sb_publishable_Qvje6uGCD42PcmnFypO89g__TuoqTxR';
-const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+function getSupabaseAdminClient() {
+  const url = (
+    process.env.NEXT_PUBLIC_SUPABASE_URL ||
+    process.env.SUPABASE_URL ||
+    process.env.VITE_SUPABASE_URL ||
+    ''
+  ).trim();
+  const key = (process.env.SUPABASE_SERVICE_ROLE_KEY || '').trim();
+  if (!url || !key) return null;
+  return createClient(url, key, {
+    auth: { autoRefreshToken: false, persistSession: false }
+  });
+}
 
 function getDbFile(): string {
   const localDir = path.resolve(process.cwd(), 'data');
@@ -54,6 +64,41 @@ export default async function handler(req: any, res: any) {
       });
     }
 
+    // Authoritative check: query Supabase `users` table (is_paid, plan) using service role key
+    const supabase = getSupabaseAdminClient();
+    if (supabase) {
+      try {
+        const { data: paidUser } = await supabase
+          .from('users')
+          .select('is_paid, plan, paystack_reference, paid_at')
+          .eq('email', email)
+          .maybeSingle();
+
+        if (paidUser?.is_paid === true) {
+          const planName = String(paidUser.plan || 'trial').toLowerCase();
+          const paidAtMs = paidUser.paid_at ? new Date(paidUser.paid_at).getTime() : Date.now();
+          const endDate =
+            planName === 'active' || planName === 'monthly'
+              ? new Date(paidAtMs + 30 * 24 * 60 * 60 * 1000).toISOString()
+              : new Date(paidAtMs + 2 * 24 * 60 * 60 * 1000).toISOString();
+
+          return res.status(200).json({
+            success: true,
+            is_paid: true,
+            plan: paidUser.plan || 'trial',
+            status: planName === 'active' || planName === 'monthly' ? 'active' : 'trial',
+            has_access: true,
+            trial_end_date: endDate,
+            next_payment_date: endDate,
+            subscription_code: null,
+            paystack_reference: paidUser.paystack_reference || null
+          });
+        }
+      } catch {
+        // Fallback to profiles / local file below
+      }
+    }
+
     let records: any[] = [];
     try {
       const dbFile = getDbFile();
@@ -67,7 +112,7 @@ export default async function handler(req: any, res: any) {
     let found = records.find((r) => r.email?.toLowerCase() === email || (userId && r.user_id === userId));
 
     // Fallback to Supabase profiles if local file has no confirmed record
-    if (!found || found.subscription_status === 'none') {
+    if ((!found || found.subscription_status === 'none') && supabase) {
       try {
         const { data: profile } = await supabase
           .from('profiles')
@@ -94,6 +139,8 @@ export default async function handler(req: any, res: any) {
     if (!found) {
       return res.status(200).json({
         success: true,
+        is_paid: false,
+        plan: 'free',
         status: 'none',
         has_access: false,
         trial_end_date: null,

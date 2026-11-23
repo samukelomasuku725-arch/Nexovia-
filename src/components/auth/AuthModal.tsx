@@ -48,6 +48,22 @@ export const AuthModal: React.FC = () => {
         authedUser = res?.user || { email, name };
       }
 
+      if (typeof window !== 'undefined') {
+        const params = new URLSearchParams(window.location.search);
+        const rawNext = params.get('next');
+        if (
+          rawNext &&
+          rawNext.startsWith('/') &&
+          !rawNext.startsWith('//') &&
+          !rawNext.startsWith('/login') &&
+          !rawNext.startsWith('/signup')
+        ) {
+          sessionStorage.removeItem(PENDING_TRIAL_STORAGE_KEY);
+          window.location.href = rawNext;
+          return;
+        }
+      }
+
       if (typeof window !== 'undefined' && sessionStorage.getItem(PENDING_TRIAL_STORAGE_KEY) === 'true') {
         const trialRes = await startTwoDayFreeTrialCheckout({ user: authedUser });
         if (!trialRes.success && trialRes.error) {

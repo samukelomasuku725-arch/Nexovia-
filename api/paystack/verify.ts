@@ -10,9 +10,19 @@ import fs from 'fs';
 import path from 'path';
 import { createClient } from '@supabase/supabase-js';
 
-const SUPABASE_URL = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || 'https://elvzpyksawrpdzfdnwsj.supabase.co';
-const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY || 'sb_publishable_Qvje6uGCD42PcmnFypO89g__TuoqTxR';
-const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+function getSupabaseAdminClient() {
+  const url = (
+    process.env.NEXT_PUBLIC_SUPABASE_URL ||
+    process.env.SUPABASE_URL ||
+    process.env.VITE_SUPABASE_URL ||
+    ''
+  ).trim();
+  const key = (process.env.SUPABASE_SERVICE_ROLE_KEY || '').trim();
+  if (!url || !key) return null;
+  return createClient(url, key, {
+    auth: { autoRefreshToken: false, persistSession: false }
+  });
+}
 
 function getDbFile(): string {
   const localDir = path.resolve(process.cwd(), 'data');
@@ -189,7 +199,25 @@ export default async function handler(req: any, res: any) {
     writeRecords(records);
 
     try {
-      if (verifiedEmail) {
+      const supabase = getSupabaseAdminClient();
+      if (supabase && verifiedEmail) {
+        const unlockPayload = {
+          is_paid: true,
+          plan: newStatus === 'active' ? 'active' : 'trial',
+          paystack_reference: reference,
+          paid_at: existing.updated_at
+        };
+        const { data: updatedRows, error: updErr } = await supabase
+          .from('users')
+          .update(unlockPayload)
+          .eq('email', verifiedEmail)
+          .select('email');
+
+        if (updErr || !updatedRows || updatedRows.length === 0) {
+          await supabase.from('users').insert({ email: verifiedEmail, ...unlockPayload });
+        }
+        console.log('UNLOCK: verified payment via /api/paystack/verify', { email: verifiedEmail, reference });
+
         await supabase.from('profiles').upsert(
           {
             id: existing.user_id,
@@ -204,8 +232,8 @@ export default async function handler(req: any, res: any) {
           { onConflict: 'email' }
         );
       }
-    } catch {
-      // Non-blocking
+    } catch (syncErr: any) {
+      console.error('UNLOCK: /api/paystack/verify Supabase sync error:', syncErr?.message || syncErr);
     }
 
     return res.status(200).json({

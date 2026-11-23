@@ -41,6 +41,7 @@ import { useTranslation } from '../../i18n/I18nContext';
 import { SALanguageCode } from '../../i18n/types';
 import { APP_CONFIG } from '../../config/brand';
 import { startTwoDayFreeTrialCheckout, isUserActive } from '../../services/paystackService';
+import { supabase } from '../../supabase';
 import { CreditCard } from 'lucide-react';
 
 interface HeroSectionProps {
@@ -52,6 +53,29 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onScrollToFinder }) =>
   const { setLanguage } = useTranslation();
   const { user, isAuthenticated } = useAuth();
   const hasActiveSubscription = isAuthenticated && isUserActive(user);
+
+  const handleStartTrial = async () => {
+    const {
+      data: { user: authUser }
+    } = await supabase.auth.getUser();
+    if (!authUser) {
+      if (typeof window !== 'undefined') {
+        window.location.href = '/login?next=' + encodeURIComponent(window.location.pathname);
+      }
+      return;
+    }
+
+    await startTwoDayFreeTrialCheckout({
+      user: { id: authUser.id, email: authUser.email, name: user?.name },
+      onRequireAuth: () => {
+        if (typeof window !== 'undefined') {
+          window.location.href = '/login?next=' + encodeURIComponent(window.location.pathname);
+        } else {
+          setCurrentTab('login');
+        }
+      }
+    });
+  };
 
   // Navigate to learn tab with specific language parameter
   const handleNavigateToLearn = (langCode: SALanguageCode) => {
@@ -221,12 +245,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onScrollToFinder }) =>
                 ) : (
                   <button
                     type="button"
-                    onClick={() =>
-                      startTwoDayFreeTrialCheckout({
-                        user,
-                        onRequireAuth: () => setCurrentTab('login')
-                      })
-                    }
+                    onClick={handleStartTrial}
                     className="w-full py-3.5 px-5 rounded-xl bg-[#FFB612] hover:bg-yellow-400 text-black font-black text-sm sm:text-base flex items-center justify-center gap-2 shadow-lg transition-transform active:scale-98 cursor-pointer"
                   >
                     <Sparkles className="w-5 h-5" />

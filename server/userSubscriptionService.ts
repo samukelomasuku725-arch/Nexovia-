@@ -20,7 +20,24 @@
 
 import fs from 'fs';
 import path from 'path';
-import { supabase } from '../src/supabase.js';
+import { createClient } from '@supabase/supabase-js';
+import { supabase as anonSupabase } from '../src/supabase.js';
+
+function getServerSupabaseClient() {
+  const url = (
+    process.env.NEXT_PUBLIC_SUPABASE_URL ||
+    process.env.SUPABASE_URL ||
+    process.env.VITE_SUPABASE_URL ||
+    ''
+  ).trim();
+  const serviceKey = (process.env.SUPABASE_SERVICE_ROLE_KEY || '').trim();
+  if (url && serviceKey) {
+    return createClient(url, serviceKey, {
+      auth: { autoRefreshToken: false, persistSession: false }
+    });
+  }
+  return anonSupabase;
+}
 
 export type SubscriptionStatusEnum = 'none' | 'trial' | 'active' | 'cancelled' | 'expired';
 
@@ -214,10 +231,50 @@ export async function checkSubscriptionAccess({
     userId
   });
 
+  // Authoritative check on Supabase `users` table (is_paid, plan) first
+  const supabaseClient = getServerSupabaseClient();
+  if (normEmail) {
+    try {
+      const { data: paidUser } = await supabaseClient
+        .from('users')
+        .select('is_paid, plan, paystack_reference, paid_at')
+        .eq('email', normEmail)
+        .maybeSingle();
+
+      if (paidUser?.is_paid === true) {
+        const planName = String(paidUser.plan || 'trial').toLowerCase();
+        const paidAtIso = paidUser.paid_at || new Date().toISOString();
+        const paidAtMs = new Date(paidAtIso).getTime();
+        const endIso =
+          planName === 'active' || planName === 'monthly'
+            ? new Date(paidAtMs + 30 * 24 * 60 * 60 * 1000).toISOString()
+            : new Date(paidAtMs + 2 * 24 * 60 * 60 * 1000).toISOString();
+
+        return {
+          allow: true,
+          status: planName === 'active' || planName === 'monthly' ? 'active' : 'trial',
+          record: {
+            ...record,
+            subscription_status: planName === 'active' || planName === 'monthly' ? 'active' : 'trial',
+            paystack_reference: paidUser.paystack_reference || record.paystack_reference,
+            trial_end_date: endIso,
+            next_payment_date: endIso,
+            subscription_end_date: endIso
+          },
+          trial_end_date: endIso,
+          next_payment_date: endIso,
+          subscription_code: record.paystack_subscription_code || null
+        };
+      }
+    } catch {
+      // Fall through to profiles/local record
+    }
+  }
+
   // Fallback check on Supabase profiles if local record shows 'none'
   if (record.subscription_status === 'none' && normEmail) {
     try {
-      const { data: profile } = await supabase
+      const { data: profile } = await supabaseClient
         .from('profiles')
         .select('*')
         .eq('email', normEmail)
@@ -525,10 +582,32 @@ export async function getUserSubscriptionRecord(email: string): Promise<UserSubs
 async function syncToSupabaseProfile(record: UserSubscriptionRecord): Promise<void> {
   try {
     if (!record.email) return;
-    await supabase.from('profiles').upsert(
+    const supabaseClient = getServerSupabaseClient();
+    const isPaid = record.subscription_status === 'trial' || record.subscription_status === 'active';
+    const normEmail = record.email.trim().toLowerCase();
+
+    if (isPaid) {
+      const unlockPayload = {
+        is_paid: true,
+        plan: record.subscription_status === 'active' ? 'active' : 'trial',
+        paystack_reference: record.paystack_reference,
+        paid_at: record.updated_at || new Date().toISOString()
+      };
+      const { data: updatedRows, error: updErr } = await supabaseClient
+        .from('users')
+        .update(unlockPayload)
+        .eq('email', normEmail)
+        .select('email');
+
+      if (updErr || !updatedRows || updatedRows.length === 0) {
+        await supabaseClient.from('users').insert({ email: normEmail, ...unlockPayload });
+      }
+    }
+
+    await supabaseClient.from('profiles').upsert(
       {
         id: record.user_id,
-        email: record.email,
+        email: normEmail,
         full_name: record.full_name || '',
         trial_start_date: record.trial_start_date,
         trial_end_date: record.trial_end_date,

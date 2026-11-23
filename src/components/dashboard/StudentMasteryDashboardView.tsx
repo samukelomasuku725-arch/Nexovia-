@@ -81,7 +81,8 @@ import { HeroSection } from '../home/HeroSection';
 import { MissionVisionSection } from '../home/MissionVisionSection';
 import { MissionHeroBanner } from '../home/MissionHeroBanner';
 import { HomeSocraticHero } from '../home/HomeSocraticHero';
-import { getCachedPaystackStatus, isUserActive } from '../../services/paystackService';
+import { getCachedPaystackStatus, isUserActive, startTwoDayFreeTrialCheckout } from '../../services/paystackService';
+import { supabase } from '../../supabase';
 
 export const StudentMasteryDashboardView: React.FC = () => {
   const {
@@ -215,6 +216,29 @@ export const StudentMasteryDashboardView: React.FC = () => {
     }
   }, [isSubActive, setCurrentTab]);
 
+  const handleStartTrial = async () => {
+    const {
+      data: { user: authUser }
+    } = await supabase.auth.getUser();
+    if (!authUser) {
+      if (typeof window !== 'undefined') {
+        window.location.href = '/login?next=' + encodeURIComponent(window.location.pathname);
+      }
+      return;
+    }
+
+    await startTwoDayFreeTrialCheckout({
+      user: { id: authUser.id, email: authUser.email, name: user?.name },
+      onRequireAuth: () => {
+        if (typeof window !== 'undefined') {
+          window.location.href = '/login?next=' + encodeURIComponent(window.location.pathname);
+        } else {
+          setCurrentTab('login');
+        }
+      }
+    });
+  };
+
   return (
     <div className="min-h-screen bg-[#0F0F0F] text-[#F8FAFC] pb-24 md:pb-12 transition-colors w-full max-w-[100vw] overflow-x-hidden">
       {/* Paystack 2-Day Free Trial / Active Subscription Banner */}
@@ -272,10 +296,7 @@ export const StudentMasteryDashboardView: React.FC = () => {
               </span>
             </span>
             <button
-              onClick={() => {
-                setCurrentTab('subscribe');
-                if (typeof window !== 'undefined') window.history.pushState({}, '', '/subscribe');
-              }}
+              onClick={handleStartTrial}
               className="px-3 py-1 rounded-lg bg-[#FFB612] hover:bg-yellow-400 text-black font-black text-xs transition-colors cursor-pointer"
             >
               Start 2-Day Free Trial - Then R60/month

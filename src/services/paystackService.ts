@@ -8,6 +8,7 @@
  * (PAYSTACK_SECRET_KEY & PAYSTACK_PLAN_CODE). Frontend never hardcodes secrets or plan codes.
  */
 
+import { supabase } from '../supabase';
 import {
   checkFastTrialState,
   recordPaymentSuccess,
@@ -52,57 +53,56 @@ export interface SubscriptionStatus {
   isAdmin?: boolean;
 }
 
-function getCacheKey(email: string): string {
-  return `nexovian_paystack_sub_${email.trim().toLowerCase()}`;
+// Authoritative in-memory store populated strictly from Supabase `users` / server verification
+const verifiedAccessByEmail = new Map<string, PaystackSubscriptionRecord>();
+
+function normalizeEmail(email?: string | null): string {
+  return String(email || '').trim().toLowerCase();
 }
 
 export function getCachedPaystackStatus(email?: string | null): PaystackSubscriptionRecord | null {
-  if (typeof window === 'undefined' || !email) return null;
-  try {
-    const raw = localStorage.getItem(getCacheKey(email));
-    if (!raw) return null;
-    const parsed = JSON.parse(raw) as PaystackSubscriptionRecord;
-    const now = Date.now();
-    if (parsed.status === 'trial' && parsed.trial_end_date && now > new Date(parsed.trial_end_date).getTime()) {
-      parsed.status = 'expired';
-      parsed.has_access = false;
-    } else if (
-      parsed.status === 'active' &&
-      parsed.next_payment_date &&
-      now > new Date(parsed.next_payment_date).getTime()
-    ) {
-      parsed.status = 'expired';
-      parsed.has_access = false;
-    }
-    return parsed;
-  } catch {
-    return null;
+  const norm = normalizeEmail(email);
+  if (!norm) return null;
+  const record = verifiedAccessByEmail.get(norm);
+  if (!record) return null;
+
+  const now = Date.now();
+  if (record.status === 'trial' && record.trial_end_date && now > new Date(record.trial_end_date).getTime()) {
+    return { ...record, status: 'expired', has_access: false };
   }
+  if (
+    record.status === 'active' &&
+    record.next_payment_date &&
+    now > new Date(record.next_payment_date).getTime()
+  ) {
+    return { ...record, status: 'expired', has_access: false };
+  }
+  return record;
 }
 
 export function saveCachedPaystackStatus(email: string, state: PaystackSubscriptionRecord): void {
-  if (typeof window === 'undefined' || !email) return;
-  try {
-    const normEmail = email.trim().toLowerCase();
-    localStorage.setItem(getCacheKey(normEmail), JSON.stringify(state));
-    if (state.has_access && (state.status === 'trial' || state.status === 'active')) {
-      localStorage.setItem('nexovian_paystack_active', 'true');
-      localStorage.setItem(`nexovian_paid_status_${normEmail}`, state.status === 'active' ? 'PAID_USER' : 'TRIAL');
-    } else {
-      localStorage.removeItem('nexovian_paystack_active');
-      localStorage.removeItem('nexovian_paid');
-      localStorage.removeItem('isPremium');
-      localStorage.removeItem('nexovian_premium');
-      localStorage.removeItem('nexovian_unlocked');
-      localStorage.removeItem(`nexovian_paid_status_${normEmail}`);
-    }
+  const normEmail = normalizeEmail(email);
+  if (!normEmail) return;
+
+  if (state.has_access && (state.status === 'trial' || state.status === 'active')) {
+    verifiedAccessByEmail.set(normEmail, state);
+  } else {
+    verifiedAccessByEmail.set(normEmail, { ...state, has_access: false });
+    clearCachedPaystackFlags(undefined, normEmail);
+  }
+
+  if (typeof window !== 'undefined') {
     window.dispatchEvent(new CustomEvent('nexovian-subscription-updated', { detail: state }));
-  } catch {
-    // Ignore storage errors
   }
 }
 
 export function clearCachedPaystackFlags(userId?: string, email?: string): void {
+  if (email) {
+    verifiedAccessByEmail.delete(normalizeEmail(email));
+  } else {
+    verifiedAccessByEmail.clear();
+  }
+
   if (typeof window === 'undefined') return;
   try {
     localStorage.removeItem('nexovian_paystack_active');
@@ -115,19 +115,67 @@ export function clearCachedPaystackFlags(userId?: string, email?: string): void 
       localStorage.removeItem(`nexovian_sub_${userId}`);
     }
     if (email) {
-      const normEmail = email.trim().toLowerCase();
+      const normEmail = normalizeEmail(email);
       localStorage.removeItem(`nexovian_paid_status_${normEmail}`);
+      localStorage.removeItem(`nexovian_paystack_sub_${normEmail}`);
     }
   } catch {
-    // Ignore
+    // Ignore storage errors
   }
+}
+
+/**
+ * Checks authoritative payment unlock directly via:
+ * 1) supabase.auth.getUser() -> Supabase `users` table (is_paid, plan)
+ * 2) Server fallback /api/paystack/status (service-role query on `users` + `profiles`)
+ */
+export async function checkSupabasePaidAccess(
+  fallbackEmail?: string | null
+): Promise<{ isPaid: boolean; plan: string; email: string | null }> {
+  let targetEmail = normalizeEmail(fallbackEmail);
+
+  try {
+    const { data: authData } = await supabase.auth.getUser();
+    if (authData?.user?.email) {
+      targetEmail = normalizeEmail(authData.user.email);
+    }
+  } catch {
+    // Continue with fallbackEmail if getUser() has no active Supabase token yet
+  }
+
+  if (!targetEmail) {
+    return { isPaid: false, plan: 'free', email: null };
+  }
+
+  try {
+    const { data: userRow, error } = await supabase
+      .from('users')
+      .select('is_paid, plan')
+      .eq('email', targetEmail)
+      .maybeSingle();
+
+    if (!error && userRow?.is_paid === true) {
+      return {
+        isPaid: true,
+        plan: String(userRow.plan || 'trial'),
+        email: targetEmail
+      };
+    }
+  } catch {
+    // Fall through to server-verified status check
+  }
+
+  return { isPaid: false, plan: 'free', email: targetEmail };
 }
 
 export async function syncSubscriptionStatus(
   email?: string | null,
   userId?: string | null
 ): Promise<PaystackSubscriptionRecord> {
-  if (!email) {
+  const supabaseCheck = await checkSupabasePaidAccess(email);
+  const targetEmail = supabaseCheck.email || normalizeEmail(email);
+
+  if (!targetEmail) {
     return {
       status: 'anonymous',
       has_access: false,
@@ -139,15 +187,40 @@ export async function syncSubscriptionStatus(
     };
   }
 
+  if (supabaseCheck.isPaid) {
+    const isMonthly = supabaseCheck.plan === 'active' || supabaseCheck.plan === 'monthly';
+    const record: PaystackSubscriptionRecord = {
+      status: isMonthly ? 'active' : 'trial',
+      has_access: true,
+      trial_end_date: null,
+      next_payment_date: null,
+      subscription_code: null,
+      days_remaining: isMonthly ? 30 : 2,
+      hours_remaining: isMonthly ? 720 : 48
+    };
+    saveCachedPaystackStatus(targetEmail, record);
+    return record;
+  }
+
   try {
-    const params = new URLSearchParams({ email: email.trim().toLowerCase() });
+    const params = new URLSearchParams({ email: targetEmail });
     if (userId) params.set('userId', userId);
     const res = await fetch(`/api/paystack/status?${params.toString()}`);
     if (res.ok) {
       const data = await res.json();
+      const serverPaid = Boolean(data.is_paid || data.has_access);
+      const serverStatus: PaystackSubscriptionRecord['status'] =
+        data.status && data.status !== 'none'
+          ? data.status
+          : serverPaid
+            ? data.plan === 'active'
+              ? 'active'
+              : 'trial'
+            : 'none';
+
       const record: PaystackSubscriptionRecord = {
-        status: data.status || 'none',
-        has_access: Boolean(data.has_access),
+        status: serverStatus,
+        has_access: serverPaid,
         trial_end_date: data.trial_end_date || null,
         next_payment_date: data.next_payment_date || null,
         subscription_code: data.subscription_code || null,
@@ -156,50 +229,69 @@ export async function syncSubscriptionStatus(
         is_admin: Boolean(data.is_admin),
         cancelled_at: data.record?.cancelled_at || null
       };
-      saveCachedPaystackStatus(email, record);
+      saveCachedPaystackStatus(targetEmail, record);
       return record;
     }
   } catch (err) {
     console.warn('[Paystack Status Sync Warning]:', err);
   }
 
-  return (
-    getCachedPaystackStatus(email) || {
-      status: 'none',
-      has_access: false,
-      trial_end_date: null,
-      next_payment_date: null,
-      subscription_code: null,
-      days_remaining: 0,
-      hours_remaining: 0
-    }
-  );
+  const lockedRecord: PaystackSubscriptionRecord = {
+    status: 'none',
+    has_access: false,
+    trial_end_date: null,
+    next_payment_date: null,
+    subscription_code: null,
+    days_remaining: 0,
+    hours_remaining: 0
+  };
+  saveCachedPaystackStatus(targetEmail, lockedRecord);
+  return lockedRecord;
 }
 
 /**
  * Starts the 2-Day Free Trial Paystack flow.
- * - If logged out, sets pending trial intent and invokes onRequireAuth (or redirects to /login).
- * - If logged in, calls POST /api/paystack/subscribe (server uses env vars only) and redirects to Paystack checkout.
+ * - Checks supabase.auth.getUser() first: if unauthenticated, redirects to /login?next=<pathname> and returns early.
+ * - If logged in, calls POST /api/paystack/subscribe with Bearer token + verified email & userId and redirects to Paystack checkout.
  */
 export async function startTwoDayFreeTrialCheckout({
-  user,
-  onRequireAuth
+  user
 }: {
   user?: { id?: string; email?: string; name?: string } | null;
   onRequireAuth?: () => void;
 } = {}): Promise<{ success: boolean; redirectedToAuth?: boolean; error?: string }> {
-  const email = user?.email?.trim();
-  if (!email) {
+  const {
+    data: { user: authUser }
+  } = await supabase.auth.getUser();
+
+  if (!authUser) {
     if (typeof window !== 'undefined') {
-      sessionStorage.setItem(PENDING_TRIAL_STORAGE_KEY, 'true');
+      const nextTarget = `${window.location.pathname}${window.location.search || ''}` || '/';
+      window.location.href = `/login?next=${encodeURIComponent(nextTarget)}`;
     }
-    if (onRequireAuth) {
-      onRequireAuth();
-    } else if (typeof window !== 'undefined') {
-      window.history.pushState({}, '', '/login');
-      window.dispatchEvent(new PopStateEvent('popstate'));
+    return { success: false, redirectedToAuth: true };
+  }
+
+  const email = (authUser.email || user?.email || '').trim().toLowerCase();
+  const userId = (authUser.id || user?.id || '').trim();
+  if (!email || !userId) {
+    if (typeof window !== 'undefined') {
+      const nextTarget = `${window.location.pathname}${window.location.search || ''}` || '/';
+      window.location.href = `/login?next=${encodeURIComponent(nextTarget)}`;
     }
-    return { success: true, redirectedToAuth: true };
+    return { success: false, redirectedToAuth: true };
+  }
+
+  const {
+    data: { session }
+  } = await supabase.auth.getSession();
+  const accessToken = session?.access_token || '';
+  if (!accessToken) {
+    if (typeof window !== 'undefined') {
+      const nextTarget = `${window.location.pathname}${window.location.search || ''}` || '/';
+      window.location.href = `/login?next=${encodeURIComponent(nextTarget)}`;
+    }
+    return { success: false, redirectedToAuth: true };
   }
 
   const targetCallback =
@@ -208,15 +300,26 @@ export async function startTwoDayFreeTrialCheckout({
   try {
     const res = await fetch('/api/paystack/subscribe', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${accessToken}`
+      },
       body: JSON.stringify({
         email,
-        userId: user?.id || '',
+        userId,
         callbackUrl: targetCallback
       })
     });
 
     const data = await res.json();
+    if (res.status === 401) {
+      if (typeof window !== 'undefined') {
+        const nextTarget = `${window.location.pathname}${window.location.search || ''}` || '/';
+        window.location.href = `/login?next=${encodeURIComponent(nextTarget)}`;
+      }
+      return { success: false, redirectedToAuth: true };
+    }
+
     if (!res.ok || !data?.authorization_url) {
       return {
         success: false,
@@ -350,8 +453,8 @@ export function checkUserSubscription(
 
 /**
  * Authoritative access check for protected routes: Study Guide, AI Tutor, Scan & Understand, Voice Docs.
- * Strictly requires logged-in user AND confirmed Paystack 2-day trial or active monthly subscription.
- * Never grants fake Active status before Paystack card/bank payment confirmation.
+ * Strictly requires logged-in user AND server/Supabase-confirmed `is_paid === true` or confirmed trial/subscription.
+ * Never grants access based only on localStorage or client-only flags.
  */
 export function isUserActive(user?: any): boolean {
   if (typeof window === 'undefined') return false;
@@ -360,17 +463,17 @@ export function isUserActive(user?: any): boolean {
     return false;
   }
 
-  const cached = getCachedPaystackStatus(user.email);
-  if (!cached || !cached.has_access) {
+  const verified = getCachedPaystackStatus(user.email);
+  if (!verified || !verified.has_access) {
     return false;
   }
 
-  if (cached.status === 'trial' && cached.trial_end_date) {
-    return Date.now() <= new Date(cached.trial_end_date).getTime();
+  if (verified.status === 'trial') {
+    return !verified.trial_end_date || Date.now() <= new Date(verified.trial_end_date).getTime();
   }
 
-  if (cached.status === 'active') {
-    return !cached.next_payment_date || Date.now() <= new Date(cached.next_payment_date).getTime();
+  if (verified.status === 'active') {
+    return !verified.next_payment_date || Date.now() <= new Date(verified.next_payment_date).getTime();
   }
 
   return false;

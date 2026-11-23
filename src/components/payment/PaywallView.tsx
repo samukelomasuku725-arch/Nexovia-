@@ -18,7 +18,8 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useLearning } from '../../context/LearningContext';
-import { isUserActive, startTwoDayFreeTrialCheckout } from '../../services/paystackService';
+import { isUserActive, startTwoDayFreeTrialCheckout, syncSubscriptionStatus } from '../../services/paystackService';
+import { supabase } from '../../supabase';
 
 const WHATSAPP_URL = 'https://wa.me/27636508381?text=Hi%20Nexovian%2C%20I%20need%20help%20with%20my%20subscription';
 
@@ -29,20 +30,45 @@ export const PaywallView: React.FC = () => {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   useEffect(() => {
-    if (isAuthenticated && isUserActive(user)) {
-      setCurrentTab('home');
+    let active = true;
+    const checkUnlock = () => {
+      if (active && isAuthenticated && isUserActive(user)) {
+        setCurrentTab('home');
+      }
+    };
+
+    checkUnlock();
+    if (isAuthenticated && user?.email) {
+      syncSubscriptionStatus(user.email, user.id).then(checkUnlock).catch(() => {});
     }
+
+    window.addEventListener('nexovian-subscription-updated', checkUnlock);
+    return () => {
+      active = false;
+      window.removeEventListener('nexovian-subscription-updated', checkUnlock);
+    };
   }, [isAuthenticated, user, setCurrentTab]);
 
   const handleStartTrial = async () => {
+    const {
+      data: { user: authUser }
+    } = await supabase.auth.getUser();
+    if (!authUser) {
+      if (typeof window !== 'undefined') {
+        window.location.href = '/login?next=' + encodeURIComponent(window.location.pathname);
+      }
+      return;
+    }
+
     setErrorMessage(null);
     setLoading(true);
     const res = await startTwoDayFreeTrialCheckout({
-      user,
+      user: { id: authUser.id, email: authUser.email, name: user?.name },
       onRequireAuth: () => {
-        setCurrentTab('login');
         if (typeof window !== 'undefined') {
-          window.history.pushState({}, '', '/login');
+          window.location.href = '/login?next=' + encodeURIComponent(window.location.pathname);
+        } else {
+          setCurrentTab('login');
         }
       }
     });

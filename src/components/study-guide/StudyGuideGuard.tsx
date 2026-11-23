@@ -13,10 +13,12 @@ import { Lock, Sparkles, ArrowRight, Loader2, AlertCircle, ArrowLeft } from 'luc
 import { useAuth } from '../../context/AuthContext';
 import { useLearning } from '../../context/LearningContext';
 import {
+  checkSupabasePaidAccess,
   isUserActive,
   startTwoDayFreeTrialCheckout,
   syncSubscriptionStatus
 } from '../../services/paystackService';
+import { supabase } from '../../supabase';
 
 interface StudyGuideGuardProps {
   children: React.ReactNode;
@@ -43,16 +45,24 @@ export const StudyGuideGuard: React.FC<StudyGuideGuardProps> = ({ children }) =>
         return;
       }
 
-      const localAllowed = isUserActive(user);
-      if (mounted) setHasAccess(localAllowed);
+      setChecking(true);
 
       try {
-        await syncSubscriptionStatus(user.email, user.id);
+        const directCheck = await checkSupabasePaidAccess(user.email);
+        if (directCheck.isPaid) {
+          await syncSubscriptionStatus(directCheck.email || user.email, user.id);
+          if (mounted) setHasAccess(true);
+          return;
+        }
+
+        const synced = await syncSubscriptionStatus(user.email, user.id);
         if (mounted) {
-          setHasAccess(isUserActive(user));
+          setHasAccess(Boolean(synced.has_access));
         }
       } catch {
-        // Keep evaluated state
+        if (mounted) {
+          setHasAccess(Boolean(isAuthenticated && isUserActive(user)));
+        }
       } finally {
         if (mounted) setChecking(false);
       }
@@ -88,14 +98,23 @@ export const StudyGuideGuard: React.FC<StudyGuideGuardProps> = ({ children }) =>
   }
 
   const handleStartTrial = async () => {
+    const {
+      data: { user: authUser }
+    } = await supabase.auth.getUser();
+    if (!authUser) {
+      if (typeof window !== 'undefined') {
+        window.location.href = '/login?next=' + encodeURIComponent(window.location.pathname);
+      }
+      return;
+    }
+
     setErrorMsg(null);
     setStartingCheckout(true);
     const result = await startTwoDayFreeTrialCheckout({
-      user,
+      user: { id: authUser.id, email: authUser.email },
       onRequireAuth: () => {
-        setCurrentTab('login');
         if (typeof window !== 'undefined') {
-          window.history.pushState({}, '', '/login');
+          window.location.href = '/login?next=' + encodeURIComponent(window.location.pathname);
         }
       }
     });
@@ -149,8 +168,11 @@ export const StudyGuideGuard: React.FC<StudyGuideGuardProps> = ({ children }) =>
             <button
               type="button"
               onClick={() => {
-                setCurrentTab('login');
-                if (typeof window !== 'undefined') window.history.pushState({}, '', '/login');
+                if (typeof window !== 'undefined') {
+                  window.location.href = '/login?next=' + encodeURIComponent(window.location.pathname);
+                } else {
+                  setCurrentTab('login');
+                }
               }}
               className="text-[#FFD400] font-bold hover:underline cursor-pointer"
             >

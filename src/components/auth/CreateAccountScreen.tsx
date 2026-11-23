@@ -180,7 +180,33 @@ export const CreateAccountScreen: React.FC<{ initialMode?: 'login' | 'signup' }>
     return cleaned.toLowerCase();
   };
 
+  const getSafeNextPath = (): string | null => {
+    if (typeof window === 'undefined') return null;
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const rawNext = params.get('next');
+      if (!rawNext || !rawNext.startsWith('/') || rawNext.startsWith('//')) {
+        return null;
+      }
+      if (rawNext.startsWith('/login') || rawNext.startsWith('/signup')) {
+        return null;
+      }
+      return rawNext;
+    } catch {
+      return null;
+    }
+  };
+
   const completeAuthNavigation = async (authedUser: { id?: string; email?: string; name?: string } | null) => {
+    const safeNext = getSafeNextPath();
+    if (safeNext) {
+      if (typeof window !== 'undefined') {
+        sessionStorage.removeItem(PENDING_TRIAL_STORAGE_KEY);
+        window.location.href = safeNext;
+      }
+      return;
+    }
+
     const hasPendingTrial =
       typeof window !== 'undefined' && sessionStorage.getItem(PENDING_TRIAL_STORAGE_KEY) === 'true';
 
@@ -466,7 +492,7 @@ export const CreateAccountScreen: React.FC<{ initialMode?: 'login' | 'signup' }>
                   setError(null);
                   setMode('signup');
                   if (typeof window !== 'undefined') {
-                    window.history.pushState({}, '', '/signup');
+                    window.history.pushState({}, '', `/signup${window.location.search || ''}`);
                   }
                 }}
                 className="w-full h-[48px] rounded-[25px] bg-white border border-[#0F172A] text-[#0F172A] font-bold text-[15px] hover:bg-slate-100 transition-all flex items-center justify-center cursor-pointer shadow-xs active:scale-[0.99]"
@@ -642,7 +668,7 @@ export const CreateAccountScreen: React.FC<{ initialMode?: 'login' | 'signup' }>
                     setError(null);
                     setMode('login');
                     if (typeof window !== 'undefined') {
-                      window.history.pushState({}, '', '/login');
+                      window.history.pushState({}, '', `/login${window.location.search || ''}`);
                     }
                   }}
                   className="text-xs text-slate-800 font-bold hover:underline cursor-pointer"

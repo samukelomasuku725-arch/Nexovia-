@@ -19,6 +19,7 @@ import {
 import { useAuth } from '../../context/AuthContext';
 import { useLearning } from '../../context/LearningContext';
 import { isUserActive, startTwoDayFreeTrialCheckout } from '../../services/paystackService';
+import { supabase } from '../../supabase';
 
 const FEATURES_XITSONGA = [
   'AC/DC Circuits - ku hlamusela ka AC/DC circuits hi Xitsonga',
@@ -79,9 +80,19 @@ export const ElectricalXitsongaPage: React.FC = () => {
     setCurrentTab(tab);
   };
 
-  const handleStartTrial = () => {
-    startTwoDayFreeTrialCheckout({
-      user,
+  const handleStartTrial = async () => {
+    const {
+      data: { user: authUser }
+    } = await supabase.auth.getUser();
+    if (!authUser) {
+      if (typeof window !== 'undefined') {
+        window.location.href = '/login?next=' + encodeURIComponent(window.location.pathname);
+      }
+      return;
+    }
+
+    await startTwoDayFreeTrialCheckout({
+      user: { id: authUser.id, email: authUser.email },
       onRequireAuth: () => navigate('login', '/login')
     });
   };

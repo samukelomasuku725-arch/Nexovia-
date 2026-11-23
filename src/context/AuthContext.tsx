@@ -415,6 +415,33 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const lang = data.user.user_metadata?.language_preference || 'en';
       const name = data.user.user_metadata?.full_name || cleanEmail.split('@')[0];
       await syncUserProfileToSupabase(data.user, name, lang);
+    } else {
+      // Ensure a Supabase Auth session is also active so supabase.auth.getUser() succeeds for checkout
+      try {
+        const { data: supaLoginData, error: supaLoginErr } = await supabase.auth.signInWithPassword({
+          email: cleanEmail,
+          password
+        });
+        if (!supaLoginErr && supaLoginData?.user) {
+          supaData = supaLoginData;
+        } else {
+          const { data: supaSignUpData } = await supabase.auth.signUp({
+            email: cleanEmail,
+            password,
+            options: {
+              data: {
+                full_name: backendUser.name || cleanEmail.split('@')[0],
+                language_preference: backendUser.preferredLanguage || 'en'
+              }
+            }
+          });
+          if (supaSignUpData?.user) {
+            supaData = supaSignUpData;
+          }
+        }
+      } catch {
+        // Non-blocking if Supabase session sync fails
+      }
     }
 
     if (rememberMe) {

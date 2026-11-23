@@ -111,7 +111,15 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 // High payload limit to easily handle high-res camera captures and image uploads
-app.use(express.json({ limit: '20mb' }));
+// Preserve rawBody for exact Paystack HMAC SHA-512 webhook signature verification
+app.use(
+  express.json({
+    limit: '20mb',
+    verify: (req: any, _res, buf) => {
+      req.rawBody = buf.toString('utf8');
+    }
+  })
+);
 app.use(express.urlencoded({ limit: '20mb', extended: true }));
 
 // Helper: extract auth token and user securely
@@ -1109,13 +1117,81 @@ app.get('/api/subscription/check', async (req: Request, res: Response) => {
   }
 });
 
+async function verifyAuthenticatedRequestUser(
+  req: Request
+): Promise<{ id: string; email: string; name?: string } | null> {
+  const authHeader = String(req.headers.authorization || '');
+  if (!authHeader.startsWith('Bearer ')) {
+    return null;
+  }
+  const token = authHeader.slice(7).trim();
+  if (!token) {
+    return null;
+  }
+
+  // 1. Check local Express token if applicable
+  const localUser = getUserByToken(token);
+  if (localUser && localUser.id && localUser.email) {
+    return {
+      id: String(localUser.id).trim(),
+      email: String(localUser.email).trim().toLowerCase(),
+      name: localUser.name
+    };
+  }
+
+  // 2. Verify Supabase Auth JWT
+  try {
+    const { createClient } = await import('@supabase/supabase-js');
+    const supabaseUrl = (
+      process.env.NEXT_PUBLIC_SUPABASE_URL ||
+      process.env.SUPABASE_URL ||
+      process.env.VITE_SUPABASE_URL ||
+      'https://elvzpyksawrpdzfdnwsj.supabase.co'
+    ).trim();
+    const supabaseKey = (
+      process.env.SUPABASE_SERVICE_ROLE_KEY ||
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
+      process.env.SUPABASE_ANON_KEY ||
+      process.env.VITE_SUPABASE_ANON_KEY ||
+      'sb_publishable_Qvje6uGCD42PcmnFypO89g__TuoqTxR'
+    ).trim();
+
+    const sb = createClient(supabaseUrl, supabaseKey, {
+      auth: { autoRefreshToken: false, persistSession: false }
+    });
+    const {
+      data: { user: sbUser },
+      error
+    } = await sb.auth.getUser(token);
+    if (!error && sbUser && sbUser.id && sbUser.email) {
+      return {
+        id: String(sbUser.id).trim(),
+        email: String(sbUser.email).trim().toLowerCase()
+      };
+    }
+  } catch (err) {
+    console.warn('[Auth Verify Warning]:', err);
+  }
+
+  return null;
+}
+
 app.post('/api/subscription/register-trial', async (req: Request, res: Response) => {
   try {
-    const { email, userId, fullName } = req.body || {};
-    if (!email) {
-      return res.status(400).json({ success: false, message: 'Email is required' });
+    const authedUser = await verifyAuthenticatedRequestUser(req);
+    if (!authedUser || !authedUser.email || !authedUser.id) {
+      return res.status(401).json({
+        success: false,
+        message: 'Authentication required. Please log in before registering a trial.'
+      });
     }
-    const record = await getOrCreateUserSubscription({ email, userId, fullName });
+
+    const { fullName } = req.body || {};
+    const record = await getOrCreateUserSubscription({
+      email: authedUser.email,
+      userId: authedUser.id,
+      fullName: fullName || authedUser.name
+    });
     return res.json({ success: true, record });
   } catch (err: any) {
     console.error('[Subscription Register Error]:', err);
@@ -1129,6 +1205,24 @@ app.post('/api/subscription/register-trial', async (req: Request, res: Response)
 // ==========================================
 app.post(['/api/paystack/subscribe', '/api/paystack/initialize'], async (req: Request, res: Response) => {
   try {
+    const authedUser = await verifyAuthenticatedRequestUser(req);
+    if (!authedUser || !authedUser.email || !authedUser.id) {
+      return res.status(401).json({
+        success: false,
+        error: 'Authentication required. Please log in or create an account before starting your 2-day free trial.'
+      });
+    }
+
+    const finalEmail = authedUser.email.trim().toLowerCase();
+    const finalUserId = authedUser.id.trim();
+
+    if (!finalEmail || !finalEmail.includes('@') || !finalUserId) {
+      return res.status(401).json({
+        success: false,
+        error: 'Verified account email and user ID are required before starting your 2-day free trial.'
+      });
+    }
+
     const secretKey = (process.env.PAYSTACK_SECRET_KEY || '').trim();
     const planCode = (process.env.PAYSTACK_PLAN_CODE || '').trim();
 
@@ -1139,21 +1233,27 @@ app.post(['/api/paystack/subscribe', '/api/paystack/initialize'], async (req: Re
       });
     }
 
-    const { email, userId, callbackUrl } = req.body || {};
-    const finalEmail = (email || '').trim().toLowerCase();
-
-    if (!finalEmail || !finalEmail.includes('@')) {
-      return res.status(400).json({
-        success: false,
-        error: 'Please log in or create an account with a valid email before starting your 2-day free trial.'
-      });
-    }
-
+    const { callbackUrl } = req.body || {};
     const trialEnd = new Date(Date.now() + 2 * 24 * 60 * 60 * 1000);
     const startDate = trialEnd.toISOString();
-    const reference = `NEX_TRIAL_${userId || 'usr'}_${Date.now()}`;
+    const reference = `NEX_TRIAL_${finalUserId}_${Date.now()}`;
     const originHeader = req.headers.origin || (req.headers.host ? `https://${req.headers.host}` : '');
-    const finalCallback = callbackUrl || (originHeader ? `${originHeader}/success` : 'https://nexovian.group/success');
+    let finalCallback = originHeader ? `${originHeader}/success` : 'https://nexovian.group/success';
+    if (typeof callbackUrl === 'string' && callbackUrl.trim()) {
+      try {
+        const parsed = new URL(callbackUrl.trim());
+        if (
+          /^https:\/\/([a-z0-9-]+\.)?nexovian\.group$/i.test(parsed.origin) ||
+          /^http:\/\/localhost:\d+$/i.test(parsed.origin) ||
+          /^https:\/\/[a-z0-9-]+\.vercel\.app$/i.test(parsed.origin) ||
+          /^https:\/\/[a-z0-9-]+\.run\.app$/i.test(parsed.origin)
+        ) {
+          finalCallback = parsed.toString();
+        }
+      } catch {
+        // fallback to derived origin callback
+      }
+    }
 
     const paystackRes = await fetch('https://api.paystack.co/transaction/initialize', {
       method: 'POST',
@@ -1169,7 +1269,7 @@ app.post(['/api/paystack/subscribe', '/api/paystack/initialize'], async (req: Re
         callback_url: finalCallback,
         metadata: {
           type: 'two_day_trial',
-          user_id: userId || '',
+          user_id: finalUserId,
           email: finalEmail,
           plan_code: planCode,
           start_date: startDate,
@@ -1203,18 +1303,150 @@ app.post(['/api/paystack/subscribe', '/api/paystack/initialize'], async (req: Re
   }
 });
 
+app.post('/api/paystack-webhook', async (req: Request, res: Response) => {
+  try {
+    const secretKey = (process.env.PAYSTACK_SECRET_KEY || '').trim();
+    if (!secretKey) {
+      console.error('UNLOCK: Missing PAYSTACK_SECRET_KEY environment variable');
+      return res.status(500).send('Server configuration error');
+    }
+
+    const rawBody =
+      (req as any).rawBody || (typeof req.body === 'string' ? req.body : JSON.stringify(req.body || {}));
+    const sigHeader = req.headers['x-paystack-signature'];
+    const signature = Array.isArray(sigHeader) ? sigHeader[0] : sigHeader;
+
+    const expectedHex = crypto.createHmac('sha512', secretKey).update(rawBody).digest('hex');
+    const expectedBuf = Buffer.from(expectedHex, 'utf8');
+    const receivedBuf = Buffer.from(String(signature || '').trim(), 'utf8');
+
+    if (!signature || expectedBuf.length !== receivedBuf.length || !crypto.timingSafeEqual(expectedBuf, receivedBuf)) {
+      return res.status(401).send('Invalid signature');
+    }
+
+    const event = JSON.parse(rawBody);
+    if (event?.event === 'charge.success') {
+      const data = event.data || {};
+      const email = String(data?.customer?.email || data?.metadata?.email || data?.email || '')
+        .trim()
+        .toLowerCase();
+      const reference = String(data?.reference || '').trim();
+      const amount = Number(data?.amount || 0);
+
+      if (email && reference) {
+        const { createClient } = await import('@supabase/supabase-js');
+        const supabaseUrl = (
+          process.env.NEXT_PUBLIC_SUPABASE_URL ||
+          process.env.SUPABASE_URL ||
+          process.env.VITE_SUPABASE_URL ||
+          ''
+        ).trim();
+        const serviceKey = (process.env.SUPABASE_SERVICE_ROLE_KEY || '').trim();
+
+        if (supabaseUrl && serviceKey) {
+          const adminClient = createClient(supabaseUrl, serviceKey, {
+            auth: { autoRefreshToken: false, persistSession: false }
+          });
+          const paidAt = new Date().toISOString();
+          const unlockPayload = {
+            is_paid: true,
+            plan: 'trial',
+            paystack_reference: reference,
+            paid_at: paidAt
+          };
+
+          const { data: updatedRows, error: updateErr } = await adminClient
+            .from('users')
+            .update(unlockPayload)
+            .eq('email', email)
+            .select('email');
+
+          if (updateErr || !updatedRows || updatedRows.length === 0) {
+            const { error: insertErr } = await adminClient.from('users').insert({ email, ...unlockPayload });
+            if (insertErr) {
+              console.error('UNLOCK: error inserting user row:', { email, reference, amount, error: insertErr.message });
+            } else {
+              console.log('UNLOCK: success (inserted)', { email, reference, amount });
+            }
+          } else {
+            console.log('UNLOCK: success (updated)', { email, reference, amount });
+          }
+        }
+
+        await activatePaystackTrial({
+          email,
+          userId: data?.metadata?.user_id,
+          reference,
+          startDateIso: data?.metadata?.start_date
+        });
+      }
+    }
+
+    return res.status(200).send('OK');
+  } catch (err: any) {
+    console.error('UNLOCK: unhandled /api/paystack-webhook error:', err?.message || err);
+    return res.status(200).send('OK');
+  }
+});
+
+app.get('/api/verify-payment', async (req: Request, res: Response) => {
+  try {
+    const reference = String(req.query.reference || req.query.trxref || '').trim();
+    if (!reference || !/^[a-zA-Z0-9._-]+$/.test(reference)) {
+      return res.status(400).json({ status: false, message: 'Valid Paystack reference is required.' });
+    }
+
+    const secretKey = (process.env.PAYSTACK_SECRET_KEY || '').trim();
+    if (!secretKey) {
+      return res.status(500).json({ status: false, message: 'PAYSTACK_SECRET_KEY is not configured.' });
+    }
+
+    const paystackRes = await fetch(`https://api.paystack.co/transaction/verify/${encodeURIComponent(reference)}`, {
+      headers: { Authorization: `Bearer ${secretKey}` }
+    });
+    const paystackJson: any = await paystackRes.json();
+
+    if (paystackRes.ok && paystackJson?.status === true && paystackJson?.data?.status === 'success') {
+      const email = String(paystackJson.data?.customer?.email || paystackJson.data?.metadata?.email || '')
+        .trim()
+        .toLowerCase();
+      if (email) {
+        await activatePaystackTrial({
+          email,
+          userId: paystackJson.data?.metadata?.user_id,
+          reference,
+          startDateIso: paystackJson.data?.metadata?.start_date
+        });
+        console.log('UNLOCK: verified payment via /api/verify-payment', { email, reference });
+      }
+    }
+
+    return res.status(paystackRes.status).json(paystackJson);
+  } catch (err: any) {
+    return res.status(500).json({ status: false, message: err?.message || 'Verification failed' });
+  }
+});
+
 app.post('/api/paystack/webhook', async (req: Request, res: Response) => {
   try {
     const secretKey = (process.env.PAYSTACK_SECRET_KEY || '').trim();
     const planCode = (process.env.PAYSTACK_PLAN_CODE || '').trim();
-    const signature = req.headers['x-paystack-signature'] as string;
+    const sigHeader = req.headers['x-paystack-signature'];
+    const signature = Array.isArray(sigHeader) ? sigHeader[0] : sigHeader;
 
-    if (secretKey && signature) {
-      const bodyStr = typeof req.body === 'string' ? req.body : JSON.stringify(req.body);
-      const hash = crypto.createHmac('sha512', secretKey).update(bodyStr).digest('hex');
-      if (hash !== signature) {
-        return res.status(401).json({ error: 'Invalid Paystack webhook signature' });
-      }
+    const rawBody =
+      (req as any).rawBody || (typeof req.body === 'string' ? req.body : JSON.stringify(req.body || {}));
+
+    if (!secretKey) {
+      return res.status(500).json({ error: 'PAYSTACK_SECRET_KEY not configured' });
+    }
+
+    const expectedHex = crypto.createHmac('sha512', secretKey).update(rawBody).digest('hex');
+    const expectedBuf = Buffer.from(expectedHex, 'utf8');
+    const receivedBuf = Buffer.from(String(signature || '').trim(), 'utf8');
+
+    if (!signature || expectedBuf.length !== receivedBuf.length || !crypto.timingSafeEqual(expectedBuf, receivedBuf)) {
+      return res.status(401).json({ error: 'Invalid Paystack webhook signature' });
     }
 
     const event = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
@@ -1515,6 +1747,8 @@ app.get(['/api/paystack/status', '/api/subscription/status'], async (req: Reques
     const access = await checkSubscriptionAccess({ email, userId });
     return res.json({
       success: true,
+      is_paid: access.allow,
+      plan: access.status === 'active' ? 'active' : access.status === 'trial' ? 'trial' : 'free',
       status: access.status,
       has_access: access.allow,
       allow: access.allow,

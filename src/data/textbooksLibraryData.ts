@@ -24,7 +24,8 @@ export interface TextbookCatalogItem {
     | 'ncvTourismTextbook'
     | 'ncvItTextbook'
     | 'ncvFinanceTextbook'
-    | 'ncvEconomicEnvironmentTextbook';
+    | 'ncvEconomicEnvironmentTextbook'
+    | 'ncvMarketingTextbook';
   initialVotes: number;
 }
 
@@ -100,23 +101,25 @@ export const TEXTBOOKS_CATALOG: TextbookCatalogItem[] = [
     status: 'LIVE',
     subjectEn: 'NCV Economic Environment',
     levelBadge: 'Level 2, 3, 4',
-    chaptersCount: 27,
+    chaptersCount: 30,
     href: '/textbooks/ncv-economic-environment-textbook',
     targetTab: 'ncvEconomicEnvironmentTextbook',
     initialVotes: 248,
     description:
-      'Level 2 (10/10), Level 3 (10/10) + Level 4 Ch 1–7 (Macroeconomy, AD/AS, Phillips Curve, Policy, Globalisation, Labour, HDI & Sustainability) — read free online.'
+      'Complete Level 2 (10/10), Level 3 (10/10) & Level 4 (10/10) = 30 Chapters — Circular Flow, AD/AS, Phillips Curve, Policy Mix, Globalisation, Public Sector, Banking & Mock Exams.'
   },
   {
     id: 'ncv-marketing',
     order: 7,
-    status: 'COMING_SOON',
+    status: 'LIVE',
     subjectEn: 'NCV Marketing',
     levelBadge: 'Level 2, 3, 4',
-    chaptersCount: 9,
+    chaptersCount: 10,
+    href: '/textbooks/ncv-marketing-textbook',
+    targetTab: 'ncvMarketingTextbook',
     initialVotes: 204,
     description:
-      'Market research, 4Ps Marketing Mix, branding, advertising and consumer behaviour.'
+      'Complete Level 2 (10/10 Chapters LIVE + 100-Mark Mock Exam & Memo): Marketing Basics, SWOT, Behaviour, STP, 4Ps/7Ps, Branding, Pricing, Distribution, CRM & Marketing Plan — read free online.'
   },
   {
     id: 'ncv-hospitality',

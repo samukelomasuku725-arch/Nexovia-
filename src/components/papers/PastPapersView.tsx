@@ -30,6 +30,7 @@ import {
 import { useLearning } from '../../context/LearningContext';
 import { useAuth } from '../../context/AuthContext';
 import { isUserActive, startTwoDayFreeTrialCheckout } from '../../services/paystackService';
+import { supabase } from '../../supabase';
 import { ALL_11_LANGUAGES } from '../home/PublicLandingView';
 import { EXPANDED_PAST_PAPERS_CATALOG, BASE_GRADE_SUBJECT_MAP } from '../../data/expandedPastPapersCatalog';
 import { generatePaperExplanation } from '../../services/language/paperExplanationGenerator';
@@ -359,13 +360,26 @@ export const PastPapersView: React.FC = () => {
     }
   }, []);
 
-  const handleStartTrial = () => {
-    startTwoDayFreeTrialCheckout({
-      user,
+  const handleStartTrial = async () => {
+    const {
+      data: { user: authUser }
+    } = await supabase.auth.getUser();
+    if (!authUser) {
+      if (typeof window !== 'undefined') {
+        window.location.href =
+          '/login?next=' + encodeURIComponent(window.location.pathname + (window.location.search || ''));
+      }
+      return;
+    }
+
+    await startTwoDayFreeTrialCheckout({
+      user: { id: authUser.id, email: authUser.email, name: user?.name },
       onRequireAuth: () => {
-        setCurrentTab('login');
         if (typeof window !== 'undefined') {
-          window.history.pushState({}, '', '/login');
+          window.location.href =
+            '/login?next=' + encodeURIComponent(window.location.pathname + (window.location.search || ''));
+        } else {
+          setCurrentTab('login');
         }
       }
     });

@@ -13,9 +13,19 @@ import fs from 'fs';
 import path from 'path';
 import { createClient } from '@supabase/supabase-js';
 
-const SUPABASE_URL = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || 'https://elvzpyksawrpdzfdnwsj.supabase.co';
-const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY || 'sb_publishable_Qvje6uGCD42PcmnFypO89g__TuoqTxR';
-const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+function getSupabaseAdminClient() {
+  const url = (
+    process.env.NEXT_PUBLIC_SUPABASE_URL ||
+    process.env.SUPABASE_URL ||
+    process.env.VITE_SUPABASE_URL ||
+    ''
+  ).trim();
+  const key = (process.env.SUPABASE_SERVICE_ROLE_KEY || '').trim();
+  if (!url || !key) return null;
+  return createClient(url, key, {
+    auth: { autoRefreshToken: false, persistSession: false }
+  });
+}
 
 function getDbFile(): string {
   const localDir = path.resolve(process.cwd(), 'data');
@@ -60,12 +70,46 @@ function writeRecords(records: any[]): void {
 }
 
 async function syncProfile(record: any): Promise<void> {
+  const supabase = getSupabaseAdminClient();
+  if (!supabase || !record?.email) return;
+
+  const isPaid = record.subscription_status === 'trial' || record.subscription_status === 'active';
+  const email = String(record.email).trim().toLowerCase();
+
   try {
-    if (!record?.email) return;
+    if (isPaid) {
+      const unlockPayload = {
+        is_paid: true,
+        plan: record.subscription_status === 'active' ? 'active' : 'trial',
+        paystack_reference: record.paystack_reference || null,
+        paid_at: record.updated_at || new Date().toISOString()
+      };
+      const { data: updated, error: updErr } = await supabase
+        .from('users')
+        .update(unlockPayload)
+        .eq('email', email)
+        .select('email');
+
+      if (updErr || !updated || updated.length === 0) {
+        const { error: insErr } = await supabase.from('users').insert({ email, ...unlockPayload });
+        if (insErr) {
+          console.error('UNLOCK: users insert error in /api/paystack/webhook:', insErr.message);
+        } else {
+          console.log('UNLOCK: success (inserted users row)', { email, reference: record.paystack_reference });
+        }
+      } else {
+        console.log('UNLOCK: success (updated users row)', { email, reference: record.paystack_reference });
+      }
+    }
+  } catch (err: any) {
+    console.error('UNLOCK: users sync error:', err?.message || err);
+  }
+
+  try {
     await supabase.from('profiles').upsert(
       {
         id: record.user_id,
-        email: record.email,
+        email,
         trial_start_date: record.trial_start_date,
         trial_end_date: record.trial_end_date,
         subscription_status: record.subscription_status,
@@ -80,15 +124,34 @@ async function syncProfile(record: any): Promise<void> {
   }
 }
 
-export default async function handler(req: any, res: any) {
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, x-paystack-signature');
-
-  if (req.method === 'OPTIONS') {
-    return res.status(200).end();
+export const config = {
+  api: {
+    bodyParser: false
   }
+};
 
+function readRawBody(req: any): Promise<string> {
+  if (typeof req.body === 'string') return Promise.resolve(req.body);
+  if (Buffer.isBuffer(req.body)) return Promise.resolve(req.body.toString('utf8'));
+  return new Promise((resolve, reject) => {
+    const chunks: Buffer[] = [];
+    req.on('data', (chunk: Buffer | string) => {
+      chunks.push(typeof chunk === 'string' ? Buffer.from(chunk, 'utf8') : chunk);
+    });
+    req.on('end', () => {
+      if (chunks.length > 0) {
+        resolve(Buffer.concat(chunks).toString('utf8'));
+      } else if (req.body && typeof req.body === 'object') {
+        resolve(JSON.stringify(req.body));
+      } else {
+        resolve('');
+      }
+    });
+    req.on('error', reject);
+  });
+}
+
+export default async function handler(req: any, res: any) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
@@ -96,17 +159,23 @@ export default async function handler(req: any, res: any) {
   try {
     const secretKey = (process.env.PAYSTACK_SECRET_KEY || '').trim();
     const planCode = (process.env.PAYSTACK_PLAN_CODE || '').trim();
-    const signature = req.headers['x-paystack-signature'];
+    const sigHeader = req.headers['x-paystack-signature'];
+    const signature = Array.isArray(sigHeader) ? sigHeader[0] : sigHeader;
 
-    if (secretKey && signature) {
-      const bodyStr = typeof req.body === 'string' ? req.body : JSON.stringify(req.body);
-      const hash = crypto.createHmac('sha512', secretKey).update(bodyStr).digest('hex');
-      if (hash !== signature) {
-        return res.status(401).json({ error: 'Invalid Paystack webhook signature' });
-      }
+    if (!secretKey) {
+      return res.status(500).json({ error: 'PAYSTACK_SECRET_KEY not configured' });
     }
 
-    const event = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
+    const rawBody = await readRawBody(req);
+    const expectedHex = crypto.createHmac('sha512', secretKey).update(rawBody).digest('hex');
+    const expectedBuf = Buffer.from(expectedHex, 'utf8');
+    const receivedBuf = Buffer.from(String(signature || '').trim(), 'utf8');
+
+    if (!signature || expectedBuf.length !== receivedBuf.length || !crypto.timingSafeEqual(expectedBuf, receivedBuf)) {
+      return res.status(401).json({ error: 'Invalid Paystack webhook signature' });
+    }
+
+    const event = JSON.parse(rawBody);
     const eventType = event?.event;
     const data = event?.data;
     const now = new Date();

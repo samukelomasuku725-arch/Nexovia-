@@ -21,6 +21,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useLearning } from '../../context/LearningContext';
 import { TVET_CHAPTERS } from '../../data/studyGuideContent';
 import { isUserActive, startTwoDayFreeTrialCheckout } from '../../services/paystackService';
+import { supabase } from '../../supabase';
 import { useStudyGuideProgress } from '../../utils/studyGuideProgress';
 
 type NLevelFilter = 'ALL' | 'N1' | 'N2' | 'N3' | 'N4' | 'N5' | 'N6';
@@ -128,9 +129,19 @@ export const TvetN1N6Page: React.FC = () => {
     setCurrentTab(tab);
   };
 
-  const handleStartTrial = () => {
-    startTwoDayFreeTrialCheckout({
-      user,
+  const handleStartTrial = async () => {
+    const {
+      data: { user: authUser }
+    } = await supabase.auth.getUser();
+    if (!authUser) {
+      if (typeof window !== 'undefined') {
+        window.location.href = '/login?next=' + encodeURIComponent(window.location.pathname);
+      }
+      return;
+    }
+
+    await startTwoDayFreeTrialCheckout({
+      user: { id: authUser.id, email: authUser.email },
       onRequireAuth: () => navigate('login', '/login')
     });
   };

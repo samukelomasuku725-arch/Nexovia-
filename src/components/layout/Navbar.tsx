@@ -7,6 +7,7 @@ import { APP_CONFIG } from '../../config/brand';
 import { XitsongaPhrasebookModal } from '../language/XitsongaPhrasebookModal';
 import { MoreToolsModal } from './MoreToolsModal';
 import { LogoIcon } from '../common/LogoIcon';
+import { supabase } from '../../supabase';
 
 export const Navbar: React.FC = () => {
   const {
@@ -89,7 +90,7 @@ export const Navbar: React.FC = () => {
                 : ''
             }`}
           >
-            {currentTab === 'textbooksLibrary' || currentTab === 'electricalTextbook' || currentTab === 'ncvTourismTextbook' || currentTab === 'ncvItTextbook' || currentTab === 'ncvFinanceTextbook' || currentTab === 'ncvEconomicEnvironmentTextbook' ? 'Home' : t('navHome')}
+            {currentTab === 'textbooksLibrary' || currentTab === 'electricalTextbook' || currentTab === 'ncvTourismTextbook' || currentTab === 'ncvItTextbook' || currentTab === 'ncvFinanceTextbook' || currentTab === 'ncvEconomicEnvironmentTextbook' || currentTab === 'ncvMarketingTextbook' ? 'Home' : t('navHome')}
           </button>
 
           <button
@@ -405,7 +406,19 @@ export const Navbar: React.FC = () => {
                 <span>Login</span>
               </button>
               <button
-                onClick={() => setCurrentTab('signup')}
+                onClick={async () => {
+                  const {
+                    data: { user: authUser }
+                  } = await supabase.auth.getUser();
+                  if (!authUser) {
+                    if (typeof window !== 'undefined') {
+                      window.location.href =
+                        '/login?next=' + encodeURIComponent(window.location.pathname + (window.location.search || ''));
+                    }
+                    return;
+                  }
+                  setCurrentTab('subscribe');
+                }}
                 className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-black bg-[#FFD400] hover:bg-yellow-400 rounded-lg transition-all shadow-sm cursor-pointer"
               >
                 <span>Start 2-Day Free Trial</span>

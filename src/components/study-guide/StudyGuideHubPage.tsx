@@ -13,7 +13,7 @@
  * - Mobile-first large touch targets (min-h-[48px])
  */
 
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   ArrowLeft,
   ArrowRight,
@@ -40,16 +40,33 @@ import {
   TVET_CHAPTERS,
   StudyGuideChapterData
 } from '../../data/studyGuideContent';
-import { isUserActive } from '../../services/paystackService';
+import { isUserActive, syncSubscriptionStatus } from '../../services/paystackService';
+import { supabase } from '../../supabase';
 import { useStudyGuideProgress } from '../../utils/studyGuideProgress';
 
 export const StudyGuideHubPage: React.FC = () => {
   const { setCurrentTab } = useLearning();
   const { user, isAuthenticated } = useAuth();
-  const hasAccess = isAuthenticated && isUserActive(user);
+  const [hasAccess, setHasAccess] = useState<boolean>(() => isAuthenticated && isUserActive(user));
   const { progress, totalChapters, completedCount } = useStudyGuideProgress();
 
   const [searchQuery, setSearchQuery] = useState('');
+
+  useEffect(() => {
+    let active = true;
+    const refresh = () => {
+      if (active) setHasAccess(Boolean(isAuthenticated && isUserActive(user)));
+    };
+    refresh();
+    if (isAuthenticated && user?.email) {
+      syncSubscriptionStatus(user.email, user.id).then(refresh).catch(() => {});
+    }
+    window.addEventListener('nexovian-subscription-updated', refresh);
+    return () => {
+      active = false;
+      window.removeEventListener('nexovian-subscription-updated', refresh);
+    };
+  }, [isAuthenticated, user]);
 
   const navigate = (
     tab:
@@ -361,12 +378,21 @@ export const StudyGuideHubPage: React.FC = () => {
 
             <a
               href={`${continueChapter.backPath}/${continueChapter.slug}`}
-              onClick={(e) => {
+              onClick={async (e) => {
                 e.preventDefault();
-                navigate(
-                  'studyGuideChapter',
-                  `${continueChapter.backPath}/${continueChapter.slug}`
-                );
+                const chapterPath = `${continueChapter.backPath}/${continueChapter.slug}`;
+                if (!hasAccess) {
+                  const {
+                    data: { user: authUser }
+                  } = await supabase.auth.getUser();
+                  if (!authUser) {
+                    if (typeof window !== 'undefined') {
+                      window.location.href = '/login?next=' + encodeURIComponent(chapterPath);
+                    }
+                    return;
+                  }
+                }
+                navigate('studyGuideChapter', chapterPath);
               }}
               className="min-h-[50px] w-full inline-flex items-center justify-center gap-2 px-5 py-3.5 rounded-2xl bg-[#FFD400] hover:bg-yellow-400 text-black font-black text-sm sm:text-base shadow-lg transition-all active:scale-95 cursor-pointer"
             >

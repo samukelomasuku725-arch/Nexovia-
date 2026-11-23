@@ -23,6 +23,7 @@ import {
   NCV_MULTILINGUAL_SEO_PAGES
 } from '../../data/ncvMultilingualSeoPages';
 import { isUserActive, startTwoDayFreeTrialCheckout } from '../../services/paystackService';
+import { supabase } from '../../supabase';
 
 export const NcvMultilingualSeoPage: React.FC = () => {
   const { setCurrentTab } = useLearning();
@@ -72,9 +73,19 @@ export const NcvMultilingualSeoPage: React.FC = () => {
     setCurrentTab(tab);
   };
 
-  const handleStartTrial = () => {
-    startTwoDayFreeTrialCheckout({
-      user,
+  const handleStartTrial = async () => {
+    const {
+      data: { user: authUser }
+    } = await supabase.auth.getUser();
+    if (!authUser) {
+      if (typeof window !== 'undefined') {
+        window.location.href = '/login?next=' + encodeURIComponent(window.location.pathname);
+      }
+      return;
+    }
+
+    await startTwoDayFreeTrialCheckout({
+      user: { id: authUser.id, email: authUser.email },
       onRequireAuth: () => navigate('login', '/login')
     });
   };

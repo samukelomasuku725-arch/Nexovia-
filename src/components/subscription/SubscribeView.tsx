@@ -27,6 +27,7 @@ import {
   startTwoDayFreeTrialCheckout,
   SUBSCRIPTION_PLAN_NAME
 } from '../../services/paystackService';
+import { supabase } from '../../supabase';
 import { WHATSAPP_REMIND_URL } from '../../services/antiAbuseService';
 
 interface SubscribeViewProps {
@@ -40,15 +41,26 @@ export const SubscribeView: React.FC<SubscribeViewProps> = ({ protectedFeature }
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   const handleStartTrial = async () => {
+    const {
+      data: { user: authUser }
+    } = await supabase.auth.getUser();
+    if (!authUser) {
+      if (typeof window !== 'undefined') {
+        window.location.href = '/login?next=' + encodeURIComponent(window.location.pathname);
+      }
+      return;
+    }
+
     setIsRedirecting(true);
     setErrorMsg(null);
     try {
       const result = await startTwoDayFreeTrialCheckout({
-        user,
+        user: { id: authUser.id, email: authUser.email, name: user?.name },
         onRequireAuth: () => {
-          setCurrentTab('login');
           if (typeof window !== 'undefined') {
-            window.history.pushState({}, '', '/login');
+            window.location.href = '/login?next=' + encodeURIComponent(window.location.pathname);
+          } else {
+            setCurrentTab('login');
           }
         }
       });

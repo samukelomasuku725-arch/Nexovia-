@@ -11,6 +11,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useLearning } from '../../context/LearningContext';
 import { MATHS_LITERACY_CHAPTERS } from '../../data/studyGuideContent';
 import { isUserActive, startTwoDayFreeTrialCheckout } from '../../services/paystackService';
+import { supabase } from '../../supabase';
 import { useStudyGuideProgress } from '../../utils/studyGuideProgress';
 
 export const MathsLiteracyGrade12Page: React.FC = () => {
@@ -33,9 +34,19 @@ export const MathsLiteracyGrade12Page: React.FC = () => {
     setCurrentTab(tab);
   };
 
-  const handleStartTrial = () => {
-    startTwoDayFreeTrialCheckout({
-      user,
+  const handleStartTrial = async () => {
+    const {
+      data: { user: authUser }
+    } = await supabase.auth.getUser();
+    if (!authUser) {
+      if (typeof window !== 'undefined') {
+        window.location.href = '/login?next=' + encodeURIComponent(window.location.pathname);
+      }
+      return;
+    }
+
+    await startTwoDayFreeTrialCheckout({
+      user: { id: authUser.id, email: authUser.email },
       onRequireAuth: () => navigate('login', '/login')
     });
   };

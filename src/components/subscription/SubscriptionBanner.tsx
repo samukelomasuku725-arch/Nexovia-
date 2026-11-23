@@ -17,6 +17,7 @@ import {
   startTwoDayFreeTrialCheckout,
   syncSubscriptionStatus
 } from '../../services/paystackService';
+import { supabase } from '../../supabase';
 
 export const SubscriptionBanner: React.FC = () => {
   const { user, isAuthenticated } = useAuth();
@@ -52,6 +53,29 @@ export const SubscriptionBanner: React.FC = () => {
   }, [isAuthenticated, user?.email, user?.id]);
 
   if (!isAuthenticated || !user?.email) return null;
+
+  const handleStartTrial = async () => {
+    const {
+      data: { user: authUser }
+    } = await supabase.auth.getUser();
+    if (!authUser) {
+      if (typeof window !== 'undefined') {
+        window.location.href = '/login?next=' + encodeURIComponent(window.location.pathname);
+      }
+      return;
+    }
+
+    await startTwoDayFreeTrialCheckout({
+      user: { id: authUser.id, email: authUser.email, name: user?.name },
+      onRequireAuth: () => {
+        if (typeof window !== 'undefined') {
+          window.location.href = '/login?next=' + encodeURIComponent(window.location.pathname);
+        } else {
+          setCurrentTab('login');
+        }
+      }
+    });
+  };
 
   const status = subState?.status || 'none';
   const hasAccess = Boolean(subState?.has_access);
@@ -118,12 +142,7 @@ export const SubscriptionBanner: React.FC = () => {
         </button>
         <button
           type="button"
-          onClick={() =>
-            startTwoDayFreeTrialCheckout({
-              user,
-              onRequireAuth: () => setCurrentTab('login')
-            })
-          }
+          onClick={handleStartTrial}
           className="px-3.5 py-1 rounded-full bg-[#FFB612] hover:bg-yellow-400 text-black font-extrabold text-[11px] flex items-center gap-1 cursor-pointer"
         >
           <span>Start 2-Day Free Trial - Then R60/month</span>

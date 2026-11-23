@@ -10,6 +10,7 @@ import { ArrowLeft, Sparkles, CreditCard, AlertCircle } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useLearning } from '../../context/LearningContext';
 import { startTwoDayFreeTrialCheckout } from '../../services/paystackService';
+import { supabase } from '../../supabase';
 
 export const TrialLandingView: React.FC = () => {
   const { user } = useAuth();
@@ -18,11 +19,27 @@ export const TrialLandingView: React.FC = () => {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   const handleStartTrial = async () => {
+    const {
+      data: { user: authUser }
+    } = await supabase.auth.getUser();
+    if (!authUser) {
+      if (typeof window !== 'undefined') {
+        window.location.href = '/login?next=' + encodeURIComponent(window.location.pathname);
+      }
+      return;
+    }
+
     setLoading(true);
     setErrorMsg(null);
     const res = await startTwoDayFreeTrialCheckout({
-      user,
-      onRequireAuth: () => setCurrentTab('login')
+      user: { id: authUser.id, email: authUser.email, name: user?.name },
+      onRequireAuth: () => {
+        if (typeof window !== 'undefined') {
+          window.location.href = '/login?next=' + encodeURIComponent(window.location.pathname);
+        } else {
+          setCurrentTab('login');
+        }
+      }
     });
     if (!res.success && res.error) {
       setErrorMsg(res.error);

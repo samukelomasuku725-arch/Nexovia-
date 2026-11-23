@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  *
  * NEXOVIAN ORIGINAL NCV ECONOMIC ENVIRONMENT TEXTBOOK
- * Status: LIVE — Level 2 (10/10) + Level 3 (10/10) + Level 4 Chapters 1–7 LIVE = 27 Chapters
+ * Status: LIVE — Level 2 (10/10) + Level 3 (10/10) + Level 4 (10/10) = ALL 30 Chapters COMPLETE
  * Route: /textbooks/ncv-economic-environment-textbook
  * Read Online Only on nexovian.group.
  */
@@ -32,7 +32,7 @@ import {
 const PAGE_TITLE =
   'NCV Economic Environment Textbook — Level 2, Level 3 & Level 4 | Nexovian';
 const PAGE_META_DESC =
-  'Read all 10 Level 2 chapters, all 10 Level 3 chapters, and Level 4 Chapters 1–7 (Macroeconomy, AD/AS, Phillips Curve, Policy, Globalisation, Labour & Inequality, Development & Sustainability) of Nexovian’s original NCV Economic Environment textbook free online.';
+  'Read all 30 chapters (Level 2 Ch 1–10, Level 3 Ch 1–10, and Level 4 Ch 1–10 — complete curriculum, AD/AS, Phillips Curve, Policy Mix, Globalisation, Labour, Development, Public Sector & 50-Mark Mock Exam) of Nexovian’s original NCV Economic Environment textbook free online.';
 
 export const NcvEconomicEnvironmentTextbookPage: React.FC = () => {
   const { setCurrentTab } = useLearning();
@@ -294,10 +294,10 @@ export const NcvEconomicEnvironmentTextbookPage: React.FC = () => {
           <div className="flex flex-wrap items-center gap-2.5">
             <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-[#FFD400]/15 border border-[#FFD400]/50 text-[#FFD400] text-xs font-bold uppercase tracking-wider">
               <TrendingUp className="w-4 h-4 shrink-0" />
-              <span>Level 2, 3 &amp; 4 • 27 Chapters LIVE</span>
+              <span>Level 2, 3 &amp; 4 • ALL 30 Chapters LIVE</span>
             </div>
             <span className="px-3 py-1 rounded-full bg-emerald-500/20 border border-emerald-400/60 text-emerald-300 text-xs font-mono font-bold uppercase tracking-wider">
-              LIVE • L2 (10/10) + L3 (10/10) + L4 CH 1–7
+              COMPLETE • L2 (10/10) + L3 (10/10) + L4 (10/10)
             </span>
           </div>
 
@@ -306,10 +306,10 @@ export const NcvEconomicEnvironmentTextbookPage: React.FC = () => {
               NCV Economic Environment
             </h1>
             <p className="text-lg sm:text-2xl font-black text-[#FFD400]">
-              Level 2 (10/10), Level 3 (10/10) &amp; Level 4 Chapters 1–7 LIVE — Read Online Only.
+              Level 2 (10/10), Level 3 (10/10) &amp; Level 4 (10/10) COMPLETE — Read Online Only.
             </p>
             <p className="text-sm sm:text-base text-slate-200 leading-relaxed max-w-3xl">
-              Master all 10 Level 2 chapters, all 10 Level 3 chapters, and Level 4 Chapters 1–7 (Macroeconomy, AD/AS, Phillips Curve, Policy, Globalisation, Labour, Development &amp; Sustainability)—100% original and free online.
+              Master the full 30-chapter NCV Economic Environment curriculum from Level 2 Foundations through Level 3 Macroeconomics and Level 4 Policy, AD/AS, Phillips Curve, Globalisation, Public Sector &amp; Exam Masterclasses—100% original and free online.
             </p>
           </div>
 
@@ -320,7 +320,7 @@ export const NcvEconomicEnvironmentTextbookPage: React.FC = () => {
               className="min-h-[50px] inline-flex items-center justify-center gap-2 px-6 py-3 rounded-2xl bg-[#FFD400] hover:bg-yellow-400 text-black font-black text-sm sm:text-base shadow-lg transition-all hover:scale-[1.02] active:scale-95 cursor-pointer"
             >
               <BookOpen className="w-5 h-5 shrink-0" />
-              <span>Read All 27 Chapters FREE</span>
+              <span>Read All 30 Chapters FREE</span>
               <ArrowRight className="w-4 h-4 shrink-0" />
             </button>
 
@@ -337,12 +337,12 @@ export const NcvEconomicEnvironmentTextbookPage: React.FC = () => {
                   }`}
                 >
                   {lvl === 'ALL'
-                    ? 'All Levels (27)'
+                    ? 'All Levels (30)'
                     : lvl === 2
                       ? 'Level 2 (10)'
                       : lvl === 3
                         ? 'Level 3 (10)'
-                        : 'Level 4 (7)'}
+                        : 'Level 4 (10)'}
                 </button>
               ))}
             </div>
@@ -398,10 +398,10 @@ export const NcvEconomicEnvironmentTextbookPage: React.FC = () => {
           >
             <div className="border-b border-sky-400/40 pb-2">
               <h2 className="font-display font-black text-2xl sm:text-3xl text-sky-300">
-                LEVEL 4 — Chapters 1–7 (LIVE Now)
+                LEVEL 4 — Chapters 1–10 (10/10 COMPLETE)
               </h2>
               <p className="text-xs sm:text-sm text-slate-300 mt-1">
-                Macroeconomy, AD/AS &amp; Stagflation, Phillips Curve, Fiscal &amp; Monetary Policy, Globalisation, Labour &amp; Gini 0.63, and Development Economics (HDI 0.717, Poverty Trap &amp; Just Transition)
+                Macroeconomy, AD/AS, Phillips Curve, Fiscal &amp; Monetary Policy, Globalisation, Labour &amp; Gini 0.63, Development &amp; Sustainability, Public Sector Economics, Financial Markets &amp; Final Exam Masterclass
               </p>
             </div>
             <div className="space-y-5">
@@ -416,10 +416,10 @@ export const NcvEconomicEnvironmentTextbookPage: React.FC = () => {
         <section className="bg-[#0D1E42] border border-[#1E3A6E] rounded-3xl p-6 space-y-4">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <h2 className="font-display font-black text-xl text-[#FFD400]">
-              Course Roadmap — Level 2 (10/10) + Level 3 (10/10) + Level 4 (Ch 1–7 LIVE)
+              Course Roadmap — Level 2 (10/10) + Level 3 (10/10) + Level 4 (10/10) = 30/30 LIVE
             </h2>
             <span className="text-xs font-mono text-emerald-300 font-bold">
-              Level 2 &amp; Level 3 Complete • Level 4 Expanding
+              100% Complete — Level 2, Level 3 &amp; Level 4
             </span>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">

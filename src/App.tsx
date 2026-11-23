@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { AuthProvider } from './context/AuthContext';
 import { LearningProvider, useLearning } from './context/LearningContext';
 import { I18nProvider, useTranslation } from './i18n/I18nContext';
@@ -62,6 +62,7 @@ import { NcvTourismTextbookPage } from './components/study-guide/NcvTourismTextb
 import { NcvItTextbookPage } from './components/study-guide/NcvItTextbookPage';
 import { NcvFinanceTextbookPage } from './components/study-guide/NcvFinanceTextbookPage';
 import { NcvEconomicEnvironmentTextbookPage } from './components/study-guide/NcvEconomicEnvironmentTextbookPage';
+import { NcvMarketingTextbookPage } from './components/study-guide/NcvMarketingTextbookPage';
 import { TextbooksLibraryPage } from './components/study-guide/TextbooksLibraryPage';
 import { MatricExamTipsPage } from './components/study-guide/MatricExamTipsPage';
 import { StudyGuideChapterPage } from './components/study-guide/StudyGuideChapterPage';
@@ -106,6 +107,13 @@ const MainLayout: React.FC = () => {
   const { currentTab, setCurrentTab, tracks, openLesson, adaptiveProfile } = useLearning();
   const { isAuthenticated, isLoading, user, logout } = useAuth();
   const { t } = useTranslation();
+  const [subscriptionTick, setSubscriptionTick] = useState(0);
+
+  useEffect(() => {
+    const onSubUpdate = () => setSubscriptionTick((prev) => prev + 1);
+    window.addEventListener('nexovian-subscription-updated', onSubUpdate);
+    return () => window.removeEventListener('nexovian-subscription-updated', onSubUpdate);
+  }, []);
 
   // Guard protected/auth/admin tabs cleanly inside useEffect (never call setCurrentTab during render)
   useEffect(() => {
@@ -123,7 +131,7 @@ const MainLayout: React.FC = () => {
     if ((currentTab === 'paywall' || currentTab === 'login' || currentTab === 'signup') && active) {
       setCurrentTab('home');
     }
-  }, [currentTab, user, isAuthenticated, isLoading, setCurrentTab]);
+  }, [currentTab, user, isAuthenticated, isLoading, subscriptionTick, setCurrentTab]);
 
   // If initial auth session is being checked, show dark blue + gold splash
   if (isLoading) {
@@ -650,6 +658,7 @@ const MainLayout: React.FC = () => {
         {currentTab === 'ncvItTextbook' && <NcvItTextbookPage />}
         {currentTab === 'ncvFinanceTextbook' && <NcvFinanceTextbookPage />}
         {currentTab === 'ncvEconomicEnvironmentTextbook' && <NcvEconomicEnvironmentTextbookPage />}
+        {currentTab === 'ncvMarketingTextbook' && <NcvMarketingTextbookPage />}
         {currentTab === 'studyGuideExamTips' && <MatricExamTipsPage />}
         {currentTab === 'studyGuideChapter' && (
           <StudyGuideGuard>

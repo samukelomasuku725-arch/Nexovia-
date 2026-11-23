@@ -72,7 +72,8 @@ export const TextbooksLibraryPage: React.FC = () => {
       | 'ncvTourismTextbook'
       | 'ncvItTextbook'
       | 'ncvFinanceTextbook'
-      | 'ncvEconomicEnvironmentTextbook',
+      | 'ncvEconomicEnvironmentTextbook'
+      | 'ncvMarketingTextbook',
     path: string
   ) => {
     if (typeof window !== 'undefined') {
@@ -132,7 +133,9 @@ export const TextbooksLibraryPage: React.FC = () => {
               ? 'ncvFinanceTextbook'
               : book.id === 'ncv-economic-environment'
                 ? 'ncvEconomicEnvironmentTextbook'
-                : 'ncvOfficeAdminTextbook');
+                : book.id === 'ncv-marketing'
+                  ? 'ncvMarketingTextbook'
+                  : 'ncvOfficeAdminTextbook');
 
     return (
       <article
@@ -489,6 +492,18 @@ export const TextbooksLibraryPage: React.FC = () => {
               className="inline-flex items-center gap-2 min-h-[44px] px-4 py-2.5 rounded-xl bg-[#FFD400] hover:bg-yellow-400 text-black font-black text-xs sm:text-sm cursor-pointer"
             >
               <span>NCV Economic Environment Textbook — Read FREE</span>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </a>
+
+            <a
+              href="/textbooks/ncv-marketing-textbook"
+              onClick={(e) => {
+                e.preventDefault();
+                navigate('ncvMarketingTextbook', '/textbooks/ncv-marketing-textbook');
+              }}
+              className="inline-flex items-center gap-2 min-h-[44px] px-4 py-2.5 rounded-xl bg-[#FFD400] hover:bg-yellow-400 text-black font-black text-xs sm:text-sm cursor-pointer"
+            >
+              <span>NCV Marketing Textbook — Read FREE</span>
               <ArrowRight className="w-3.5 h-3.5" />
             </a>
           </div>

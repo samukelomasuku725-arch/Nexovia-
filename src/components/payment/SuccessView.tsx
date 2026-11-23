@@ -21,8 +21,10 @@ import { useAuth } from '../../context/AuthContext';
 import { useLearning } from '../../context/LearningContext';
 import {
   saveCachedPaystackStatus,
-  startTwoDayFreeTrialCheckout
+  startTwoDayFreeTrialCheckout,
+  syncSubscriptionStatus
 } from '../../services/paystackService';
+import { supabase } from '../../supabase';
 
 interface VerifyState {
   status: 'verifying' | 'success' | 'error';
@@ -50,6 +52,29 @@ function formatDateZA(isoDate?: string | null): string {
 export const SuccessView: React.FC = () => {
   const { user } = useAuth();
   const { setCurrentTab } = useLearning();
+
+  const handleStartTrial = async () => {
+    const {
+      data: { user: authUser }
+    } = await supabase.auth.getUser();
+    if (!authUser) {
+      if (typeof window !== 'undefined') {
+        window.location.href = '/login?next=' + encodeURIComponent(window.location.pathname);
+      }
+      return;
+    }
+
+    await startTwoDayFreeTrialCheckout({
+      user: { id: authUser.id, email: authUser.email, name: user?.name },
+      onRequireAuth: () => {
+        if (typeof window !== 'undefined') {
+          window.location.href = '/login?next=' + encodeURIComponent(window.location.pathname);
+        } else {
+          setCurrentTab('login');
+        }
+      }
+    });
+  };
 
   const [verifyState, setVerifyState] = useState<VerifyState>({
     status: 'verifying',
@@ -85,26 +110,42 @@ export const SuccessView: React.FC = () => {
         if (user?.email) query.set('email', user.email);
         if (user?.id) query.set('userId', user.id);
 
-        const res = await fetch(`/api/paystack/verify?${query.toString()}`);
-        const data = await res.json();
+        // Call primary /api/paystack/verify and also ensure /api/verify-payment unlocks Supabase users table
+        const [res, fallbackRes] = await Promise.all([
+          fetch(`/api/paystack/verify?${query.toString()}`),
+          fetch(`/api/verify-payment?reference=${encodeURIComponent(ref)}`)
+        ]);
+        const data = await res.json().catch(() => ({}));
+        const fallbackData = await fallbackRes.json().catch(() => ({}));
 
         if (!active) return;
 
-        if (res.ok && data?.success) {
-          const emailToCache = data.email || data.record?.email || user?.email;
-          const rawStatus = data.subscription_status || data.status;
+        const primaryOk = res.ok && data?.success;
+        const fallbackOk =
+          fallbackRes.ok &&
+          fallbackData?.status === true &&
+          fallbackData?.data?.status === 'success';
+
+        if (primaryOk || fallbackOk) {
+          const emailToCache =
+            data?.email ||
+            data?.record?.email ||
+            fallbackData?.data?.customer?.email ||
+            user?.email;
+          const rawStatus = data?.subscription_status || data?.status;
           const recordStatus: 'trial' | 'active' = rawStatus === 'active' ? 'active' : 'trial';
 
           if (emailToCache) {
             saveCachedPaystackStatus(emailToCache, {
               status: recordStatus,
               has_access: true,
-              trial_end_date: data.trial_end_date || null,
-              next_payment_date: data.next_payment_date || data.trial_end_date || null,
-              subscription_code: data.subscription_code || null,
+              trial_end_date: data?.trial_end_date || null,
+              next_payment_date: data?.next_payment_date || data?.trial_end_date || null,
+              subscription_code: data?.subscription_code || null,
               days_remaining: recordStatus === 'trial' ? 2 : 30,
               hours_remaining: recordStatus === 'trial' ? 48 : 720
             });
+            await syncSubscriptionStatus(emailToCache, user?.id);
           }
 
           setVerifyState({
@@ -113,9 +154,9 @@ export const SuccessView: React.FC = () => {
               recordStatus === 'active'
                 ? 'Active — Your monthly R60 Nexovian subscription is confirmed!'
                 : 'Active — Your 2-Day Free Trial is now confirmed! First R60 payment is scheduled on your trial end date.',
-            trialEndDate: data.trial_end_date || null,
-            nextPaymentDate: data.next_payment_date || data.trial_end_date || null,
-            subscriptionCode: data.subscription_code || null,
+            trialEndDate: data?.trial_end_date || null,
+            nextPaymentDate: data?.next_payment_date || data?.trial_end_date || null,
+            subscriptionCode: data?.subscription_code || null,
             subStatus: recordStatus
           });
         } else {
@@ -170,12 +211,7 @@ export const SuccessView: React.FC = () => {
             <div className="flex flex-col sm:flex-row gap-3 pt-2">
               <button
                 type="button"
-                onClick={() =>
-                  startTwoDayFreeTrialCheckout({
-                    user,
-                    onRequireAuth: () => setCurrentTab('login')
-                  })
-                }
+                onClick={handleStartTrial}
                 className="flex-1 py-3.5 px-5 rounded-xl bg-[#fbbf24] hover:bg-yellow-400 text-black font-black text-sm cursor-pointer"
               >
                 Start 2-Day Free Trial - Then R60/month

@@ -44,6 +44,7 @@ import {
   startTwoDayFreeTrialCheckout,
   syncSubscriptionStatus
 } from '../../services/paystackService';
+import { supabase } from '../../supabase';
 
 
 export interface LanguageOption {
@@ -238,14 +239,25 @@ export const PublicLandingView: React.FC = () => {
 
   const handleStartTrial = async () => {
     persistSelectedContext();
+    const {
+      data: { user: authUser }
+    } = await supabase.auth.getUser();
+    if (!authUser) {
+      if (typeof window !== 'undefined') {
+        window.location.href = '/login?next=' + encodeURIComponent(window.location.pathname);
+      }
+      return;
+    }
+
     setCheckoutError(null);
     setCheckoutLoading(true);
     const result = await startTwoDayFreeTrialCheckout({
-      user,
+      user: { id: authUser.id, email: authUser.email, name: user?.name },
       onRequireAuth: () => {
-        setCurrentTab('login');
         if (typeof window !== 'undefined') {
-          window.history.pushState({}, '', '/login');
+          window.location.href = '/login?next=' + encodeURIComponent(window.location.pathname);
+        } else {
+          setCurrentTab('login');
         }
       }
     });

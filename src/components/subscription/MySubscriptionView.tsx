@@ -32,6 +32,7 @@ import {
   startTwoDayFreeTrialCheckout,
   syncSubscriptionStatus
 } from '../../services/paystackService';
+import { supabase } from '../../supabase';
 
 function formatDateZA(isoDate?: string | null): string {
   if (!isoDate) return '—';
@@ -110,11 +111,27 @@ export const MySubscriptionView: React.FC = () => {
   };
 
   const handleStartTrial = async () => {
+    const {
+      data: { user: authUser }
+    } = await supabase.auth.getUser();
+    if (!authUser) {
+      if (typeof window !== 'undefined') {
+        window.location.href = '/login?next=' + encodeURIComponent(window.location.pathname);
+      }
+      return;
+    }
+
     setStartingTrial(true);
     setFeedback(null);
     const result = await startTwoDayFreeTrialCheckout({
-      user,
-      onRequireAuth: () => setCurrentTab('login')
+      user: { id: authUser.id, email: authUser.email, name: user?.name },
+      onRequireAuth: () => {
+        if (typeof window !== 'undefined') {
+          window.location.href = '/login?next=' + encodeURIComponent(window.location.pathname);
+        } else {
+          setCurrentTab('login');
+        }
+      }
     });
     if (!result.success && result.error) {
       setFeedback({ type: 'error', text: result.error });

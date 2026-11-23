@@ -26,7 +26,8 @@ import { useLearning } from '../../context/LearningContext';
 import { useTranslation } from '../../i18n/I18nContext';
 import { useAuth } from '../../context/AuthContext';
 import { SALanguageCode } from '../../types';
-import { checkUserSubscription } from '../../services/paystackService';
+import { checkUserSubscription, startTwoDayFreeTrialCheckout } from '../../services/paystackService';
+import { supabase } from '../../supabase';
 import { isAdminUser } from '../../services/antiAbuseService';
 
 interface CalculationStep {
@@ -92,6 +93,29 @@ export const MathCalculatorView: React.FC = () => {
   // Subscription check
   const subStatus = checkUserSubscription(user);
   const isPaidOrTrial = Boolean(subStatus.isSubscribed || subStatus.isTrialActive || (user && isAdminUser(user)));
+
+  const handleStartTrial = async () => {
+    const {
+      data: { user: authUser }
+    } = await supabase.auth.getUser();
+    if (!authUser) {
+      if (typeof window !== 'undefined') {
+        window.location.href = '/login?next=' + encodeURIComponent(window.location.pathname);
+      }
+      return;
+    }
+
+    await startTwoDayFreeTrialCheckout({
+      user: { id: authUser.id, email: authUser.email, name: user?.name },
+      onRequireAuth: () => {
+        if (typeof window !== 'undefined') {
+          window.location.href = '/login?next=' + encodeURIComponent(window.location.pathname);
+        } else {
+          setCurrentTab('login');
+        }
+      }
+    });
+  };
 
   React.useEffect(() => {
     if (result && typeof window !== 'undefined') {
@@ -558,7 +582,7 @@ export const MathCalculatorView: React.FC = () => {
 
                 <div className="flex flex-col sm:flex-row items-center gap-3">
                   <button
-                    onClick={() => setCurrentTab('trial')}
+                    onClick={handleStartTrial}
                     className="px-6 py-3 bg-[#FFD700] hover:bg-yellow-400 text-slate-950 font-black text-sm rounded-xl shadow-xl transition-all cursor-pointer flex items-center gap-2"
                   >
                     <span>Unlock full steps with R60/month - Start 2-Day Free Trial</span>
