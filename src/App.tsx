@@ -80,7 +80,7 @@ import { CreateAccountScreen } from './components/auth/CreateAccountScreen';
 import { SubscriptionBanner } from './components/subscription/SubscriptionBanner';
 import { SubscribeView } from './components/subscription/SubscribeView';
 import { MySubscriptionView } from './components/subscription/MySubscriptionView';
-import { isUserActive } from './services/paystackService';
+import { isUserActive, syncSubscriptionStatus } from './services/paystackService';
 import { isAdminUser } from './services/antiAbuseService';
 import { LogoIcon } from './components/common/LogoIcon';
 import { APP_CONFIG } from './config/brand';
@@ -112,8 +112,11 @@ const MainLayout: React.FC = () => {
   useEffect(() => {
     const onSubUpdate = () => setSubscriptionTick((prev) => prev + 1);
     window.addEventListener('nexovian-subscription-updated', onSubUpdate);
+    syncSubscriptionStatus(user?.email, user?.id)
+      .then(() => setSubscriptionTick((prev) => prev + 1))
+      .catch(() => {});
     return () => window.removeEventListener('nexovian-subscription-updated', onSubUpdate);
-  }, []);
+  }, [user?.email, user?.id]);
 
   // Guard protected/auth/admin tabs cleanly inside useEffect (never call setCurrentTab during render)
   useEffect(() => {

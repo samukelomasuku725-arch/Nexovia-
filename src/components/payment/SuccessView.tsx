@@ -21,6 +21,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useLearning } from '../../context/LearningContext';
 import {
   saveCachedPaystackStatus,
+  savePaidProfileToSupabase,
   startTwoDayFreeTrialCheckout,
   syncSubscriptionStatus
 } from '../../services/paystackService';
@@ -136,6 +137,12 @@ export const SuccessView: React.FC = () => {
           const recordStatus: 'trial' | 'active' = rawStatus === 'active' ? 'active' : 'trial';
 
           if (emailToCache) {
+            await savePaidProfileToSupabase({
+              userId: user?.id,
+              email: emailToCache,
+              paystackRef: ref,
+              trialEndIso: data?.trial_end_date || undefined
+            });
             saveCachedPaystackStatus(emailToCache, {
               status: recordStatus,
               has_access: true,

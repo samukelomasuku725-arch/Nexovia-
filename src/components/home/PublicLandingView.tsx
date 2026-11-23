@@ -1515,16 +1515,32 @@ export const PublicLandingView: React.FC = () => {
                 <span>2. Tap [🌐 Explain in My Language]</span>
                 <span className="text-emerald-400 block">3. Immediate mother-tongue explanation in isiZulu, Sepedi, etc.</span>
               </div>
-              <button
-                onClick={() => {
-                  setIsDemoModalOpen(false);
-                  handleStartTrial();
-                }}
-                className="w-full py-3 bg-[#FFD400] text-black font-black rounded-xl text-xs hover:bg-yellow-400 flex items-center justify-center gap-2 cursor-pointer"
-              >
-                <Sparkles className="w-4 h-4" />
-                <span>Start 2-Day Free Trial - Then R60/month</span>
-              </button>
+              {hasActiveAccess ? (
+                <button
+                  onClick={() => {
+                    setIsDemoModalOpen(false);
+                    setCurrentTab('studyGuide');
+                    if (typeof window !== 'undefined') {
+                      window.history.pushState({}, '', '/study-guide');
+                    }
+                  }}
+                  className="w-full py-3 bg-[#FFD400] text-black font-black rounded-xl text-xs hover:bg-yellow-400 flex items-center justify-center gap-2 cursor-pointer"
+                >
+                  <BookOpen className="w-4 h-4" />
+                  <span>Open Study Guide</span>
+                </button>
+              ) : (
+                <button
+                  onClick={() => {
+                    setIsDemoModalOpen(false);
+                    handleStartTrial();
+                  }}
+                  className="w-full py-3 bg-[#FFD400] text-black font-black rounded-xl text-xs hover:bg-yellow-400 flex items-center justify-center gap-2 cursor-pointer"
+                >
+                  <Sparkles className="w-4 h-4" />
+                  <span>Start 2-Day Free Trial - Then R60/month</span>
+                </button>
+              )}
             </div>
           </div>
         </div>

@@ -276,16 +276,17 @@ export async function checkSubscriptionAccess({
     try {
       const { data: profile } = await supabaseClient
         .from('profiles')
-        .select('*')
+        .select('id, email, is_paid, trial_end, paystack_ref, created_at')
         .eq('email', normEmail)
         .maybeSingle();
-      if (profile && profile.subscription_status && profile.subscription_status !== 'none' && profile.paystack_reference) {
-        record.subscription_status = profile.subscription_status;
-        record.trial_start_date = profile.trial_start_date || null;
-        record.trial_end_date = profile.trial_end_date || null;
-        record.subscription_end_date = profile.subscription_end_date || null;
-        record.next_payment_date = profile.trial_end_date || profile.subscription_end_date || null;
-        record.paystack_reference = profile.paystack_reference;
+      if (profile && profile.is_paid === true && profile.trial_end) {
+        const isFuture = new Date(profile.trial_end).getTime() > Date.now();
+        record.subscription_status = isFuture ? 'trial' : 'expired';
+        record.trial_start_date = profile.created_at || null;
+        record.trial_end_date = profile.trial_end;
+        record.subscription_end_date = profile.trial_end;
+        record.next_payment_date = profile.trial_end;
+        record.paystack_reference = profile.paystack_ref || null;
       }
     } catch {
       // Non-blocking
@@ -608,13 +609,9 @@ async function syncToSupabaseProfile(record: UserSubscriptionRecord): Promise<vo
       {
         id: record.user_id,
         email: normEmail,
-        full_name: record.full_name || '',
-        trial_start_date: record.trial_start_date,
-        trial_end_date: record.trial_end_date,
-        subscription_status: record.subscription_status,
-        subscription_end_date: record.subscription_end_date,
-        paystack_reference: record.paystack_reference,
-        updated_at: record.updated_at
+        is_paid: record.subscription_status === 'trial' || record.subscription_status === 'active',
+        trial_end: record.trial_end_date || record.subscription_end_date || null,
+        paystack_ref: record.paystack_reference || null
       },
       { onConflict: 'email' }
     );

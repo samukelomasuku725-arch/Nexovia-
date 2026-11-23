@@ -79,20 +79,18 @@ export function checkIsApp(): boolean {
 
 export async function syncUserProfileToSupabase(
   user: { id: string; email?: string; created_at?: string },
-  fullName = '',
-  languagePreference = 'en'
+  _fullName = '',
+  _languagePreference = 'en'
 ) {
   try {
+    const cleanEmail = String(user.email || '').trim().toLowerCase();
     const { error } = await supabase.from('profiles').upsert(
       {
         id: user.id,
-        email: user.email || '',
-        full_name: fullName || user.email?.split('@')[0] || '',
-        created_at: user.created_at || new Date().toISOString(),
-        language_preference: languagePreference,
-        updated_at: new Date().toISOString()
+        email: cleanEmail,
+        created_at: user.created_at || new Date().toISOString()
       },
-      { onConflict: 'id' }
+      { onConflict: 'id', ignoreDuplicates: true }
     );
     if (error) {
       console.warn('Note on Supabase profiles sync:', error.message);
@@ -181,8 +179,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             localStorage.setItem(LOCAL_USER_KEY, JSON.stringify(profile));
             localStorage.setItem('nexovian_logged_in', 'true');
             sessionStorage.setItem(TAB_SESSION_KEY, 'true');
-            // Sync to Supabase profiles table
+            // Sync to Supabase profiles table and check is_paid + trial_end on page load
             syncUserProfileToSupabase(initialSession.user, profile.name, profile.preferredLanguage);
+            syncSubscriptionStatus(profile.email, profile.id).catch(() => {});
           } else {
             // Check if there was no active supabase session
             setSession(null);
@@ -246,8 +245,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           localStorage.setItem(LOCAL_USER_KEY, JSON.stringify(profile));
           setIsAuthModalOpen(false);
 
-          // Save user to Supabase profiles table with email, full_name, created_at, language preference
+          // Save user to Supabase profiles table and check is_paid + trial_end on login
           await syncUserProfileToSupabase(currentSession.user, profile.name, lang);
+          await syncSubscriptionStatus(profile.email, profile.id).catch(() => {});
         } else {
           setSession(null);
           setSupabaseUser(null);

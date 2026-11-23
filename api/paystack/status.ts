@@ -116,19 +116,20 @@ export default async function handler(req: any, res: any) {
       try {
         const { data: profile } = await supabase
           .from('profiles')
-          .select('*')
+          .select('id, email, is_paid, trial_end, paystack_ref, created_at')
           .eq('email', email)
           .maybeSingle();
-        if (profile && profile.subscription_status && profile.subscription_status !== 'none') {
+        if (profile && profile.is_paid === true && profile.trial_end) {
+          const isFuture = new Date(profile.trial_end).getTime() > Date.now();
           found = {
             user_id: profile.id || userId,
             email,
-            subscription_status: profile.subscription_status,
-            trial_start_date: profile.trial_start_date || null,
-            trial_end_date: profile.trial_end_date || null,
-            subscription_end_date: profile.subscription_end_date || null,
-            next_payment_date: profile.trial_end_date || profile.subscription_end_date || null,
-            paystack_reference: profile.paystack_reference || null
+            subscription_status: isFuture ? 'trial' : 'expired',
+            trial_start_date: profile.created_at || null,
+            trial_end_date: profile.trial_end,
+            subscription_end_date: profile.trial_end,
+            next_payment_date: profile.trial_end,
+            paystack_reference: profile.paystack_ref || null
           };
         }
       } catch {

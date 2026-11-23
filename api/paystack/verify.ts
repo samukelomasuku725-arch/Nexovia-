@@ -222,12 +222,9 @@ export default async function handler(req: any, res: any) {
           {
             id: existing.user_id,
             email: verifiedEmail,
-            trial_start_date: existing.trial_start_date,
-            trial_end_date: existing.trial_end_date,
-            subscription_status: existing.subscription_status,
-            subscription_end_date: existing.subscription_end_date,
-            paystack_reference: reference,
-            updated_at: existing.updated_at
+            is_paid: true,
+            trial_end: existing.trial_end_date || startDateIso,
+            paystack_ref: reference
           },
           { onConflict: 'email' }
         );

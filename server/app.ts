@@ -1765,6 +1765,17 @@ app.get(['/api/paystack/status', '/api/subscription/status'], async (req: Reques
   }
 });
 
+app.get('/api/paystack/public-key', (_req: Request, res: Response) => {
+  const candidate = (
+    process.env.VITE_PAYSTACK_PUBLIC_KEY ||
+    process.env.NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY ||
+    process.env.PAYSTACK_PUBLIC_KEY ||
+    ''
+  ).trim();
+  const publicKey = candidate.startsWith('pk_') ? candidate : '';
+  return res.json({ success: Boolean(publicKey), publicKey });
+});
+
 app.get('/api/subscription/session-check', (req: Request, res: Response) => {
   try {
     const code = (req.query.code as string || '').trim();
