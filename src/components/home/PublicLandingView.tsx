@@ -445,12 +445,34 @@ export const PublicLandingView: React.FC = () => {
                     </span>
                   </button>
                 ) : (
-                  <button
-                    onClick={() => setCurrentTab('login')}
-                    className="px-2.5 sm:px-4 py-1.5 sm:py-2 rounded-full border border-[#1E3A6E] bg-[#0D1E42]/80 hover:border-[#FFD400] text-white font-bold text-[11px] sm:text-sm transition-colors cursor-pointer whitespace-nowrap"
-                  >
-                    Login
-                  </button>
+                  <div className="flex items-center gap-1.5 sm:gap-2">
+                    <button
+                      onClick={() => {
+                        if (typeof window !== 'undefined') {
+                          window.location.href =
+                            '/login?next=' + encodeURIComponent(window.location.pathname + (window.location.search || ''));
+                        } else {
+                          setCurrentTab('login');
+                        }
+                      }}
+                      className="px-2.5 sm:px-4 py-1.5 sm:py-2 rounded-full border border-[#1E3A6E] bg-[#0D1E42]/80 hover:border-[#FFD400] text-white font-bold text-[11px] sm:text-sm transition-colors cursor-pointer whitespace-nowrap"
+                    >
+                      Login
+                    </button>
+                    <button
+                      onClick={() => {
+                        if (typeof window !== 'undefined') {
+                          window.location.href =
+                            '/signup?next=' + encodeURIComponent(window.location.pathname + (window.location.search || ''));
+                        } else {
+                          setCurrentTab('signup');
+                        }
+                      }}
+                      className="px-2.5 sm:px-4 py-1.5 sm:py-2 rounded-full border border-[#FFD400]/70 bg-[#0D1E42] hover:bg-[#132959] text-[#FFD400] font-bold text-[11px] sm:text-sm transition-colors cursor-pointer whitespace-nowrap"
+                    >
+                      Create Account
+                    </button>
+                  </div>
                 )}
 
                 <button

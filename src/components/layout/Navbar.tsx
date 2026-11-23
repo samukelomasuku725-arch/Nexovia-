@@ -399,11 +399,31 @@ export const Navbar: React.FC = () => {
           ) : (
             <div className="flex items-center gap-1.5 sm:gap-2">
               <button
-                onClick={() => setCurrentTab('login')}
+                onClick={() => {
+                  if (typeof window !== 'undefined') {
+                    window.location.href =
+                      '/login?next=' + encodeURIComponent(window.location.pathname + (window.location.search || ''));
+                  } else {
+                    setCurrentTab('login');
+                  }
+                }}
                 className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-900 rounded-lg transition-colors border border-slate-200 dark:border-slate-800 cursor-pointer"
               >
                 <User className="w-3.5 h-3.5" />
                 <span>Login</span>
+              </button>
+              <button
+                onClick={() => {
+                  if (typeof window !== 'undefined') {
+                    window.location.href =
+                      '/signup?next=' + encodeURIComponent(window.location.pathname + (window.location.search || ''));
+                  } else {
+                    setCurrentTab('signup');
+                  }
+                }}
+                className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 text-[11px] sm:text-xs font-bold text-black bg-[#FFD400] hover:bg-yellow-400 rounded-lg transition-all shadow-sm cursor-pointer whitespace-nowrap"
+              >
+                <span>Create Account</span>
               </button>
               <button
                 onClick={async () => {
