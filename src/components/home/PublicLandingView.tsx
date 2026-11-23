@@ -238,17 +238,17 @@ export const PublicLandingView: React.FC = () => {
   };
 
   const handleStartTrial = async () => {
-    persistSelectedContext();
     const {
       data: { user: authUser }
     } = await supabase.auth.getUser();
     if (!authUser) {
       if (typeof window !== 'undefined') {
-        window.location.href = '/login?next=' + encodeURIComponent(window.location.pathname);
+        window.location.href = '/login?next=' + window.location.pathname;
       }
       return;
     }
 
+    persistSelectedContext();
     setCheckoutError(null);
     setCheckoutLoading(true);
     const result = await startTwoDayFreeTrialCheckout({
