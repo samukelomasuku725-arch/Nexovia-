@@ -1679,6 +1679,82 @@ app.get('/api/paystack/public-key', (_req: Request, res: Response) => {
   return res.json({ success: Boolean(publicKey), publicKey });
 });
 
+app.post('/api/paystack/test-r1', async (req: Request, res: Response) => {
+  try {
+    const authedUser = await verifyAuthenticatedRequestUser(req);
+    if (!authedUser || !authedUser.email) {
+      return res.status(401).json({ success: false, error: 'Authentication required.' });
+    }
+    const email = authedUser.email.trim().toLowerCase();
+    if (email !== 'samukelomasuku17@gmail.com') {
+      return res.status(403).json({ success: false, error: 'Test R1 payment is restricted.' });
+    }
+
+    const secretKey = (process.env.PAYSTACK_SECRET_KEY || '').trim();
+    if (!secretKey) {
+      return res.status(500).json({ success: false, error: 'PAYSTACK_SECRET_KEY not configured.' });
+    }
+
+    const { callbackUrl } = req.body || {};
+    const reference = `NEXOVIAN-TESTR1-${Date.now()}`;
+    const originHeader = req.headers.origin || (req.headers.host ? `https://${req.headers.host}` : '');
+    let finalCallback = originHeader ? `${originHeader}/success` : 'https://nexovian.group/success';
+    if (typeof callbackUrl === 'string' && callbackUrl.trim()) {
+      try {
+        const parsed = new URL(callbackUrl.trim());
+        if (
+          /^https:\/\/([a-z0-9-]+\.)?nexovian\.group$/i.test(parsed.origin) ||
+          /^http:\/\/localhost:\d+$/i.test(parsed.origin) ||
+          /^https:\/\/[a-z0-9-]+\.vercel\.app$/i.test(parsed.origin) ||
+          /^https:\/\/[a-z0-9-]+\.run\.app$/i.test(parsed.origin)
+        ) {
+          finalCallback = parsed.toString();
+        }
+      } catch {
+        // fallback
+      }
+    }
+
+    const paystackRes = await fetch('https://api.paystack.co/transaction/initialize', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${secretKey}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        email,
+        amount: 100, // R1 once (100 ZAR cents), not a subscription
+        currency: 'ZAR',
+        reference,
+        callback_url: finalCallback,
+        metadata: {
+          type: 'test_r1_one_time',
+          one_time_test: true,
+          user_id: authedUser.id,
+          email
+        }
+      })
+    });
+
+    const paystackData: any = await paystackRes.json();
+    if (!paystackRes.ok || !paystackData?.status || !paystackData?.data?.authorization_url) {
+      return res.status(paystackRes.status >= 400 ? paystackRes.status : 502).json({
+        success: false,
+        error: paystackData?.message || 'Failed to initialize R1 test checkout.'
+      });
+    }
+
+    return res.json({
+      success: true,
+      authorization_url: paystackData.data.authorization_url,
+      access_code: paystackData.data.access_code,
+      reference: paystackData.data.reference || reference
+    });
+  } catch (err: any) {
+    return res.status(500).json({ success: false, error: err?.message || 'R1 test checkout error.' });
+  }
+});
+
 app.get('/api/subscription/session-check', (req: Request, res: Response) => {
   try {
     const code = (req.query.code as string || '').trim();

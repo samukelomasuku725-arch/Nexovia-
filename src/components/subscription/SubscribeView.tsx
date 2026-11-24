@@ -29,6 +29,7 @@ import {
 } from '../../services/paystackService';
 import { supabase } from '../../supabase';
 import { WHATSAPP_REMIND_URL } from '../../services/antiAbuseService';
+import TestOneRandButton from '../payment/TestOneRandButton';
 
 interface SubscribeViewProps {
   protectedFeature?: 'Study Guide' | 'AI Tutor' | 'Scan & Understand' | 'Voice Docs' | string;
@@ -193,6 +194,8 @@ export const SubscribeView: React.FC<SubscribeViewProps> = ({ protectedFeature }
             </span>
             <ArrowRight className="w-4 h-4 shrink-0" />
           </button>
+
+          <TestOneRandButton />
 
           {!isAuthenticated && (
             <p className="text-center text-xs text-slate-400">

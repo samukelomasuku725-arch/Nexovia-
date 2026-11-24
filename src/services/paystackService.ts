@@ -25,6 +25,11 @@ export const PAYSTACK_SUCCESS_URL =
   typeof window !== 'undefined' ? `${window.location.origin}/success` : 'https://nexovian.group/success';
 export const SUBSCRIPTION_AMOUNT_CENTS = 6000; // R60 in cents
 export const SUBSCRIPTION_AMOUNT_ZAR = 60;
+export const TEST_R1_EMAIL = 'samukelomasuku17@gmail.com';
+
+export function isTestR1Account(email?: string | null): boolean {
+  return String(email || '').trim().toLowerCase() === TEST_R1_EMAIL;
+}
 
 export const PENDING_TRIAL_STORAGE_KEY = 'nexovian_pending_trial';
 
@@ -778,6 +783,133 @@ export async function startPaystackCheckout({
   onRequireAuth?: () => void;
 } = {}): Promise<{ success: boolean; redirectedToAuth?: boolean; error?: string }> {
   return startTwoDayFreeTrialCheckout({ user, onRequireAuth });
+}
+
+/**
+ * Restricted R1 one-time test checkout strictly for samukelomasuku17@gmail.com.
+ * Charges R1 (100 ZAR cents) once without a subscription plan and triggers the same
+ * charge.success webhook unlock at /api/paystack-webhook.
+ */
+export async function startTestOneRandCheckout({
+  user
+}: {
+  user?: { id?: string; email?: string; name?: string } | null;
+} = {}): Promise<{ success: boolean; error?: string }> {
+  const {
+    data: { user: authUser }
+  } = await supabase.auth.getUser();
+
+  const email = normalizeEmail(authUser?.email || user?.email);
+  const userId = String(authUser?.id || user?.id || '').trim();
+
+  if (!authUser || email !== TEST_R1_EMAIL) {
+    return {
+      success: false,
+      error: 'Test Pay R1 is restricted to the authorized test account.'
+    };
+  }
+
+  const [publicKey, PaystackPop] = await Promise.all([resolvePaystackPublicKey(), ensurePaystackPop()]);
+
+  if (publicKey && PaystackPop) {
+    const reference = `NEXOVIAN-TESTR1-${Date.now()}`;
+
+    return await new Promise<{ success: boolean; error?: string }>((resolve) => {
+      try {
+        const handler = PaystackPop.setup({
+          key: publicKey,
+          email,
+          amount: 100, // R1 once (100 cents), NOT a subscription
+          currency: 'ZAR',
+          ref: reference,
+          metadata: {
+            type: 'test_r1_one_time',
+            one_time_test: true,
+            user_id: userId,
+            email,
+            custom_fields: [
+              {
+                display_name: 'Payment Type',
+                variable_name: 'payment_type',
+                value: 'Test Pay R1 (One-Time)'
+              }
+            ]
+          },
+          callback: function (response: { reference?: string }) {
+            void (async () => {
+              const paystackRef = response?.reference || reference;
+              const trialEndIso = new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString();
+
+              const saveResult = await savePaidProfileToSupabase({
+                userId,
+                email,
+                paystackRef,
+                trialEndIso
+              });
+
+              if (!saveResult.success) {
+                resolve({ success: false, error: saveResult.error });
+                return;
+              }
+
+              try {
+                await fetch(
+                  `/api/paystack/verify?reference=${encodeURIComponent(paystackRef)}&email=${encodeURIComponent(email)}&userId=${encodeURIComponent(userId)}`
+                );
+              } catch {
+                // Non-blocking
+              }
+
+              if (typeof window !== 'undefined') {
+                window.location.reload();
+              }
+              resolve({ success: true });
+            })();
+          },
+          onClose: function () {
+            resolve({ success: false });
+          }
+        });
+
+        handler.openIframe();
+      } catch (err: any) {
+        resolve({ success: false, error: err?.message || 'Unable to open Paystack R1 test checkout.' });
+      }
+    });
+  }
+
+  // Fallback to server-side R1 one-time initialization if public key isn't exposed on client
+  const {
+    data: { session }
+  } = await supabase.auth.getSession();
+  const accessToken = session?.access_token || '';
+  if (!accessToken) {
+    return { success: false, error: 'Please log in as samukelomasuku17@gmail.com first.' };
+  }
+
+  const targetCallback =
+    typeof window !== 'undefined' ? `${window.location.origin}/success` : PAYSTACK_SUCCESS_URL;
+
+  try {
+    const res = await fetch('/api/paystack/test-r1', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${accessToken}`
+      },
+      body: JSON.stringify({ callbackUrl: targetCallback })
+    });
+    const data = await res.json();
+    if (!res.ok || !data?.authorization_url) {
+      return { success: false, error: data?.error || 'Could not start R1 test checkout.' };
+    }
+    if (typeof window !== 'undefined') {
+      window.location.href = data.authorization_url;
+    }
+    return { success: true };
+  } catch (err: any) {
+    return { success: false, error: err?.message || 'Network error starting R1 test checkout.' };
+  }
 }
 
 export async function cancelUserSubscription(

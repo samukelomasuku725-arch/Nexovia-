@@ -45,6 +45,7 @@ import {
   syncSubscriptionStatus
 } from '../../services/paystackService';
 import { supabase } from '../../supabase';
+import TestOneRandButton from '../payment/TestOneRandButton';
 
 
 export interface LanguageOption {
@@ -784,6 +785,7 @@ export const PublicLandingView: React.FC = () => {
                     </span>
                     <ArrowRight className="w-4 h-4 shrink-0 ml-0.5" />
                   </button>
+                  <TestOneRandButton className="mt-3" />
                   <p className="mt-2.5 text-center text-[11px] text-white/60">
                     Create an account or log in &bull; Full access for 2 days free &bull; Cancel before 2 days and pay R0
                   </p>
@@ -1445,6 +1447,7 @@ export const PublicLandingView: React.FC = () => {
                 </span>
                 <ArrowRight className="w-4 h-4 text-black shrink-0" />
               </button>
+              <TestOneRandButton className="mt-3" />
             </div>
           )}
         </section>

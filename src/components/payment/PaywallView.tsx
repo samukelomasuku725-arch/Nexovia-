@@ -20,6 +20,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useLearning } from '../../context/LearningContext';
 import { isUserActive, startTwoDayFreeTrialCheckout, syncSubscriptionStatus } from '../../services/paystackService';
 import { supabase } from '../../supabase';
+import TestOneRandButton from './TestOneRandButton';
 
 const WHATSAPP_URL = 'https://wa.me/27636508381?text=Hi%20Nexovian%2C%20I%20need%20help%20with%20my%20subscription';
 
@@ -193,6 +194,8 @@ export const PaywallView: React.FC = () => {
             </span>
             <ArrowRight className="w-4 h-4 text-black" />
           </button>
+
+          <TestOneRandButton />
 
           <p className="text-center text-xs text-white/60">
             {isAuthenticated

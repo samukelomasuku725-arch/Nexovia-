@@ -33,6 +33,7 @@ import {
   syncSubscriptionStatus
 } from '../../services/paystackService';
 import { supabase } from '../../supabase';
+import TestOneRandButton from '../payment/TestOneRandButton';
 
 function formatDateZA(isoDate?: string | null): string {
   if (!isoDate) return '—';
@@ -361,6 +362,7 @@ export const MySubscriptionView: React.FC = () => {
                         : 'Start 2-Day Free Trial - Then R60/month'}
                     </span>
                   </button>
+                  <TestOneRandButton />
                   <p className="text-[11px] text-center text-slate-400">
                     First charge of R60 is scheduled in 2 days. Cancel anytime before 2 days and pay R0.
                   </p>

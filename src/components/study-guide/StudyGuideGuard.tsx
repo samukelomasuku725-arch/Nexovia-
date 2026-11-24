@@ -19,6 +19,7 @@ import {
   syncSubscriptionStatus
 } from '../../services/paystackService';
 import { supabase } from '../../supabase';
+import TestOneRandButton from '../payment/TestOneRandButton';
 
 interface StudyGuideGuardProps {
   children: React.ReactNode;
@@ -162,6 +163,8 @@ export const StudyGuideGuard: React.FC<StudyGuideGuardProps> = ({ children }) =>
           </span>
           <ArrowRight className="w-4 h-4 text-black shrink-0" />
         </button>
+
+        <TestOneRandButton />
 
         <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-1 text-xs">
           {!isAuthenticated && (

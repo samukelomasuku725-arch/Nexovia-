@@ -11,6 +11,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useLearning } from '../../context/LearningContext';
 import { startTwoDayFreeTrialCheckout } from '../../services/paystackService';
 import { supabase } from '../../supabase';
+import TestOneRandButton from './TestOneRandButton';
 
 export const TrialLandingView: React.FC = () => {
   const { user } = useAuth();
@@ -104,6 +105,8 @@ export const TrialLandingView: React.FC = () => {
             {loading ? 'Connecting Paystack...' : 'Start 2-Day Free Trial - Then R60/month'}
           </span>
         </button>
+
+        <TestOneRandButton className="mt-3" />
 
         <p className="text-[13px] text-[#666666] mt-5 leading-relaxed">
           &#10003; 2 Days Free &#10003; All Study Guides &amp; Past Papers &#10003; 11 SA Languages<br />
