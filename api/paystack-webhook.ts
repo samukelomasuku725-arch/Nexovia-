@@ -1,9 +1,9 @@
 /**
- * Vercel Serverless Function: /api/paystack/webhook
+ * Vercel Serverless Function: /api/paystack-webhook
  *
  * Verifies Paystack webhook signature (HMAC SHA-512 with PAYSTACK_SECRET_KEY)
- * and updates user subscription status in database:
- * - charge.success -> 'trial' (if 2-day trial auth) or 'active' (for R60 recurring charges)
+ * and updates user subscription status in Supabase `profiles` (via Service Role Key) & local state:
+ * - charge.success -> marks `profiles.is_paid = true`, `trial_end`, `paystack_ref`
  * - subscription.create -> stores subscription_code & email_token, preserves/sets 'trial' or 'active'
  * - subscription.disable / subscription.not_renew -> marks user 'cancelled'
  */
@@ -18,7 +18,7 @@ function getSupabaseAdminClient() {
     process.env.NEXT_PUBLIC_SUPABASE_URL ||
     process.env.SUPABASE_URL ||
     process.env.VITE_SUPABASE_URL ||
-    ''
+    'https://elvzpyksawrpdzfdnwsj.supabase.co'
   ).trim();
   const key = (process.env.SUPABASE_SERVICE_ROLE_KEY || '').trim();
   if (!url || !key) return null;
@@ -71,10 +71,55 @@ function writeRecords(records: any[]): void {
 
 async function syncProfile(record: any): Promise<void> {
   const supabase = getSupabaseAdminClient();
-  if (!supabase || !record?.email) return;
+  if (!supabase || !record?.email) {
+    console.warn('UNLOCK: Missing Supabase Service Role client or email in /api/paystack-webhook');
+    return;
+  }
 
   const isPaid = record.subscription_status === 'trial' || record.subscription_status === 'active';
   const email = String(record.email).trim().toLowerCase();
+  const trialEnd =
+    record.next_payment_date ||
+    record.trial_end_date ||
+    new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString();
+
+  try {
+    const { data: existingProfile } = await supabase
+      .from('profiles')
+      .select('id')
+      .eq('email', email)
+      .maybeSingle();
+
+    const metadataId =
+      record.user_id &&
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(String(record.user_id))
+        ? String(record.user_id)
+        : null;
+    const resolvedId = existingProfile?.id || metadataId || crypto.randomUUID();
+
+    const { error: profileErr } = await supabase.from('profiles').upsert(
+      {
+        id: resolvedId,
+        email,
+        is_paid: isPaid,
+        trial_end: isPaid ? trialEnd : new Date().toISOString(),
+        paystack_ref: record.paystack_reference || null
+      },
+      { onConflict: 'email' }
+    );
+
+    if (profileErr) {
+      console.error('UNLOCK: profiles upsert error in /api/paystack-webhook:', profileErr.message);
+    } else {
+      console.log('UNLOCK: profiles updated via /api/paystack-webhook', {
+        email,
+        is_paid: isPaid,
+        paystack_ref: record.paystack_reference || null
+      });
+    }
+  } catch (err: any) {
+    console.error('UNLOCK: profiles sync error:', err?.message || err);
+  }
 
   try {
     if (isPaid) {
@@ -91,36 +136,11 @@ async function syncProfile(record: any): Promise<void> {
         .select('email');
 
       if (updErr || !updated || updated.length === 0) {
-        const { error: insErr } = await supabase.from('users').insert({ email, ...unlockPayload });
-        if (insErr) {
-          console.error('UNLOCK: users insert error in /api/paystack/webhook:', insErr.message);
-        } else {
-          console.log('UNLOCK: success (inserted users row)', { email, reference: record.paystack_reference });
-        }
-      } else {
-        console.log('UNLOCK: success (updated users row)', { email, reference: record.paystack_reference });
+        await supabase.from('users').insert({ email, ...unlockPayload });
       }
     }
-  } catch (err: any) {
-    console.error('UNLOCK: users sync error:', err?.message || err);
-  }
-
-  try {
-    await supabase.from('profiles').upsert(
-      {
-        id: record.user_id,
-        email,
-        trial_start_date: record.trial_start_date,
-        trial_end_date: record.trial_end_date,
-        subscription_status: record.subscription_status,
-        subscription_end_date: record.subscription_end_date,
-        paystack_reference: record.paystack_reference,
-        updated_at: record.updated_at
-      },
-      { onConflict: 'email' }
-    );
   } catch {
-    // Non-blocking
+    // Non-blocking optional users table sync
   }
 }
 
@@ -230,6 +250,8 @@ export default async function handler(req: any, res: any) {
           if (isTrialInit) {
             found.trial_start_date = found.trial_start_date || nowIso;
             found.trial_end_date = startDateIso;
+          } else {
+            found.trial_end_date = nextDateIso;
           }
           found.subscription_end_date = nextDateIso;
           found.next_payment_date = nextDateIso;
@@ -245,7 +267,7 @@ export default async function handler(req: any, res: any) {
             user_id: userId || `usr_${Date.now()}`,
             email: customerEmail,
             trial_start_date: nowIso,
-            trial_end_date: isTrialInit ? startDateIso : nowIso,
+            trial_end_date: nextDateIso,
             subscription_status: statusToSet,
             subscription_end_date: nextDateIso,
             next_payment_date: nextDateIso,

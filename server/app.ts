@@ -1339,14 +1339,49 @@ app.post('/api/paystack-webhook', async (req: Request, res: Response) => {
           process.env.NEXT_PUBLIC_SUPABASE_URL ||
           process.env.SUPABASE_URL ||
           process.env.VITE_SUPABASE_URL ||
-          ''
+          'https://elvzpyksawrpdzfdnwsj.supabase.co'
         ).trim();
         const serviceKey = (process.env.SUPABASE_SERVICE_ROLE_KEY || '').trim();
+        const trialEnd =
+          data?.metadata?.start_date || new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString();
 
         if (supabaseUrl && serviceKey) {
           const adminClient = createClient(supabaseUrl, serviceKey, {
             auth: { autoRefreshToken: false, persistSession: false }
           });
+
+          try {
+            const { data: existingProfile } = await adminClient
+              .from('profiles')
+              .select('id')
+              .eq('email', email)
+              .maybeSingle();
+
+            const rawMetaUserId = String(data?.metadata?.user_id || '').trim();
+            const validMetaUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(rawMetaUserId)
+              ? rawMetaUserId
+              : null;
+            const resolvedId = existingProfile?.id || validMetaUuid || crypto.randomUUID();
+
+            const { error: profileErr } = await adminClient.from('profiles').upsert(
+              {
+                id: resolvedId,
+                email,
+                is_paid: true,
+                trial_end: trialEnd,
+                paystack_ref: reference
+              },
+              { onConflict: 'email' }
+            );
+            if (profileErr) {
+              console.error('UNLOCK: error updating profiles:', profileErr.message);
+            } else {
+              console.log('UNLOCK: profiles unlocked via /api/paystack-webhook', { email, reference, amount });
+            }
+          } catch (profileEx: any) {
+            console.error('UNLOCK: profiles exception:', profileEx?.message || profileEx);
+          }
+
           const paidAt = new Date().toISOString();
           const unlockPayload = {
             is_paid: true,
@@ -1362,14 +1397,7 @@ app.post('/api/paystack-webhook', async (req: Request, res: Response) => {
             .select('email');
 
           if (updateErr || !updatedRows || updatedRows.length === 0) {
-            const { error: insertErr } = await adminClient.from('users').insert({ email, ...unlockPayload });
-            if (insertErr) {
-              console.error('UNLOCK: error inserting user row:', { email, reference, amount, error: insertErr.message });
-            } else {
-              console.log('UNLOCK: success (inserted)', { email, reference, amount });
-            }
-          } else {
-            console.log('UNLOCK: success (updated)', { email, reference, amount });
+            await adminClient.from('users').insert({ email, ...unlockPayload });
           }
         }
 
@@ -1377,7 +1405,7 @@ app.post('/api/paystack-webhook', async (req: Request, res: Response) => {
           email,
           userId: data?.metadata?.user_id,
           reference,
-          startDateIso: data?.metadata?.start_date
+          startDateIso: trialEnd
         });
       }
     }
@@ -1427,132 +1455,7 @@ app.get('/api/verify-payment', async (req: Request, res: Response) => {
   }
 });
 
-app.post('/api/paystack/webhook', async (req: Request, res: Response) => {
-  try {
-    const secretKey = (process.env.PAYSTACK_SECRET_KEY || '').trim();
-    const planCode = (process.env.PAYSTACK_PLAN_CODE || '').trim();
-    const sigHeader = req.headers['x-paystack-signature'];
-    const signature = Array.isArray(sigHeader) ? sigHeader[0] : sigHeader;
 
-    const rawBody =
-      (req as any).rawBody || (typeof req.body === 'string' ? req.body : JSON.stringify(req.body || {}));
-
-    if (!secretKey) {
-      return res.status(500).json({ error: 'PAYSTACK_SECRET_KEY not configured' });
-    }
-
-    const expectedHex = crypto.createHmac('sha512', secretKey).update(rawBody).digest('hex');
-    const expectedBuf = Buffer.from(expectedHex, 'utf8');
-    const receivedBuf = Buffer.from(String(signature || '').trim(), 'utf8');
-
-    if (!signature || expectedBuf.length !== receivedBuf.length || !crypto.timingSafeEqual(expectedBuf, receivedBuf)) {
-      return res.status(401).json({ error: 'Invalid Paystack webhook signature' });
-    }
-
-    const event = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
-    const eventType = event?.event;
-    const data = event?.data;
-
-    console.log(`[Express Paystack Webhook]: ${eventType}`);
-
-    if (eventType === 'charge.success') {
-      const email = (data?.customer?.email || data?.metadata?.email || data?.email || '').trim().toLowerCase();
-      const reference = data?.reference || `PAY_${Date.now()}`;
-      const userId = data?.metadata?.user_id;
-      const isTrialInit = data?.metadata?.type === 'two_day_trial';
-      const customerCode = data?.customer?.customer_code || null;
-      const authorizationCode = data?.authorization?.authorization_code || null;
-
-      if (email) {
-        if (isTrialInit) {
-          const startDateIso = data?.metadata?.start_date || new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString();
-          const existing = await getUserSubscriptionRecord(email);
-          let subscriptionCode = existing?.paystack_subscription_code || null;
-          let emailToken = existing?.paystack_email_token || null;
-
-          if (secretKey && planCode && customerCode && !subscriptionCode) {
-            try {
-              const subRes = await fetch('https://api.paystack.co/subscription', {
-                method: 'POST',
-                headers: {
-                  Authorization: `Bearer ${secretKey}`,
-                  'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                  customer: customerCode,
-                  plan: planCode,
-                  authorization: authorizationCode,
-                  start_date: startDateIso
-                })
-              });
-              const subData: any = await subRes.json();
-              if (subData?.status && subData?.data?.subscription_code) {
-                subscriptionCode = subData.data.subscription_code;
-                emailToken = subData.data.email_token || emailToken;
-              }
-            } catch (err) {
-              console.warn('[Express Webhook subscription create error]:', err);
-            }
-          }
-
-          await activatePaystackTrial({
-            email,
-            userId,
-            reference,
-            startDateIso,
-            subscriptionCode,
-            emailToken,
-            customerCode,
-            authorizationCode
-          });
-        } else {
-          await verifyAndActivatePaystackPayment({
-            reference,
-            email,
-            userId,
-            customerCode,
-            authorizationCode
-          });
-        }
-        await recordPaystackPayment({ email, userId, reference });
-      }
-      return res.json({ status: 'success', message: 'Charge processed' });
-    }
-
-    if (eventType === 'subscription.create') {
-      const email = (data?.customer?.email || '').trim().toLowerCase();
-      const subscriptionCode = data?.subscription_code || null;
-      const emailToken = data?.email_token || null;
-      const nextPaymentDate = data?.next_payment_date || null;
-      if (email) {
-        const existing = await getUserSubscriptionRecord(email);
-        if (!existing || existing.subscription_status === 'none' || existing.subscription_status === 'trial') {
-          await activatePaystackTrial({
-            email,
-            reference: existing?.paystack_reference || subscriptionCode || `SUB_${Date.now()}`,
-            startDateIso: nextPaymentDate || undefined,
-            subscriptionCode,
-            emailToken
-          });
-        }
-      }
-      return res.json({ status: 'success', message: 'Subscription recorded' });
-    }
-
-    if (eventType === 'subscription.disable' || eventType === 'subscription.not_renew') {
-      const email = (data?.customer?.email || data?.email || '').trim().toLowerCase();
-      if (email) {
-        await deactivateUserSubscription(email);
-      }
-      return res.json({ status: 'success', message: 'User subscription marked cancelled' });
-    }
-
-    return res.json({ status: 'success', received: true });
-  } catch (err: any) {
-    console.error('[Express Paystack Webhook Error]:', err);
-    return res.status(500).json({ error: 'Webhook processing error', message: err?.message });
-  }
-});
 
 app.all(['/api/paystack/verify', '/api/paystack/verify/:ref'], async (req: Request, res: Response) => {
   try {
