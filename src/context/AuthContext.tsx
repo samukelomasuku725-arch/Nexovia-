@@ -179,7 +179,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             localStorage.setItem(LOCAL_USER_KEY, JSON.stringify(profile));
             localStorage.setItem('nexovian_logged_in', 'true');
             sessionStorage.setItem(TAB_SESSION_KEY, 'true');
-            // Sync to Supabase profiles table and check is_paid + trial_end on page load
+            // Sync to Supabase profiles table and check is_unlocked + subscription_status on page load
             syncUserProfileToSupabase(initialSession.user, profile.name, profile.preferredLanguage);
             syncSubscriptionStatus(profile.email, profile.id).catch(() => {});
           } else {
@@ -245,7 +245,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           localStorage.setItem(LOCAL_USER_KEY, JSON.stringify(profile));
           setIsAuthModalOpen(false);
 
-          // Save user to Supabase profiles table and check is_paid + trial_end on login
+          // Save user to Supabase profiles table and check is_unlocked + subscription_status on login
           await syncUserProfileToSupabase(currentSession.user, profile.name, lang);
           await syncSubscriptionStatus(profile.email, profile.id).catch(() => {});
         } else {

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import {
   isTestR1Account,
@@ -14,8 +14,18 @@ export const TestOneRandButton: React.FC<TestOneRandButtonProps> = ({ className 
   const { user, isAuthenticated } = useAuth();
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [isUnlocked, setIsUnlocked] = useState<boolean>(() => isAuthenticated && isUserActive(user));
 
-  if (!isAuthenticated || !isTestR1Account(user?.email) || isUserActive(user)) {
+  useEffect(() => {
+    setIsUnlocked(isAuthenticated && isUserActive(user));
+    const onSubUpdate = () => {
+      setIsUnlocked(isAuthenticated && isUserActive(user));
+    };
+    window.addEventListener('nexovian-subscription-updated', onSubUpdate);
+    return () => window.removeEventListener('nexovian-subscription-updated', onSubUpdate);
+  }, [isAuthenticated, user]);
+
+  if (!isAuthenticated || !isTestR1Account(user?.email) || isUnlocked) {
     return null;
   }
 

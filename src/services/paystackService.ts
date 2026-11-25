@@ -6,8 +6,8 @@
  *
  * Uses Paystack LIVE public key (pk_live_... via VITE_PAYSTACK_PUBLIC_KEY / NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY / /api/paystack/public-key)
  * with PaystackPop.setup inline checkout (amount: 6000 ZAR cents, currency: 'ZAR', ref: 'NEXOVIAN-' + timestamp),
- * updates Supabase `public.profiles` (is_paid, trial_end, paystack_ref) in the payment callback,
- * stores `nexovian_paid = 'true'` in localStorage, and verifies `public.profiles` on login & page load.
+ * updates Supabase `public.profiles` (`is_unlocked: true`, `subscription_status: 'active'`, `trial_end`, `paystack_ref`) in the payment callback,
+ * stores `nexovian_paid = 'true'` in localStorage, and verifies `public.profiles.is_unlocked` on login & page load.
  */
 
 import { supabase } from '../supabase';
@@ -36,6 +36,8 @@ export const PENDING_TRIAL_STORAGE_KEY = 'nexovian_pending_trial';
 export interface PaystackSubscriptionRecord {
   status: 'none' | 'trial' | 'active' | 'cancelled' | 'expired' | 'anonymous';
   has_access: boolean;
+  is_unlocked?: boolean;
+  subscription_status?: string;
   trial_end_date: string | null;
   next_payment_date: string | null;
   subscription_code: string | null;
@@ -222,8 +224,8 @@ async function ensurePaystackPop(): Promise<any | null> {
 
 /**
  * Persists a verified Paystack payment into Supabase `public.profiles`
- * (`id`, `email`, `is_paid`, `trial_end`, `paystack_ref`) and `localStorage.nexovian_paid = 'true'`.
- * Logs and alerts immediately if Supabase update fails.
+ * (`id`, `email`, `is_unlocked: true`, `subscription_status: 'active'`, `trial_end`, `paystack_ref`)
+ * and `localStorage.nexovian_paid = 'true'`.
  */
 export async function savePaidProfileToSupabase({
   userId,
@@ -268,7 +270,8 @@ export async function savePaidProfileToSupabase({
         {
           id: currentUserId,
           email: currentEmail,
-          is_paid: true,
+          is_unlocked: true,
+          subscription_status: 'active',
           trial_end: trialEnd,
           paystack_ref: paystackRef
         },
@@ -276,7 +279,7 @@ export async function savePaidProfileToSupabase({
       );
       upsertError = error;
 
-      // If a row with this email already exists under another id, upsert on email conflict instead
+      // Retry without optional trial_end/paystack_ref or on email conflict if schema/constraint differs
       if (upsertError) {
         const errMsg = String(upsertError.message || '').toLowerCase();
         if (errMsg.includes('email') || errMsg.includes('unique') || upsertError.code === '23505') {
@@ -284,13 +287,26 @@ export async function savePaidProfileToSupabase({
             {
               id: currentUserId,
               email: currentEmail,
-              is_paid: true,
+              is_unlocked: true,
+              subscription_status: 'active',
               trial_end: trialEnd,
               paystack_ref: paystackRef
             },
             { onConflict: 'email' }
           );
           upsertError = retryErr;
+        }
+        if (upsertError) {
+          const { error: minimalErr } = await supabase.from('profiles').upsert(
+            {
+              id: currentUserId,
+              email: currentEmail,
+              is_unlocked: true,
+              subscription_status: 'active'
+            },
+            { onConflict: 'email' }
+          );
+          upsertError = minimalErr;
         }
       }
     } else {
@@ -308,7 +324,8 @@ export async function savePaidProfileToSupabase({
 
       const profilePayload: Record<string, any> = {
         email: currentEmail,
-        is_paid: true,
+        is_unlocked: true,
+        subscription_status: 'active',
         trial_end: trialEnd,
         paystack_ref: paystackRef
       };
@@ -320,6 +337,21 @@ export async function savePaidProfileToSupabase({
         .from('profiles')
         .upsert(profilePayload, { onConflict: 'email' });
       upsertError = error;
+
+      if (upsertError) {
+        const minimalPayload: Record<string, any> = {
+          email: currentEmail,
+          is_unlocked: true,
+          subscription_status: 'active'
+        };
+        if (resolvedId) {
+          minimalPayload.id = resolvedId;
+        }
+        const { error: minimalErr } = await supabase
+          .from('profiles')
+          .upsert(minimalPayload, { onConflict: 'email' });
+        upsertError = minimalErr;
+      }
     }
   } catch (err: any) {
     upsertError = err;
@@ -348,8 +380,10 @@ export async function savePaidProfileToSupabase({
 
   if (currentEmail) {
     saveCachedPaystackStatus(currentEmail, {
-      status: 'trial',
+      status: 'active',
       has_access: true,
+      is_unlocked: true,
+      subscription_status: 'active',
       trial_end_date: trialEnd,
       next_payment_date: trialEnd,
       subscription_code: paystackRef,
@@ -363,14 +397,15 @@ export async function savePaidProfileToSupabase({
 
 /**
  * Checks authoritative payment unlock directly via:
- * 1) supabase.auth.getUser() -> Supabase `profiles` table (`is_paid`, `trial_end`, `paystack_ref`)
- * 2) Fallback: Supabase `users` table (`is_paid`, `plan`) if no `profiles` row exists yet
+ * 1) supabase.auth.getUser() -> Supabase `profiles` table (`is_unlocked`, `subscription_status`, `trial_end`, `paystack_ref`)
+ * 2) Fallback: Supabase `users` table (`is_unlocked`, `subscription_status`, `plan`) if no `profiles` row exists yet
  */
 export async function checkSupabasePaidAccess(
   fallbackEmail?: string | null,
   fallbackUserId?: string | null
 ): Promise<{
-  isPaid: boolean;
+  isUnlocked: boolean;
+  subscriptionStatus: string;
   plan: string;
   email: string | null;
   trialEnd: string | null;
@@ -403,7 +438,8 @@ export async function checkSupabasePaidAccess(
 
   if (!targetEmail && !targetUserId) {
     return {
-      isPaid: false,
+      isUnlocked: false,
+      subscriptionStatus: 'locked',
       plan: 'free',
       email: null,
       trialEnd: null,
@@ -411,55 +447,77 @@ export async function checkSupabasePaidAccess(
     };
   }
 
-  // 1. Check authoritative `public.profiles` table (`is_paid` + `trial_end` in the future)
+  // 1. Check authoritative `public.profiles` table (`is_unlocked` + `subscription_status`)
   try {
     let profileRow: any = null;
 
     if (targetUserId) {
       const { data, error } = await supabase
         .from('profiles')
-        .select('id, email, is_paid, trial_end, paystack_ref')
+        .select('id, email, is_unlocked, subscription_status, trial_end, paystack_ref')
         .eq('id', targetUserId)
         .maybeSingle();
       if (!error && data) {
         profileRow = data;
+      } else if (error) {
+        const { data: fallbackData, error: fallbackErr } = await supabase
+          .from('profiles')
+          .select('id, email, is_unlocked, subscription_status')
+          .eq('id', targetUserId)
+          .maybeSingle();
+        if (!fallbackErr && fallbackData) {
+          profileRow = fallbackData;
+        }
       }
     }
 
     if (!profileRow && targetEmail) {
       const { data, error } = await supabase
         .from('profiles')
-        .select('id, email, is_paid, trial_end, paystack_ref')
+        .select('id, email, is_unlocked, subscription_status, trial_end, paystack_ref')
         .eq('email', targetEmail)
         .maybeSingle();
       if (!error && data) {
         profileRow = data;
+      } else if (error) {
+        const { data: fallbackData, error: fallbackErr } = await supabase
+          .from('profiles')
+          .select('id, email, is_unlocked, subscription_status')
+          .eq('email', targetEmail)
+          .maybeSingle();
+        if (!fallbackErr && fallbackData) {
+          profileRow = fallbackData;
+        }
       }
     }
 
     if (profileRow) {
       const resolvedEmail = normalizeEmail(profileRow.email) || targetEmail || null;
-      const validFutureTrial = isFutureDate(profileRow.trial_end);
+      const isUnlocked = profileRow.is_unlocked === true;
+      const subStatus = String(profileRow.subscription_status || (isUnlocked ? 'active' : 'locked')).toLowerCase();
+      const validFutureTrial = !profileRow.trial_end || isFutureDate(profileRow.trial_end) || subStatus === 'active';
 
-      if (profileRow.is_paid === true && validFutureTrial) {
+      if (isUnlocked && validFutureTrial) {
         return {
-          isPaid: true,
-          plan: 'trial',
+          isUnlocked: true,
+          subscriptionStatus: subStatus,
+          plan: subStatus || 'active',
           email: resolvedEmail,
-          trialEnd: profileRow.trial_end,
+          trialEnd: profileRow.trial_end || null,
           paystackRef: profileRow.paystack_ref || null,
           hasProfileRow: true
         };
       }
 
       return {
-        isPaid: false,
+        isUnlocked: false,
+        subscriptionStatus: subStatus || 'locked',
         plan: 'free',
         email: resolvedEmail,
         trialEnd: profileRow.trial_end || null,
         paystackRef: profileRow.paystack_ref || null,
         hasProfileRow: true,
-        expired: Boolean(profileRow.is_paid === true && !validFutureTrial)
+        expired: Boolean(isUnlocked && !validFutureTrial)
       };
     }
   } catch (err) {
@@ -471,12 +529,12 @@ export async function checkSupabasePaidAccess(
     try {
       const { data: userRow, error } = await supabase
         .from('users')
-        .select('is_paid, plan, paystack_reference, paid_at')
+        .select('is_unlocked, subscription_status, plan, paystack_reference, paid_at')
         .eq('email', targetEmail)
         .maybeSingle();
 
-      if (!error && userRow?.is_paid === true) {
-        const plan = String(userRow.plan || 'trial');
+      if (!error && userRow?.is_unlocked === true) {
+        const plan = String(userRow.subscription_status || userRow.plan || 'active');
         const paidAtMs = userRow.paid_at ? new Date(userRow.paid_at).getTime() : Date.now();
         const defaultEnd =
           plan === 'active' || plan === 'monthly'
@@ -484,7 +542,8 @@ export async function checkSupabasePaidAccess(
             : new Date(paidAtMs + 2 * 24 * 60 * 60 * 1000).toISOString();
 
         return {
-          isPaid: isFutureDate(defaultEnd),
+          isUnlocked: isFutureDate(defaultEnd),
+          subscriptionStatus: plan,
           plan,
           email: targetEmail,
           trialEnd: defaultEnd,
@@ -498,7 +557,8 @@ export async function checkSupabasePaidAccess(
   }
 
   return {
-    isPaid: false,
+    isUnlocked: false,
+    subscriptionStatus: 'locked',
     plan: 'free',
     email: targetEmail || null,
     trialEnd: null,
@@ -518,6 +578,8 @@ export async function syncSubscriptionStatus(
     return {
       status: 'anonymous',
       has_access: false,
+      is_unlocked: false,
+      subscription_status: 'locked',
       trial_end_date: null,
       next_payment_date: null,
       subscription_code: null,
@@ -526,12 +588,17 @@ export async function syncSubscriptionStatus(
     };
   }
 
-  if (supabaseCheck.isPaid) {
-    const isMonthly = supabaseCheck.plan === 'active' || supabaseCheck.plan === 'monthly';
+  if (supabaseCheck.isUnlocked) {
+    const isMonthly =
+      supabaseCheck.plan === 'active' ||
+      supabaseCheck.plan === 'monthly' ||
+      supabaseCheck.subscriptionStatus === 'active';
     const remaining = getRemainingTime(supabaseCheck.trialEnd);
     const record: PaystackSubscriptionRecord = {
       status: isMonthly ? 'active' : 'trial',
       has_access: true,
+      is_unlocked: true,
+      subscription_status: supabaseCheck.subscriptionStatus || 'active',
       trial_end_date: supabaseCheck.trialEnd,
       next_payment_date: supabaseCheck.trialEnd,
       subscription_code: supabaseCheck.paystackRef,
@@ -542,11 +609,13 @@ export async function syncSubscriptionStatus(
     return record;
   }
 
-  // If `profiles` explicitly says `is_paid = false` or `trial_end` expired, lock immediately
+  // If `profiles` explicitly says `is_unlocked = false` or `trial_end` expired, lock immediately
   if (supabaseCheck.hasProfileRow) {
     const lockedProfileRecord: PaystackSubscriptionRecord = {
       status: supabaseCheck.expired ? 'expired' : 'none',
       has_access: false,
+      is_unlocked: false,
+      subscription_status: supabaseCheck.subscriptionStatus || 'locked',
       trial_end_date: supabaseCheck.trialEnd,
       next_payment_date: null,
       subscription_code: supabaseCheck.paystackRef,
@@ -564,14 +633,14 @@ export async function syncSubscriptionStatus(
     if (res.ok) {
       const data = await res.json();
       const endDate = data.trial_end_date || data.next_payment_date || null;
-      const serverPaid = Boolean(data.is_paid || data.has_access) && (!endDate || isFutureDate(endDate));
+      const serverUnlocked = Boolean(data.is_unlocked || data.has_access) && (!endDate || isFutureDate(endDate));
       const serverStatus: PaystackSubscriptionRecord['status'] =
         data.status && data.status !== 'none'
-          ? serverPaid
+          ? serverUnlocked
             ? data.status
             : 'expired'
-          : serverPaid
-            ? data.plan === 'active'
+          : serverUnlocked
+            ? data.plan === 'active' || data.subscription_status === 'active'
               ? 'active'
               : 'trial'
             : 'none';
@@ -579,7 +648,9 @@ export async function syncSubscriptionStatus(
       const remaining = getRemainingTime(endDate);
       const record: PaystackSubscriptionRecord = {
         status: serverStatus,
-        has_access: serverPaid,
+        has_access: serverUnlocked,
+        is_unlocked: serverUnlocked,
+        subscription_status: data.subscription_status || (serverUnlocked ? 'active' : 'locked'),
         trial_end_date: data.trial_end_date || null,
         next_payment_date: data.next_payment_date || null,
         subscription_code: data.subscription_code || null,
@@ -598,6 +669,8 @@ export async function syncSubscriptionStatus(
   const lockedRecord: PaystackSubscriptionRecord = {
     status: 'none',
     has_access: false,
+    is_unlocked: false,
+    subscription_status: 'locked',
     trial_end_date: null,
     next_payment_date: null,
     subscription_code: null,
@@ -612,7 +685,7 @@ export async function syncSubscriptionStatus(
  * Starts the 2-Day Free Trial / R60 Paystack flow.
  * - Checks supabase.auth.getUser() first: if unauthenticated, redirects to /login?next=<pathname> and returns early.
  * - Opens PaystackPop.setup with LIVE public key (amount: 6000 cents = R60, currency: 'ZAR', ref: 'NEXOVIAN-' + timestamp).
- * - On Paystack payment success callback: upserts Supabase `public.profiles` (`id`, `email`, `is_paid: true`, `trial_end`, `paystack_ref`),
+ * - On Paystack payment success callback: upserts Supabase `public.profiles` (`id`, `email`, `is_unlocked: true`, `subscription_status: 'active'`, `trial_end`, `paystack_ref`),
  *   saves `nexovian_paid = 'true'` to localStorage, and reloads the page to display unlocked content.
  */
 export async function startTwoDayFreeTrialCheckout({
@@ -932,7 +1005,7 @@ export async function cancelUserSubscription(
   try {
     await supabase
       .from('profiles')
-      .update({ is_paid: false })
+      .update({ is_unlocked: false, subscription_status: 'cancelled' })
       .eq('email', normalizeEmail(email));
   } catch {
     // Non-blocking
@@ -1023,15 +1096,20 @@ export function checkUserSubscription(
 
 /**
  * Authoritative access check for protected routes: Study Guide, AI Tutor, Scan & Understand, Voice Docs.
- * Strictly checks confirmed Supabase `profiles` (`is_paid === true` and `trial_end` in the future).
+ * Strictly checks confirmed Supabase `profiles` (`is_unlocked === true`).
  * On reload before async Supabase sync completes, checks `localStorage.nexovian_paid === 'true'` and non-expired `nexovian_trial_end`.
  */
 export function isUserActive(user?: any): boolean {
   if (typeof window === 'undefined') return false;
 
+  if (user?.is_unlocked === false) {
+    return false;
+  }
+
   if (user?.email) {
     const verified = getCachedPaystackStatus(user.email);
     if (verified) {
+      if (verified.is_unlocked === false) return false;
       if (!verified.has_access) return false;
       if (verified.status === 'trial') {
         return !verified.trial_end_date || Date.now() < new Date(verified.trial_end_date).getTime();
@@ -1041,6 +1119,10 @@ export function isUserActive(user?: any): boolean {
       }
       return false;
     }
+  }
+
+  if (user?.is_unlocked === true) {
+    return true;
   }
 
   try {

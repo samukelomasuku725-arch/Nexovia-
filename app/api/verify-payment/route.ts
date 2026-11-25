@@ -66,7 +66,8 @@ export async function GET(req: Request): Promise<Response> {
       if (supabase && email) {
         const paidAt = new Date().toISOString();
         const unlockPayload = {
-          is_paid: true,
+          is_unlocked: true,
+          subscription_status: 'active',
           plan: 'trial',
           paystack_reference: reference,
           paid_at: paidAt
@@ -82,6 +83,17 @@ export async function GET(req: Request): Promise<Response> {
           if (updateError || !updatedRows || updatedRows.length === 0) {
             await supabase.from('users').insert({ email, ...unlockPayload });
           }
+
+          await supabase
+            .from('profiles')
+            .upsert(
+              {
+                email,
+                is_unlocked: true,
+                subscription_status: 'active'
+              },
+              { onConflict: 'email' }
+            );
           console.log('UNLOCK: verified payment via /api/verify-payment', { email, reference });
         } catch (err: any) {
           console.error('UNLOCK: verify-payment DB sync error:', err?.message || err);

@@ -64,18 +64,76 @@ export default async function handler(req: any, res: any) {
       });
     }
 
-    // Authoritative check: query Supabase `users` table (is_paid, plan) using service role key
+    // Authoritative check: query Supabase `profiles` (`is_unlocked`, `subscription_status`) using service role key
     const supabase = getSupabaseAdminClient();
     if (supabase) {
       try {
-        const { data: paidUser } = await supabase
-          .from('users')
-          .select('is_paid, plan, paystack_reference, paid_at')
+        let profile: any = null;
+        const { data: fullProfile, error: fullErr } = await supabase
+          .from('profiles')
+          .select('id, email, is_unlocked, subscription_status, trial_end, paystack_ref, created_at')
           .eq('email', email)
           .maybeSingle();
 
-        if (paidUser?.is_paid === true) {
-          const planName = String(paidUser.plan || 'trial').toLowerCase();
+        if (!fullErr && fullProfile) {
+          profile = fullProfile;
+        } else if (fullErr) {
+          const { data: minProfile } = await supabase
+            .from('profiles')
+            .select('id, email, is_unlocked, subscription_status')
+            .eq('email', email)
+            .maybeSingle();
+          profile = minProfile;
+        }
+
+        if (profile) {
+          const isUnlocked = profile.is_unlocked === true;
+          const subStatus = String(profile.subscription_status || (isUnlocked ? 'active' : 'locked')).toLowerCase();
+          const trialEnd = profile.trial_end || null;
+          const validTrialEnd = !trialEnd || new Date(trialEnd).getTime() > Date.now() || subStatus === 'active';
+
+          if (isUnlocked && validTrialEnd) {
+            const endDate =
+              trialEnd || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
+            return res.status(200).json({
+              success: true,
+              is_unlocked: true,
+              subscription_status: subStatus,
+              plan: subStatus || 'active',
+              status: 'active',
+              has_access: true,
+              trial_end_date: endDate,
+              next_payment_date: endDate,
+              subscription_code: null,
+              paystack_reference: profile.paystack_ref || null
+            });
+          }
+
+          return res.status(200).json({
+            success: true,
+            is_unlocked: false,
+            subscription_status: subStatus || 'locked',
+            plan: 'free',
+            status: isUnlocked && !validTrialEnd ? 'expired' : 'none',
+            has_access: false,
+            trial_end_date: trialEnd,
+            next_payment_date: null,
+            subscription_code: null
+          });
+        }
+      } catch {
+        // Fallback to users / local file below
+      }
+
+      try {
+        const { data: paidUser } = await supabase
+          .from('users')
+          .select('is_unlocked, subscription_status, plan, paystack_reference, paid_at')
+          .eq('email', email)
+          .maybeSingle();
+
+        if (paidUser?.is_unlocked === true) {
+          const planName = String(paidUser.subscription_status || paidUser.plan || 'active').toLowerCase();
           const paidAtMs = paidUser.paid_at ? new Date(paidUser.paid_at).getTime() : Date.now();
           const endDate =
             planName === 'active' || planName === 'monthly'
@@ -84,9 +142,10 @@ export default async function handler(req: any, res: any) {
 
           return res.status(200).json({
             success: true,
-            is_paid: true,
-            plan: paidUser.plan || 'trial',
-            status: planName === 'active' || planName === 'monthly' ? 'active' : 'trial',
+            is_unlocked: true,
+            subscription_status: 'active',
+            plan: paidUser.plan || 'active',
+            status: 'active',
             has_access: true,
             trial_end_date: endDate,
             next_payment_date: endDate,
@@ -95,7 +154,7 @@ export default async function handler(req: any, res: any) {
           });
         }
       } catch {
-        // Fallback to profiles / local file below
+        // Fallback to local file below
       }
     }
 
@@ -111,36 +170,11 @@ export default async function handler(req: any, res: any) {
 
     let found = records.find((r) => r.email?.toLowerCase() === email || (userId && r.user_id === userId));
 
-    // Fallback to Supabase profiles if local file has no confirmed record
-    if ((!found || found.subscription_status === 'none') && supabase) {
-      try {
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('id, email, is_paid, trial_end, paystack_ref, created_at')
-          .eq('email', email)
-          .maybeSingle();
-        if (profile && profile.is_paid === true && profile.trial_end) {
-          const isFuture = new Date(profile.trial_end).getTime() > Date.now();
-          found = {
-            user_id: profile.id || userId,
-            email,
-            subscription_status: isFuture ? 'trial' : 'expired',
-            trial_start_date: profile.created_at || null,
-            trial_end_date: profile.trial_end,
-            subscription_end_date: profile.trial_end,
-            next_payment_date: profile.trial_end,
-            paystack_reference: profile.paystack_ref || null
-          };
-        }
-      } catch {
-        // Non-blocking fallback
-      }
-    }
-
     if (!found) {
       return res.status(200).json({
         success: true,
-        is_paid: false,
+        is_unlocked: false,
+        subscription_status: 'locked',
         plan: 'free',
         status: 'none',
         has_access: false,
@@ -178,6 +212,8 @@ export default async function handler(req: any, res: any) {
 
     return res.status(200).json({
       success: true,
+      is_unlocked: hasAccess,
+      subscription_status: hasAccess ? 'active' : status,
       status,
       has_access: hasAccess,
       trial_end_date: status === 'none' ? null : found.trial_end_date || null,

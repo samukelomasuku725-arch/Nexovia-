@@ -50,7 +50,7 @@ export const StudyGuideGuard: React.FC<StudyGuideGuardProps> = ({ children }) =>
 
       try {
         const directCheck = await checkSupabasePaidAccess(user.email);
-        if (directCheck.isPaid) {
+        if (directCheck.isUnlocked) {
           await syncSubscriptionStatus(directCheck.email || user.email, user.id);
           if (mounted) setHasAccess(true);
           return;

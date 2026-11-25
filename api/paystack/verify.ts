@@ -202,7 +202,8 @@ export default async function handler(req: any, res: any) {
       const supabase = getSupabaseAdminClient();
       if (supabase && verifiedEmail) {
         const unlockPayload = {
-          is_paid: true,
+          is_unlocked: true,
+          subscription_status: 'active',
           plan: newStatus === 'active' ? 'active' : 'trial',
           paystack_reference: reference,
           paid_at: existing.updated_at
@@ -218,16 +219,28 @@ export default async function handler(req: any, res: any) {
         }
         console.log('UNLOCK: verified payment via /api/paystack/verify', { email: verifiedEmail, reference });
 
-        await supabase.from('profiles').upsert(
+        const { error: profErr } = await supabase.from('profiles').upsert(
           {
             id: existing.user_id,
             email: verifiedEmail,
-            is_paid: true,
+            is_unlocked: true,
+            subscription_status: 'active',
             trial_end: existing.trial_end_date || startDateIso,
             paystack_ref: reference
           },
           { onConflict: 'email' }
         );
+        if (profErr) {
+          await supabase.from('profiles').upsert(
+            {
+              id: existing.user_id,
+              email: verifiedEmail,
+              is_unlocked: true,
+              subscription_status: 'active'
+            },
+            { onConflict: 'email' }
+          );
+        }
       }
     } catch (syncErr: any) {
       console.error('UNLOCK: /api/paystack/verify Supabase sync error:', syncErr?.message || syncErr);

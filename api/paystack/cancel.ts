@@ -144,15 +144,27 @@ export default async function handler(req: any, res: any) {
     fs.renameSync(tmp, dbFile);
 
     try {
-      await supabase.from('profiles').upsert(
+      const { error: cancelErr } = await supabase.from('profiles').upsert(
         {
           id: found.user_id,
           email: normEmail,
+          is_unlocked: false,
           subscription_status: 'cancelled',
           updated_at: nowIso
         },
         { onConflict: 'email' }
       );
+      if (cancelErr) {
+        await supabase.from('profiles').upsert(
+          {
+            id: found.user_id,
+            email: normEmail,
+            is_unlocked: false,
+            subscription_status: 'cancelled'
+          },
+          { onConflict: 'email' }
+        );
+      }
     } catch {
       // Non-blocking
     }

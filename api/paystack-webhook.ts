@@ -3,7 +3,7 @@
  *
  * Verifies Paystack webhook signature (HMAC SHA-512 with PAYSTACK_SECRET_KEY)
  * and updates user subscription status in Supabase `profiles` (via Service Role Key) & local state:
- * - charge.success -> marks `profiles.is_paid = true`, `trial_end`, `paystack_ref`
+ * - charge.success -> marks `profiles.is_unlocked = true`, `subscription_status = 'active'`, `trial_end`, `paystack_ref`
  * - subscription.create -> stores subscription_code & email_token, preserves/sets 'trial' or 'active'
  * - subscription.disable / subscription.not_renew -> marks user 'cancelled'
  */
@@ -76,7 +76,12 @@ async function syncProfile(record: any): Promise<void> {
     return;
   }
 
-  const isPaid = record.subscription_status === 'trial' || record.subscription_status === 'active';
+  const isUnlocked = record.subscription_status === 'trial' || record.subscription_status === 'active';
+  const subStatus = isUnlocked
+    ? 'active'
+    : record.subscription_status === 'cancelled'
+      ? 'cancelled'
+      : 'locked';
   const email = String(record.email).trim().toLowerCase();
   const trialEnd =
     record.next_payment_date ||
@@ -97,23 +102,38 @@ async function syncProfile(record: any): Promise<void> {
         : null;
     const resolvedId = existingProfile?.id || metadataId || crypto.randomUUID();
 
-    const { error: profileErr } = await supabase.from('profiles').upsert(
+    let { error: profileErr } = await supabase.from('profiles').upsert(
       {
         id: resolvedId,
         email,
-        is_paid: isPaid,
-        trial_end: isPaid ? trialEnd : new Date().toISOString(),
+        is_unlocked: isUnlocked,
+        subscription_status: subStatus,
+        trial_end: isUnlocked ? trialEnd : new Date().toISOString(),
         paystack_ref: record.paystack_reference || null
       },
       { onConflict: 'email' }
     );
 
     if (profileErr) {
+      const retry = await supabase.from('profiles').upsert(
+        {
+          id: resolvedId,
+          email,
+          is_unlocked: isUnlocked,
+          subscription_status: subStatus
+        },
+        { onConflict: 'email' }
+      );
+      profileErr = retry.error;
+    }
+
+    if (profileErr) {
       console.error('UNLOCK: profiles upsert error in /api/paystack-webhook:', profileErr.message);
     } else {
       console.log('UNLOCK: profiles updated via /api/paystack-webhook', {
         email,
-        is_paid: isPaid,
+        is_unlocked: isUnlocked,
+        subscription_status: subStatus,
         paystack_ref: record.paystack_reference || null
       });
     }
@@ -122,9 +142,10 @@ async function syncProfile(record: any): Promise<void> {
   }
 
   try {
-    if (isPaid) {
+    if (isUnlocked) {
       const unlockPayload = {
-        is_paid: true,
+        is_unlocked: true,
+        subscription_status: 'active',
         plan: record.subscription_status === 'active' ? 'active' : 'trial',
         paystack_reference: record.paystack_reference || null,
         paid_at: record.updated_at || new Date().toISOString()

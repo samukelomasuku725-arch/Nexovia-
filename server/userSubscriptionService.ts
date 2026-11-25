@@ -231,18 +231,75 @@ export async function checkSubscriptionAccess({
     userId
   });
 
-  // Authoritative check on Supabase `users` table (is_paid, plan) first
+  // Authoritative check on Supabase `profiles` (`is_unlocked`, `subscription_status`) first
   const supabaseClient = getServerSupabaseClient();
   if (normEmail) {
     try {
-      const { data: paidUser } = await supabaseClient
-        .from('users')
-        .select('is_paid, plan, paystack_reference, paid_at')
+      let profile: any = null;
+      const { data: fullProfile, error: fullErr } = await supabaseClient
+        .from('profiles')
+        .select('id, email, is_unlocked, subscription_status, trial_end, paystack_ref, created_at')
         .eq('email', normEmail)
         .maybeSingle();
 
-      if (paidUser?.is_paid === true) {
-        const planName = String(paidUser.plan || 'trial').toLowerCase();
+      if (!fullErr && fullProfile) {
+        profile = fullProfile;
+      } else if (fullErr) {
+        const { data: minProfile } = await supabaseClient
+          .from('profiles')
+          .select('id, email, is_unlocked, subscription_status')
+          .eq('email', normEmail)
+          .maybeSingle();
+        profile = minProfile;
+      }
+
+      if (profile) {
+        const isUnlocked = profile.is_unlocked === true;
+        const subStatus = String(profile.subscription_status || (isUnlocked ? 'active' : 'locked')).toLowerCase();
+        const validTrial = !profile.trial_end || new Date(profile.trial_end).getTime() > Date.now() || subStatus === 'active';
+
+        if (isUnlocked && validTrial) {
+          const endIso = profile.trial_end || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
+          return {
+            allow: true,
+            status: 'active',
+            record: {
+              ...record,
+              subscription_status: 'active',
+              paystack_reference: profile.paystack_ref || record.paystack_reference,
+              trial_end_date: endIso,
+              next_payment_date: endIso,
+              subscription_end_date: endIso
+            },
+            trial_end_date: endIso,
+            next_payment_date: endIso,
+            subscription_code: record.paystack_subscription_code || null
+          };
+        }
+
+        return {
+          allow: false,
+          status: isUnlocked && !validTrial ? 'expired' : 'none',
+          reason: isUnlocked && !validTrial ? 'expired' : 'no_subscription',
+          record,
+          trial_end_date: profile.trial_end || null,
+          next_payment_date: null,
+          subscription_code: record.paystack_subscription_code || null
+        };
+      }
+    } catch {
+      // Fall through to users/local record
+    }
+
+    try {
+      const { data: paidUser } = await supabaseClient
+        .from('users')
+        .select('is_unlocked, subscription_status, plan, paystack_reference, paid_at')
+        .eq('email', normEmail)
+        .maybeSingle();
+
+      if (paidUser?.is_unlocked === true) {
+        const planName = String(paidUser.subscription_status || paidUser.plan || 'active').toLowerCase();
         const paidAtIso = paidUser.paid_at || new Date().toISOString();
         const paidAtMs = new Date(paidAtIso).getTime();
         const endIso =
@@ -267,29 +324,7 @@ export async function checkSubscriptionAccess({
         };
       }
     } catch {
-      // Fall through to profiles/local record
-    }
-  }
-
-  // Fallback check on Supabase profiles if local record shows 'none'
-  if (record.subscription_status === 'none' && normEmail) {
-    try {
-      const { data: profile } = await supabaseClient
-        .from('profiles')
-        .select('id, email, is_paid, trial_end, paystack_ref, created_at')
-        .eq('email', normEmail)
-        .maybeSingle();
-      if (profile && profile.is_paid === true && profile.trial_end) {
-        const isFuture = new Date(profile.trial_end).getTime() > Date.now();
-        record.subscription_status = isFuture ? 'trial' : 'expired';
-        record.trial_start_date = profile.created_at || null;
-        record.trial_end_date = profile.trial_end;
-        record.subscription_end_date = profile.trial_end;
-        record.next_payment_date = profile.trial_end;
-        record.paystack_reference = profile.paystack_ref || null;
-      }
-    } catch {
-      // Non-blocking
+      // Fall through to local record
     }
   }
 
@@ -584,12 +619,18 @@ async function syncToSupabaseProfile(record: UserSubscriptionRecord): Promise<vo
   try {
     if (!record.email) return;
     const supabaseClient = getServerSupabaseClient();
-    const isPaid = record.subscription_status === 'trial' || record.subscription_status === 'active';
+    const isUnlocked = record.subscription_status === 'trial' || record.subscription_status === 'active';
+    const subStatus = isUnlocked
+      ? 'active'
+      : record.subscription_status === 'cancelled'
+        ? 'cancelled'
+        : 'locked';
     const normEmail = record.email.trim().toLowerCase();
 
-    if (isPaid) {
+    if (isUnlocked) {
       const unlockPayload = {
-        is_paid: true,
+        is_unlocked: true,
+        subscription_status: 'active',
         plan: record.subscription_status === 'active' ? 'active' : 'trial',
         paystack_reference: record.paystack_reference,
         paid_at: record.updated_at || new Date().toISOString()
@@ -605,16 +646,28 @@ async function syncToSupabaseProfile(record: UserSubscriptionRecord): Promise<vo
       }
     }
 
-    await supabaseClient.from('profiles').upsert(
+    const { error: profErr } = await supabaseClient.from('profiles').upsert(
       {
         id: record.user_id,
         email: normEmail,
-        is_paid: record.subscription_status === 'trial' || record.subscription_status === 'active',
+        is_unlocked: isUnlocked,
+        subscription_status: subStatus,
         trial_end: record.trial_end_date || record.subscription_end_date || null,
         paystack_ref: record.paystack_reference || null
       },
       { onConflict: 'email' }
     );
+    if (profErr) {
+      await supabaseClient.from('profiles').upsert(
+        {
+          id: record.user_id,
+          email: normEmail,
+          is_unlocked: isUnlocked,
+          subscription_status: subStatus
+        },
+        { onConflict: 'email' }
+      );
+    }
   } catch {
     // Non-blocking sync
   }

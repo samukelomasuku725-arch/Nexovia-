@@ -87,7 +87,8 @@ export async function POST(req: Request): Promise<Response> {
 
       const paidAt = new Date().toISOString();
       const unlockPayload = {
-        is_paid: true,
+        is_unlocked: true,
+        subscription_status: 'active',
         plan: 'trial',
         paystack_reference: reference,
         paid_at: paidAt
@@ -128,24 +129,34 @@ export async function POST(req: Request): Promise<Response> {
           console.log('UNLOCK: success (updated existing user)', { email, reference, amount });
         }
 
-        // Optional sync: safely ignored if profiles table does not exist
+        // Sync profiles (`is_unlocked: true`, `subscription_status: 'active'`)
         try {
           const trialEnd =
             data?.metadata?.start_date || new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString();
-          await supabase
+          const { error: profErr } = await supabase
             .from('profiles')
             .upsert(
               {
                 email,
-                subscription_status: 'trial',
-                trial_start_date: paidAt,
-                trial_end_date: trialEnd,
-                subscription_end_date: trialEnd,
-                paystack_reference: reference,
-                updated_at: paidAt
+                is_unlocked: true,
+                subscription_status: 'active',
+                trial_end: trialEnd,
+                paystack_ref: reference
               },
               { onConflict: 'email' }
             );
+          if (profErr) {
+            await supabase
+              .from('profiles')
+              .upsert(
+                {
+                  email,
+                  is_unlocked: true,
+                  subscription_status: 'active'
+                },
+                { onConflict: 'email' }
+              );
+          }
         } catch {
           // Optional profiles table not required — never breaks webhook
         }

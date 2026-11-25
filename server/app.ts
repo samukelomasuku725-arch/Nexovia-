@@ -1363,16 +1363,29 @@ app.post('/api/paystack-webhook', async (req: Request, res: Response) => {
               : null;
             const resolvedId = existingProfile?.id || validMetaUuid || crypto.randomUUID();
 
-            const { error: profileErr } = await adminClient.from('profiles').upsert(
+            let { error: profileErr } = await adminClient.from('profiles').upsert(
               {
                 id: resolvedId,
                 email,
-                is_paid: true,
+                is_unlocked: true,
+                subscription_status: 'active',
                 trial_end: trialEnd,
                 paystack_ref: reference
               },
               { onConflict: 'email' }
             );
+            if (profileErr) {
+              const retry = await adminClient.from('profiles').upsert(
+                {
+                  id: resolvedId,
+                  email,
+                  is_unlocked: true,
+                  subscription_status: 'active'
+                },
+                { onConflict: 'email' }
+              );
+              profileErr = retry.error;
+            }
             if (profileErr) {
               console.error('UNLOCK: error updating profiles:', profileErr.message);
             } else {
@@ -1384,7 +1397,8 @@ app.post('/api/paystack-webhook', async (req: Request, res: Response) => {
 
           const paidAt = new Date().toISOString();
           const unlockPayload = {
-            is_paid: true,
+            is_unlocked: true,
+            subscription_status: 'active',
             plan: 'trial',
             paystack_reference: reference,
             paid_at: paidAt
@@ -1650,7 +1664,8 @@ app.get(['/api/paystack/status', '/api/subscription/status'], async (req: Reques
     const access = await checkSubscriptionAccess({ email, userId });
     return res.json({
       success: true,
-      is_paid: access.allow,
+      is_unlocked: access.allow,
+      subscription_status: access.allow ? 'active' : (access.status || 'locked'),
       plan: access.status === 'active' ? 'active' : access.status === 'trial' ? 'trial' : 'free',
       status: access.status,
       has_access: access.allow,
